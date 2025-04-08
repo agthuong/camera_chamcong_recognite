@@ -1,0 +1,274 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Xử lý Video ROI</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            background-color: #f8f9fa; /* Light gray background */
+        }
+        .card {
+            margin-top: 2rem;
+        }
+        .roi-status {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1.25rem;
+            border: 1px solid transparent;
+            border-radius: 0.25rem;
+        }
+        .roi-status-selected {
+            color: #0f5132;
+            background-color: #d1e7dd;
+            border-color: #badbcc;
+        }
+        .roi-status-not-selected {
+            color: #664d03;
+            background-color: #fff3cd;
+            border-color: #ffecb5;
+        }
+        .camera-section .form-group {
+            display: flex;
+            align-items: flex-start; /* Align items to the top */
+            gap: 10px; /* Add some space between elements */
+        }
+        /* Allow crispy form group for camera to take up space */
+        .camera-section .form-group > div {
+             flex-grow: 1;
+        }
+        /* Adjust button size/margin if needed */
+        .camera-section .btn-sm {
+             margin-top: 5px; /* Add margin if needed */
+        }
+        .table-responsive {
+            margin-top: 2rem;
+        }
+        .img-thumbnail {
+            max-width: 100px;
+            max-height: 100px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Phần xử lý video -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Xử lý Video với Vùng Quan Tâm (ROI)</h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Chọn camera từ danh sách. ROI đã cấu hình sẽ được sử dụng tự động.
+                        Nếu chưa có camera hoặc muốn thêm, nhấn nút "Thêm Camera".
+                    </p>
+                    <hr>
+
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- Form chính bắt đầu từ đây -->
+                    <form method="POST" id="process-form" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Phần chọn Camera và nút Add -->
+                        <div class="camera-section mb-3">
+                            <div class="form-group">
+                                <!-- Render dropdown camera trực tiếp -->
+                                {{ form.camera|as_crispy_field }}
+                                <a href="{% url 'add-camera' %}" class="btn btn-success btn-sm mt-4" title="Thêm Camera Mới">
+                                    <i class="fas fa-plus"></i> <span class="d-none d-md-inline">Thêm</span> <!-- Ẩn chữ trên màn nhỏ -->
+                                </a>
+                            </div>
+                             <small class="form-text text-muted">
+                                ROI sẽ được lấy tự động từ camera đã chọn. Cấu hình ROI trong trang Admin hoặc dùng nút "Cấu hình ROI" bên dưới.
+                            </small>
+                        </div>
+                   
+                        <!-- Hiển thị các trường còn lại của form (Mode, Username) -->
+                         <div class="form-group">
+                            {{ form.mode|as_crispy_field }}
+                        </div>
+                         <div class="form-group">
+                             {{ form.username|as_crispy_field }}
+                        </div>
+                        
+                        <!-- Nút Xử lý và Cấu hình ROI -->
+                        <div class="form-group mt-4 text-center">
+                            <button class="btn btn-primary" type="submit">Bắt đầu Xử lý</button>
+                             <button type="button" id="configure-roi-button" class="btn btn-secondary ml-2">Cấu hình ROI cho Camera</button>
+                             <a href="{% url 'test-roi' %}" class="btn btn-info ml-2">Test ROI</a>
+                        </div>
+                    </form> <!-- Kết thúc form chính -->
+
+                    <hr>
+                    <p class="text-muted small">
+                        <strong>Lưu ý:</strong> Quá trình xử lý video sẽ mở cửa sổ OpenCV trên server.
+                    </p>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-sm">Quay lại Dashboard</a>
+                    <a href="{% url 'train' %}" id="train-button" class="btn btn-info btn-sm">Huấn luyện Model</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phần bảng chấm công -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Bảng chấm công</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Form tìm kiếm -->
+                    <form method="get" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="start_date">Từ ngày:</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date">Đến ngày:</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <label for="search">Tìm kiếm:</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="search" name="search" placeholder="Nhập tên người dùng..." value="{{ search_query }}">
+                                    <div class="input-group-append">
+                                        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Bảng chấm công -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Người dùng</th>
+                                    <th>Check in</th>
+                                    <th>Check out</th>
+                                    <th>Ảnh check in</th>
+                                    <th>Ảnh check out</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in records %}
+                                <tr>
+                                    <td>{{ record.date|date:"d/m/Y" }}</td>
+                                    <td>{{ record.user.get_full_name|default:record.user.username }}</td>
+                                    <td>{{ record.check_in|date:"H:i:s"|default:"-" }}</td>
+                                    <td>{{ record.check_out|date:"H:i:s"|default:"-" }}</td>
+                                    <td>
+                                        {% if record.check_in_face %}
+                                        <img src="{{ record.check_in_face.url }}" alt="Check in face" class="img-thumbnail">
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if record.check_out_face %}
+                                        <img src="{{ record.check_out_face.url }}" alt="Check out face" class="img-thumbnail">
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">Không có dữ liệu chấm công</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Optional JavaScript -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script>
+    $(document).ready(function() {
+        // Bỏ code di chuyển dropdown cũ
+        // var cameraDropdown = $("#div_id_camera"); 
+        // $("#camera-dropdown-placeholder").replaceWith(cameraDropdown);
+        // cameraDropdown.find('label').remove(); 
+        // cameraDropdown.find('select').attr('id', 'id_camera_select');
+        
+        // Gán ID cho select để dễ lấy giá trị (Crispy thường tạo là id_FIELDNAME)
+        var cameraSelect = $('#id_camera'); 
+
+        // Đóng alert
+        $('.alert .close').on('click', function(e) {
+            $(this).parent().alert('close');
+        });
+
+        // Cảnh báo nút Train
+        $("#train-button").click(function(e){
+            alert("Bắt đầu quá trình huấn luyện. Việc này có thể mất vài phút. Vui lòng đợi và không đóng trang.");
+        });
+
+        // --- Xử lý nút Cấu hình ROI ---
+        $("#configure-roi-button").click(function(){
+            var selectedCameraId = cameraSelect.val(); // Lấy ID từ select#id_camera
+            if (!selectedCameraId) {
+                alert("Vui lòng chọn một camera trước khi cấu hình ROI.");
+                return;
+            }
+            var selectUrl = `/select_roi/${selectedCameraId}/`; // URL cần cập nhật trong urls.py
+            alert("Chuẩn bị mở cửa sổ chọn ROI cho camera đã chọn. Vui lòng kiểm tra cửa sổ OpenCV trên server và làm theo hướng dẫn...");
+            window.location.href = selectUrl; 
+        });
+        
+        // --- Xử lý Submit Form Chính ---
+         $("#process-form").submit(function(e) {
+             var selectedCameraId = cameraSelect.val();
+             if (!selectedCameraId) {
+                 alert("Vui lòng chọn một camera từ danh sách.");
+                 e.preventDefault(); 
+                 return false;
+             }
+             // Các kiểm tra khác (username nếu cần)
+             var mode = $("input[name='mode']:checked").val();
+             var username = $("#id_username").val();
+             if (mode === 'collect' && !username) {
+                  alert("Vui lòng nhập Username khi chọn chế độ Thu thập dữ liệu.");
+                  e.preventDefault(); 
+                  return false;
+             }
+             // Hidden field không còn cần thiết vì field 'camera' đã có trong form
+             // $('#selected_camera_id').val(selectedCameraId); 
+             return true; 
+        });
+
+    });
+</script>
+
+</body>
+</html> 

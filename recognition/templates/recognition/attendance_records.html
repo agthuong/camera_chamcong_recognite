@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">Bảng chấm công</h4>
+        </div>
+        <div class="card-body">
+            <!-- Form tìm kiếm -->
+            <form method="get" class="mb-4">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="start_date">Từ ngày:</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="end_date">Đến ngày:</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="search">Tìm kiếm:</label>
+                        <input type="text" class="form-control" id="search" name="search" placeholder="Nhập tên người dùng..." value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary form-control">Tìm kiếm</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Bảng chấm công -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Ngày</th>
+                            <th>Người dùng</th>
+                            <th>Check in</th>
+                            <th>Check out</th>
+                            <th>Ảnh check in</th>
+                            <th>Ảnh check out</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td>{{ record.date|date:"d/m/Y" }}</td>
+                            <td>{{ record.user.get_full_name|default:record.user.username }}</td>
+                            <td>{{ record.check_in|date:"H:i:s"|default:"-" }}</td>
+                            <td>{{ record.check_out|date:"H:i:s"|default:"-" }}</td>
+                            <td>
+                                {% if record.check_in_face %}
+                                <img src="{{ record.check_in_face.url }}" alt="Check in face" class="img-thumbnail" style="max-width: 100px;">
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.check_out_face %}
+                                <img src="{{ record.check_out_face.url }}" alt="Check out face" class="img-thumbnail" style="max-width: 100px;">
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">Không có dữ liệu chấm công</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
