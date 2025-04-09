@@ -43,7 +43,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .serializers import AttendanceRecordSerializer
 from django.utils.dateparse import parse_date
-
+from django.http import StreamingHttpResponse
 mpl.use('Agg')
 
 # Định nghĩa RTSP stream URL, hãy thay đổi URL này theo cấu hình của bạn.
@@ -849,44 +849,6 @@ def add_camera_view(request):
         form = AddCameraForm()
     
     return render(request, 'recognition/add_camera.html', {'form': form})
-
-@login_required
-def test_roi_view(request):
-    if request.user.username != 'admin':
-        return redirect('not-authorised')
-
-    if request.method == 'POST':
-        form = VideoRoiForm(request.POST)
-        if form.is_valid():
-            camera_config = form.cleaned_data['camera']
-            video_source = camera_config.source
-            selected_roi = camera_config.get_roi_tuple()
-
-            if not selected_roi:
-                messages.error(request, f"Camera '{camera_config.name}' chưa được cấu hình ROI. Vui lòng cấu hình ROI trước.")
-                return redirect('test-roi')
-
-            try:
-                # Test nhận diện với ROI đã chọn
-                recognized_dict = video_roi_processor.test_roi_recognition(
-                    video_source=video_source,
-                    roi=selected_roi,
-                    show_window=True
-                )
-                
-                if recognized_dict:
-                    recognized_names = ", ".join(recognized_dict.keys())
-                    messages.success(request, f"Test thành công! Người được nhận diện: {recognized_names}")
-                else:
-                    messages.info(request, "Không nhận diện được ai trong vùng ROI đã chọn.")
-            except Exception as e:
-                messages.error(request, f"Lỗi khi test ROI: {e}")
-
-            return redirect('test-roi')
-
-    # Cho GET request
-    form = VideoRoiForm()
-    return render(request, 'recognition/test_roi.html', {'form': form})
 
 @login_required
 def attendance_records(request):

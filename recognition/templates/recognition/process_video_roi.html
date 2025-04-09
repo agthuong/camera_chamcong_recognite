@@ -114,7 +114,6 @@
                         <div class="form-group mt-4 text-center">
                             <button class="btn btn-primary" type="submit">Bắt đầu Xử lý</button>
                              <button type="button" id="configure-roi-button" class="btn btn-secondary ml-2">Cấu hình ROI cho Camera</button>
-                             <a href="{% url 'test-roi' %}" class="btn btn-info ml-2">Test ROI</a>
                         </div>
                     </form> <!-- Kết thúc form chính -->
 
@@ -124,7 +123,6 @@
                     </p>
                 </div>
                 <div class="card-footer text-center">
-                    <a href="{% url 'dashboard' %}" class="btn btn-secondary btn-sm">Quay lại Dashboard</a>
                     <a href="{% url 'train' %}" id="train-button" class="btn btn-info btn-sm">Huấn luyện Model</a>
                 </div>
             </div>
@@ -223,6 +221,25 @@
         
         // Gán ID cho select để dễ lấy giá trị (Crispy thường tạo là id_FIELDNAME)
         var cameraSelect = $('#id_camera'); 
+        var modeSelect = $('#id_mode');
+        var usernameField = $('#div_id_username');
+
+        // Ẩn/hiện trường username dựa vào mode
+        function toggleUsernameField() {
+            if (modeSelect.val() === 'collect') {
+                usernameField.show();
+            } else {
+                usernameField.hide();
+            }
+        }
+
+        // Khởi đầu ẩn/hiện dựa trên giá trị ban đầu
+        toggleUsernameField();
+
+        // Khi thay đổi mode
+        modeSelect.change(function() {
+            toggleUsernameField();
+        });
 
         // Đóng alert
         $('.alert .close').on('click', function(e) {

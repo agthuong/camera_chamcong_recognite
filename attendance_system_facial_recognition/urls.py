@@ -30,7 +30,6 @@ urlpatterns = [
     path('process_video_roi/', recog_views.process_video_roi_view, name='process-video-roi'),
     path('select_roi/<int:camera_id>/', recog_views.select_roi_view, name='select-roi'),
     path('add_camera/', recog_views.add_camera_view, name='add-camera'),
-    path('test_roi/', recog_views.test_roi_view, name='test-roi'),
     path('attendance_records/', recog_views.attendance_records, name='attendance-records'),
     path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='recognition/home.html'), name='logout'),
