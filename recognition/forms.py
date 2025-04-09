@@ -30,18 +30,23 @@ class VideoRoiForm(forms.Form):
         queryset=CameraConfig.objects.all(), 
         label='Chọn Camera',
         empty_label="-- Chọn một Camera đã cấu hình --",
-        widget=forms.Select(attrs={'class': 'form-control'}) # Thêm class để styling nếu cần
+        widget=forms.Select(attrs={'class': 'form-control'})
     )
     mode = forms.ChoiceField(
         label='Chế độ xử lý',
-        choices=[('collect', 'Thu thập dữ liệu'), ('recognize', 'Nhận diện')],
+        choices=[
+            ('stream', 'Chỉ Stream Video'), 
+            ('recognize', 'Nhận diện'),
+            ('collect', 'Thu thập dữ liệu')
+        ],
+        initial='stream',
         widget=forms.RadioSelect
     )
     username = forms.CharField(
-        label='Username (nếu Thu thập dữ liệu)', 
+        label='Username (cho Thu thập dữ liệu)',
         max_length=30, 
-        required=False, 
-        help_text='Nhập tên người dùng cần thu thập dữ liệu.',
+        required=False,
+        help_text='Chỉ cần nhập khi chọn chế độ Thu thập dữ liệu.',
         widget=forms.TextInput(attrs={'placeholder': 'Nhập username'})
     )
 
@@ -52,16 +57,10 @@ class VideoRoiForm(forms.Form):
 
         if mode == 'collect' and not username:
             raise forms.ValidationError(
-                "Vui lòng nhập Username khi chọn chế độ 'Thu thập dữ liệu'."
+                "Vui lòng nhập Username khi chọn chế độ 'Thu thập dữ liệu'.",
+                code='username_required_for_collect'
             )
         
-        # Kiểm tra xem camera đã chọn có ROI chưa (tùy chọn, có thể kiểm tra trong view)
-        # camera = cleaned_data.get('camera')
-        # if camera and not camera.get_roi_tuple():
-        #     raise forms.ValidationError(
-        #         f"Camera '{camera.name}' chưa được cấu hình ROI. Vui lòng vào trang Admin để cấu hình."
-        #     )
-
         return cleaned_data
 
 # Form để thêm Camera mới từ giao diện người dùng

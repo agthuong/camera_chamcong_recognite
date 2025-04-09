@@ -59,21 +59,57 @@
         .video-container {
             position: relative;
             width: 100%;
-            /* padding-bottom: 56.25%; /* 16:9 aspect ratio */
-            background-color: #000;
+            background-color: #222; /* Darker background */
             margin-bottom: 1rem;
+            min-height: 300px; /* Ensure minimum height */
+            display: flex; /* Use flexbox for centering */
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; /* Hide overflow */
         }
         .video-container img {
             width: 100%;
             height: auto;
             display: block;
+            max-width: 100%; /* Ensure image doesn't exceed container */
+            max-height: 600px; /* Limit max height if needed */
         }
+        .video-placeholder-text {
+            position: absolute; /* Overlay text */
+            color: #aaa;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+        /* Hide placeholder text when the image source is the video feed */
+        .video-container img[src*="video-feed"] + .video-placeholder-text {
+            display: none;
+        }
+        /* Hide placeholder image when video feed is active (can use JS too) */
+        /* Optional: Add class via JS when processing starts */
+        .is-streaming .video-placeholder-text {
+             display: none;
+        }
+
+        /* Ensure username field group is initially hidden if not collect */
+        #username-field-group:not(.mode-collect) {
+            display: none;
+        }
+
         .control-buttons button {
             margin-right: 5px;
         }
+        /* Style cho div username khi được di chuyển (tùy chọn) */
+        #div_id_username.moved-username-field {
+            margin-left: 25px; 
+            margin-top: 5px; /* Tăng khoảng cách trên */
+            margin-bottom: 15px; 
+            border-left: 2px solid #eee; 
+            padding-left: 15px;
+            padding-top: 5px; /* Thêm padding trên nếu cần */
+        }
     </style>
 </head>
-<body>
+<body data-is-processing="{% if is_processing %}true{% else %}false{% endif %}">
 
 <div class="container-fluid mt-4"> <!-- Sử dụng container-fluid để rộng hơn -->
     <div class="row">
@@ -92,14 +128,18 @@
                      </form>
                 </div>
                 <div class="card-body">
-                    <div class="video-container">
-                        <!-- Thẻ img để hiển thị video stream -->
-                        {% if is_processing %}
-                             <img id="video-stream" src="{% url 'video-feed' %}" alt="Video Stream">
-                        {% else %}
-                             <img id="video-stream" src="{% static 'recognition/img/placeholder.png' %}" alt="Video Stream Stopped"> <!-- Ảnh placeholder -->
-                        {% endif %}
-                    </div>
+                    <div class="video-container {% if is_processing %}is-streaming{% endif %}"> <!-- Add class if streaming -->
+                         <!-- Image tag for video stream or placeholder -->
+                        <img id="video-stream" 
+                             src="{% if is_processing %}{% url 'video-feed' %}{% else %}{% static 'recognition/img/placeholder.png' %}{% endif %}" 
+                             alt="Video Stream Area">
+                        <!-- Placeholder text overlay -->
+                        <div class="video-placeholder-text">
+                             {% if not is_processing %}
+                             Vui lòng chọn camera và bắt đầu xử lý.
+                             {% endif %}
+                         </div>
+                     </div>
                 </div>
              </div>
         </div>
@@ -142,7 +182,8 @@
                          <div class="form-group">
                             {{ form.mode|as_crispy_field }}
                         </div>
-                         <div class="form-group" id="username-field-group">
+                         <!-- Username field group - Sẽ được di chuyển bằng JS -->
+                         <div class="form-group {% if form.mode.value != 'collect' %}d-none{% endif %}" id="div_id_username">
                              {{ form.username|as_crispy_field }}
                         </div>
 
@@ -217,102 +258,115 @@
     $(document).ready(function() {
         var cameraSelect = $('#id_camera');
         var modeSelect = $('#id_mode');
-        var usernameFieldGroup = $('#username-field-group'); // Div chứa trường username
+        var usernameFieldGroup = $('#div_id_username');
         var processForm = $("#process-form");
         var startButton = processForm.find("button[type='submit']");
-        var stopButton = $("form button:contains('Dừng Xử lý')"); // Tìm nút Stop
+        var stopButton = $("form button:contains('Dừng Xử lý')");
         var videoStreamImg = $("#video-stream");
-        var placeholderSrc = "{% static 'recognition/img/placeholder.png' %}"; // Cache placeholder src
+        var videoContainer = $(".video-container");
+        var placeholderText = $(".video-placeholder-text");
+        var placeholderSrc = "{% static 'recognition/img/placeholder.png' %}";
         var videoFeedUrl = "{% url 'video-feed' %}";
+        var collectRadioButtonLabel; // Biến để lưu label của radio 'collect'
 
-        // Ẩn/hiện trường username dựa vào mode
+        // --- Move Username Field --- 
+        // Tìm input radio có giá trị 'collect' và label tương ứng của nó
+        try {
+             collectRadioButtonLabel = $('input[name="mode"][value="collect"]').closest('.form-check').find('label');
+             if (collectRadioButtonLabel.length > 0 && usernameFieldGroup.length > 0) {
+                 // Di chuyển div username ngay sau label của radio 'collect'
+                 usernameFieldGroup.insertAfter(collectRadioButtonLabel).addClass('moved-username-field'); 
+                 console.log("Moved username field after 'collect' radio label.");
+             } else {
+                 console.warn("Could not find 'collect' radio label or username field group to move.");
+             }
+        } catch (e) {
+             console.error("Error moving username field:", e);
+        }
+
+        // --- Function to toggle Username field --- 
         function toggleUsernameField() {
-            if (modeSelect.val() === 'collect') {
-                usernameFieldGroup.show();
+            // Lấy giá trị mode được chọn trực tiếp từ radio buttons
+            var selectedMode = $('input[name="mode"]:checked').val();
+            console.log("Mode changed to:", selectedMode);
+            if (selectedMode === 'collect') {
+                console.log("Showing username field");
+                usernameFieldGroup.removeClass('d-none');
             } else {
-                usernameFieldGroup.hide();
+                console.log("Hiding username field");
+                usernameFieldGroup.addClass('d-none');
             }
         }
-        toggleUsernameField(); // Chạy lần đầu
-        modeSelect.change(toggleUsernameField); // Chạy khi mode thay đổi
+        toggleUsernameField(); // Initial check
+        // Gắn sự kiện change vào TẤT CẢ radio buttons trong group 'mode'
+        $('input[name="mode"]').change(toggleUsernameField); 
 
-        // Đóng alert
         $('.alert .close').on('click', function(e) {
             $(this).parent().alert('close');
         });
 
-        // Cảnh báo nút Train
         $("#train-button").click(function(e){
-            if (!confirm("Bắt đầu quá trình huấn luyện? Việc này có thể mất vài phút và không thể dừng.")) {
-                e.preventDefault(); // Ngăn chặn nếu người dùng hủy
+            if (!confirm("Bắt đầu huấn luyện? Việc này có thể mất vài phút.")) {
+                e.preventDefault();
             }
         });
 
-        // --- Xử lý link Cấu hình ROI ---
         $("#configure-roi-link").click(function(e){
-            e.preventDefault(); // Ngăn link chuyển trang
+            e.preventDefault();
             var selectedCameraId = cameraSelect.val();
             if (!selectedCameraId) {
-                alert("Vui lòng chọn một camera trước khi cấu hình ROI.");
-                return;
+                alert("Vui lòng chọn camera trước."); return;
             }
             var selectUrl = `/select_roi/${selectedCameraId}/`;
-            alert("Mở cửa sổ chọn ROI cho camera đã chọn. Kiểm tra cửa sổ OpenCV và làm theo hướng dẫn...");
+            alert("Mở cửa sổ chọn ROI. Kiểm tra cửa sổ OpenCV...");
             window.location.href = selectUrl;
         });
 
-        // --- Xử lý Submit Form Bắt đầu ---
         processForm.submit(function(e) {
-            var selectedCameraId = cameraSelect.val();
-            if (!selectedCameraId) {
-                alert("Vui lòng chọn camera.");
-                e.preventDefault();
-                return false;
+            if (!cameraSelect.val()) {
+                alert("Vui lòng chọn camera."); e.preventDefault(); return false;
             }
-            var mode = modeSelect.val();
-            var username = $("#id_username").val();
-            if (mode === 'collect' && !username) {
-                 alert("Vui lòng nhập Username khi chọn chế độ Thu thập dữ liệu.");
-                 e.preventDefault();
-                 return false;
+            if (modeSelect.val() === 'collect' && !$("#id_username").val()) {
+                 alert("Vui lòng nhập Username cho chế độ Thu thập."); e.preventDefault(); return false;
             }
-            // Vô hiệu hóa nút Start và kích hoạt nút Stop (giao diện)
-            startButton.prop('disabled', true);
+            
+            startButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Bắt đầu...');
             stopButton.prop('disabled', false);
-            // Thay ảnh placeholder bằng stream
-            videoStreamImg.attr("src", videoFeedUrl + "?t=" + new Date().getTime()); // Thêm timestamp để tránh cache
-
-            // Submit form để Django xử lý phía server
+            placeholderText.hide();
+            videoContainer.addClass('is-streaming');
+            videoStreamImg.attr("src", videoFeedUrl + "?ts=" + new Date().getTime());
+            
             return true;
         });
 
-         // --- Xử lý khi trang tải với tiến trình đang chạy --- 
-        {% if is_processing %}
+        if ($("body").data("is-processing")) {
              startButton.prop('disabled', true);
              stopButton.prop('disabled', false);
-             // Đảm bảo img src là URL video feed
+             placeholderText.hide();
+             videoContainer.addClass('is-streaming');
              if (videoStreamImg.attr('src') !== videoFeedUrl) {
-                 videoStreamImg.attr('src', videoFeedUrl + "?t=" + new Date().getTime());
+                 videoStreamImg.attr('src', videoFeedUrl + "?ts=" + new Date().getTime());
              }
-        {% else %}
-             startButton.prop('disabled', false);
+        } else {
+             startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu Xử lý');
              stopButton.prop('disabled', true);
-             // Đảm bảo img src là placeholder
+             placeholderText.show();
+             videoContainer.removeClass('is-streaming');
               if (videoStreamImg.attr('src') !== placeholderSrc) {
                  videoStreamImg.attr('src', placeholderSrc);
              }
-        {% endif %}
+        }
 
-        // Optional: Reload image on error to try reconnecting (simple approach)
-        // videoStreamImg.on('error', function() {
-        //     console.log("Stream error, attempting reload...");
-        //     setTimeout(() => {
-        //         // Only reload if we are supposed to be processing
-        //         if (stopButton.prop('disabled') === false) {
-        //              $(this).attr('src', videoFeedUrl + "?t=" + new Date().getTime());
-        //         }
-        //     }, 5000); // Wait 5 seconds before retrying
-        // });
+        videoStreamImg.on('error', function() {
+            if (videoContainer.hasClass('is-streaming')) {
+                console.error("Video stream error or stopped.");
+                $(this).attr('src', placeholderSrc);
+                placeholderText.text("Lỗi kết nối stream hoặc đã dừng.").show();
+                 startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu Xử lý');
+                 stopButton.prop('disabled', true);
+                 videoContainer.removeClass('is-streaming');
+            }
+        });
 
     });
 </script>

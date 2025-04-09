@@ -718,32 +718,29 @@ def view_my_attendance_employee_login(request):
 
 @login_required
 def process_video_roi_view(request):
-    global processing_thread, stop_processing_event # Vẫn cần khai báo global để sửa đổi
+    global processing_thread, stop_processing_event
     if not request.user.is_superuser:
         return redirect('not-authorised')
 
-    # --- Xử lý yêu cầu POST (Bắt đầu/Dừng xử lý) ---
     if request.method == 'POST':
         action = request.POST.get('action')
         
-        # --- Dừng xử lý --- 
         if action == 'stop':
             if processing_thread and processing_thread.is_alive():
                 print("[View] Gửi tín hiệu dừng...")
-                stop_processing_event.set() # Gửi tín hiệu dừng
-                processing_thread.join(timeout=5.0) # Đợi thread kết thúc
+                stop_processing_event.set()
+                processing_thread.join(timeout=5.0)
                 if processing_thread.is_alive():
                      print("[View] Cảnh báo: Thread xử lý không dừng kịp thời.")
                 else:
                      print("[View] Thread xử lý đã dừng.")
                 processing_thread = None
-                video_roi_processor.stream_output.stop_stream() # Đảm bảo dừng stream
+                video_roi_processor.stream_output.stop_stream()
                 messages.info(request, 'Đã dừng xử lý video.')
             else:
                 messages.warning(request, 'Không có tiến trình nào đang chạy để dừng.')
             return redirect('process-video-roi')
         
-        # --- Bắt đầu xử lý --- 
         elif action == 'start':
              if processing_thread and processing_thread.is_alive():
                  messages.warning(request, 'Tiến trình xử lý đã chạy. Vui lòng dừng trước khi bắt đầu lại.')
@@ -752,7 +749,7 @@ def process_video_roi_view(request):
              form = VideoRoiForm(request.POST)
              if form.is_valid():
                  camera = form.cleaned_data['camera']
-                 mode = form.cleaned_data['mode'] # Chế độ xử lý (collect, recognize, stream)
+                 mode = form.cleaned_data['mode']
                  username = form.cleaned_data.get('username')
                  
                  if mode == 'collect' and not username:
@@ -760,14 +757,15 @@ def process_video_roi_view(request):
                      return redirect('process-video-roi')
                  
                  roi = camera.get_roi_tuple()
-                 # Cho phép stream không cần ROI, nhưng collect/recognize thì cần
                  if mode in ['collect', 'recognize'] and not roi:
                      messages.error(request, f'Camera {camera.name} chưa được cấu hình ROI. Cần ROI cho chế độ {mode}.')
                      return redirect('process-video-roi')
                  
-                 # Reset cờ dừng và khởi tạo thread
+                 request.session['last_camera_id'] = camera.id
+                 request.session['last_mode'] = mode
+                 
                  stop_processing_event.clear()
-                 video_roi_processor.stream_output.start_stream() # Bật stream output
+                 video_roi_processor.stream_output.start_stream()
                  
                  print(f"[View] Bắt đầu thread xử lý (Mode: {mode}, Camera: {camera.name}, ROI: {roi})")
                  processing_thread = threading.Thread(
@@ -776,39 +774,42 @@ def process_video_roi_view(request):
                          camera.source,
                          mode,
                          roi,
-                         stop_processing_event, # Truyền sự kiện dừng
-                         video_roi_processor.stream_output, # Truyền output handler
-                         username, # Có thể là None nếu mode không phải collect
+                         stop_processing_event,
+                         video_roi_processor.stream_output,
+                         username,
                      ),
-                     daemon=True # Thread sẽ tự kết thúc khi chương trình chính thoát
+                     daemon=True
                  )
                  processing_thread.start()
                  messages.success(request, f'Đã bắt đầu xử lý video ở chế độ: {mode}.')
-                 # Không cần đợi thread ở đây, redirect ngay
                  return redirect('process-video-roi')
              else:
-                 # Form không hợp lệ khi nhấn Start
+                 print("--- FORM ERRORS ---")
+                 print(form.errors)
+                 print("-------------------")
                  messages.error(request, "Dữ liệu form không hợp lệ để bắt đầu.")
-                 # Render lại trang với form lỗi
-                 context = {
-                    'form': form, # Hiển thị lỗi form
-                    'is_processing': False, # Giả sử chưa chạy
-                    'records': AttendanceRecord.objects.all().order_by('-date', '-check_in')[:10] # Hiển thị vài bản ghi
-                 }
+                 context = { 'form': form, 'is_processing': False, 'records': AttendanceRecord.objects.all().order_by('-date', '-check_in')[:10] }
                  return render(request, 'recognition/process_video_roi.html', context)
         else:
              messages.error(request, "Hành động không hợp lệ.")
              return redirect('process-video-roi')
              
-    # --- Xử lý yêu cầu GET (Hiển thị trang) --- 
     else:
-        form = VideoRoiForm() # Form trống cho GET request
+        last_camera_id = request.session.get('last_camera_id')
+        last_mode = request.session.get('last_mode', 'stream')
+        
+        initial_data = {'mode': last_mode}
+        if last_camera_id:
+            try:
+                initial_data['camera'] = CameraConfig.objects.get(pk=last_camera_id)
+            except CameraConfig.DoesNotExist:
+                 request.session.pop('last_camera_id', None)
+
+        form = VideoRoiForm(initial=initial_data)
         is_processing = processing_thread is not None and processing_thread.is_alive()
 
-    # Lấy dữ liệu chấm công gần đây (có thể giới hạn lại nếu nhiều)
-    records = AttendanceRecord.objects.all().order_by('-date', '-check_in')[:20] # Lấy 20 bản ghi mới nhất
+    records = AttendanceRecord.objects.all().order_by('-date', '-check_in')[:20]
     
-    # Xử lý tìm kiếm (giữ nguyên logic tìm kiếm của bạn)
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     search_query = request.GET.get('search')
@@ -834,7 +835,6 @@ def process_video_roi_view(request):
     }
     return render(request, 'recognition/process_video_roi.html', context)
 
-# View cập nhật ROI cho CameraConfig cụ thể
 @login_required
 def select_roi_view(request, camera_id):
     if request.user.username != 'admin':
@@ -852,7 +852,6 @@ def select_roi_view(request, camera_id):
     selected_roi_tuple = video_roi_processor.select_roi_from_source(video_source)
 
     if selected_roi_tuple:
-        # Lưu ROI vào database
         try:
              rx, ry, rw, rh = selected_roi_tuple
              camera_config.roi_x = rx
@@ -866,9 +865,8 @@ def select_roi_view(request, camera_id):
     else:
         messages.warning(request, f"Đã hủy chọn ROI hoặc không thể mở video cho camera '{camera_config.name}'. ROI hiện tại không thay đổi.")
 
-    return redirect('process-video-roi') # Quay lại trang form chính
+    return redirect('process-video-roi')
 
-# View mới để thêm Camera Config từ UI
 @login_required
 def add_camera_view(request):
     if request.user.username != 'admin':
@@ -878,48 +876,36 @@ def add_camera_view(request):
         form = AddCameraForm(request.POST)
         if form.is_valid():
             try:
-                form.save() # Lưu CameraConfig mới
+                form.save()
                 messages.success(request, f"Đã thêm camera '{form.cleaned_data['name']}' thành công.")
-                # Chuyển hướng đến trang ROI để họ có thể chọn camera mới
                 return redirect('process-video-roi') 
             except Exception as e:
-                # Xử lý lỗi nếu tên hoặc nguồn bị trùng (do unique=True trong model)
                 error_message = f"Lỗi khi thêm camera: {e}. Tên hoặc Nguồn có thể đã tồn tại."
                 print(f"[Add Camera View] {error_message}")
                 messages.error(request, error_message)
-                # Hiển thị lại form với lỗi
                 return render(request, 'recognition/add_camera.html', {'form': form})
         else:
-            # Form không hợp lệ
             messages.error(request, "Dữ liệu nhập không hợp lệ. Vui lòng kiểm tra lại.")
     else:
-        # Cho GET request, hiển thị form trống
         form = AddCameraForm()
     
     return render(request, 'recognition/add_camera.html', {'form': form})
 
 @login_required
 def attendance_records(request):
-    """
-    Hiển thị bảng chấm công
-    """
     if request.user.username != 'admin':
         return redirect('not-authorised')
         
-    # Lấy ngày bắt đầu và kết thúc từ request
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
-    # Lấy tất cả bản ghi chấm công
     records = AttendanceRecord.objects.all()
     
-    # Lọc theo ngày nếu có
     if start_date:
         records = records.filter(date__gte=start_date)
     if end_date:
         records = records.filter(date__lte=end_date)
         
-    # Lọc theo tên người dùng nếu có
     search_query = request.GET.get('search')
     if search_query:
         records = records.filter(
@@ -928,7 +914,6 @@ def attendance_records(request):
             Q(user__last_name__icontains=search_query)
         )
     
-    # Sắp xếp theo ngày và thời gian check in
     records = records.order_by('-date', '-check_in')
     
     context = {
@@ -940,42 +925,28 @@ def attendance_records(request):
     
     return render(request, 'recognition/attendance_records.html', context)
 
-# --- Video Stream View ---
 def generate_frames():
-    """Generator function to yield JPEG encoded frames."""
     print("[Stream] Bắt đầu generate_frames")
     while True:
         frame_bytes = video_roi_processor.stream_output.get_frame_bytes()
         if frame_bytes:
-            # Yield the frame in the required format for multipart response
             yield (
                 b'--frame\r\n'
                 b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n\r\n'
             )
         else:
-            # Nếu không có frame, đợi một chút
-            # print("[Stream] Không có frame, đợi...")
-            time.sleep(0.05) # Giảm tải CPU khi không có frame mới
-            # Hoặc có thể yield một ảnh placeholder
+            time.sleep(0.05)
 
-@login_required # Đảm bảo chỉ người dùng đăng nhập mới xem được stream
+@login_required
 def video_feed(request):
-    """View function that returns the MJPEG stream."""
     print("[Stream] Yêu cầu video_feed")
-    # Check if processing is running? (Optional)
-    # if not video_roi_processor.stream_output.running:
-    #    return HttpResponse("Video processing is not running.")
 
     return StreamingHttpResponse(
         generate_frames(),
         content_type='multipart/x-mixed-replace; boundary=frame'
     )
 
-# API Views
 class AttendanceRecordList(generics.ListAPIView):
-    """
-    API endpoint để lấy tất cả dữ liệu chấm công 
-    """
     queryset = AttendanceRecord.objects.all().order_by('-date', '-check_in')
     serializer_class = AttendanceRecordSerializer
     filter_backends = [filters.SearchFilter]
@@ -984,7 +955,6 @@ class AttendanceRecordList(generics.ListAPIView):
     def get_queryset(self):
         queryset = AttendanceRecord.objects.all().order_by('-date', '-check_in')
         
-        # Lọc theo ngày
         start_date = self.request.query_params.get('start_date', None)
         end_date = self.request.query_params.get('end_date', None)
         
@@ -1002,7 +972,6 @@ class AttendanceRecordList(generics.ListAPIView):
             except Exception:
                 pass
         
-        # Lọc theo username
         username = self.request.query_params.get('username', None)
         if username:
             queryset = queryset.filter(user__username=username)
@@ -1010,16 +979,12 @@ class AttendanceRecordList(generics.ListAPIView):
         return queryset
 
 class UserAttendanceRecordList(generics.ListAPIView):
-    """
-    API endpoint để lấy dữ liệu chấm công của một người dùng cụ thể
-    """
     serializer_class = AttendanceRecordSerializer
     
     def get_queryset(self):
         username = self.kwargs['username']
         queryset = AttendanceRecord.objects.filter(user__username=username).order_by('-date')
         
-        # Lọc theo ngày
         start_date = self.request.query_params.get('start_date', None)
         end_date = self.request.query_params.get('end_date', None)
         
@@ -1041,9 +1006,6 @@ class UserAttendanceRecordList(generics.ListAPIView):
 
 @api_view(['GET'])
 def today_attendance(request):
-    """
-    API endpoint để lấy dữ liệu chấm công của ngày hôm nay
-    """
     today = datetime.now().date()
     records = AttendanceRecord.objects.filter(date=today)
     serializer = AttendanceRecordSerializer(records, many=True)
@@ -1051,10 +1013,6 @@ def today_attendance(request):
 
 @api_view(['GET'])
 def my_attendance(request):
-    """
-    API endpoint để lấy dữ liệu chấm công của một người dùng theo tham số username
-    """
-    # Lấy tham số từ request
     username = request.query_params.get('username', None)
     start_date = request.query_params.get('start_date', None)
     end_date = request.query_params.get('end_date', None)

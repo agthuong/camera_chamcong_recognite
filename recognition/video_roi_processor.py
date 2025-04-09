@@ -344,74 +344,70 @@ class VideoSourceHandler:
 def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, username=None,
                            max_samples=DEFAULT_MAX_SAMPLES,
                            recognition_threshold=DEFAULT_RECOGNITION_THRESHOLD):
-    """
-    Xử lý video (thu thập hoặc nhận diện) trong vùng ROI đã chọn.
-    Đưa frame đã xử lý (đã vẽ hoặc gốc) vào output_handler để stream.
-
-    Args:
-        video_source: Đường dẫn video hoặc ID webcam
-        mode: 'collect', 'recognize', hoặc 'stream' (mới)
-        roi: Tuple (x, y, w, h) xác định vùng ROI
-        stop_event: threading.Event để dừng xử lý từ bên ngoài
-        output_handler: Instance của StreamOutput để đặt frame JPEG
-        username: Bắt buộc nếu mode là 'collect'
-        max_samples: Số mẫu tối đa cần thu thập
-        recognition_threshold: Ngưỡng nhận diện
-    """
-    output_handler.start_stream() # Báo cho output handler biết là đang stream
+    
+    # --- DEBUG PRINTS --- 
+    print("-"*30)
+    print(f"[PROCESS START] Mode: {mode}, Source: {video_source}, ROI: {roi}, Username: {username}")
+    print(f"[PROCESS START] stop_event set: {stop_event.is_set()}")
+    # --- END DEBUG PRINTS --- 
+    
+    output_handler.start_stream() 
 
     if mode == 'collect' and not username:
-        print("Lỗi: Cần cung cấp username cho chế độ 'collect'")
+        print("[PROCESS ERROR] Cần cung cấp username cho chế độ 'collect'")
         output_handler.stop_stream()
         return 0
-    if roi is None and mode != 'stream': # Cho phép stream không cần ROI
-         print("Lỗi: Cần có ROI cho chế độ 'collect' hoặc 'recognize'")
+    if roi is None and mode != 'stream':
+         print("[PROCESS ERROR] Cần có ROI cho chế độ 'collect' hoặc 'recognize'")
          output_handler.stop_stream()
          return 0 if mode == 'collect' else {}
     elif roi is not None and len(roi) != 4:
-         print("Lỗi: ROI không hợp lệ")
+         print("[PROCESS ERROR] ROI không hợp lệ")
          output_handler.stop_stream()
          return 0 if mode == 'collect' else {}
 
-    # Giải nén ROI (nếu có)
-    rx, ry, rw, rh = (0,0,0,0) # Giá trị mặc định nếu không có ROI (chế độ stream)
+    rx, ry, rw, rh = (0,0,0,0) 
     if roi:
         rx, ry, rw, rh = [int(v) for v in roi]
 
-    # Khởi tạo các công cụ phát hiện khuôn mặt (chỉ khi cần)
     detector, predictor, fa = None, None, None
     svc, encoder = None, None
     if mode in ['collect', 'recognize']:
-        print("[INFO] Đang tải bộ phát hiện khuôn mặt...")
+        print("[PROCESS INFO] Đang tải bộ phát hiện khuôn mặt...")
         try:
             detector = dlib.get_frontal_face_detector()
             if not os.path.exists(PREDICTOR_PATH):
-                print(f"Lỗi: Không tìm thấy file shape predictor tại: {PREDICTOR_PATH}")
+                print(f"[PROCESS ERROR] Không tìm thấy file shape predictor tại: {PREDICTOR_PATH}")
                 output_handler.stop_stream()
                 return 0 if mode == 'collect' else {}
             predictor = dlib.shape_predictor(PREDICTOR_PATH)
             fa = FaceAligner(predictor, desiredFaceWidth=FACE_WIDTH)
         except Exception as e:
-            print(f"Lỗi khi khởi tạo dlib/FaceAligner: {e}")
+            print(f"[PROCESS ERROR] Lỗi khi khởi tạo dlib/FaceAligner: {e}")
             output_handler.stop_stream()
             return 0 if mode == 'collect' else {}
 
-    # Thiết lập dựa trên mode
     sample_count = 0
-    recognized_persons = {}  # Cho chế độ recognize
-    recognition_counts = {}  # Theo dõi số lần nhận diện liên tiếp
+    recognized_persons = {}
+    recognition_counts = {}
     output_dir = None
-    last_save_time = {}  # Dictionary để lưu thời gian lưu cuối cùng cho mỗi người
+    last_save_time = {}
 
     if mode == 'collect':
         output_dir = os.path.join(TRAINING_DATA_DIR, username)
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            print(f"Đã tạo thư mục: {output_dir}")
-        print(f"[INFO] Chế độ COLLECT: Sẽ lưu tối đa {max_samples} mẫu vào '{output_dir}'")
+        try:
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+                print(f"[PROCESS INFO] Đã tạo thư mục: {output_dir}")
+            else:
+                print(f"[PROCESS INFO] Thư mục đã tồn tại: {output_dir}")
+        except OSError as e:
+            print(f"[PROCESS ERROR] Không thể tạo thư mục '{output_dir}': {e}")
+            output_handler.stop_stream()
+            return 0
+        print(f"[PROCESS INFO] Chế độ COLLECT: Sẽ lưu tối đa {max_samples} mẫu vào '{output_dir}'")
 
     elif mode == 'recognize':
-        # Tải model SVC và encoder
         if not os.path.exists(SVC_PATH) or not os.path.exists(CLASSES_PATH):
             print("Lỗi: Không tìm thấy file model (svc.sav) hoặc classes (classes.npy). Vui lòng huấn luyện trước.")
             output_handler.stop_stream()
@@ -421,41 +417,38 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 svc = pickle.load(f)
             encoder = LabelEncoder()
             encoder.classes_ = np.load(CLASSES_PATH)
-            # Khởi tạo dictionary theo dõi
             for name in encoder.classes_:
                 recognized_persons[name] = False
                 recognition_counts[name] = 0
-                last_save_time[name] = None  # Khởi tạo thời gian lưu cuối cùng
-            print(f"[INFO] Chế độ RECOGNIZE: Đã tải model cho {len(encoder.classes_)} người.")
+                last_save_time[name] = None
+            print(f"[PROCESS INFO] Chế độ RECOGNIZE: Đã tải model cho {len(encoder.classes_)} người.")
         except Exception as e:
-            print(f"Lỗi khi tải model/classes: {e}")
+            print(f"[PROCESS ERROR] Lỗi khi tải model/classes: {e}")
             output_handler.stop_stream()
             return {}
 
-    # Khởi tạo VideoSourceHandler
-    print(f"[INFO] Khởi tạo luồng video từ nguồn: {video_source}")
+    print(f"[PROCESS INFO] Khởi tạo luồng video từ nguồn: {video_source}")
     video_handler = VideoSourceHandler(video_source)
     if not video_handler.start():
-        print(f"[ERROR] Không thể khởi động VideoSourceHandler cho nguồn: {video_source}")
+        print(f"[PROCESS ERROR] Không thể khởi động VideoSourceHandler cho nguồn: {video_source}")
         output_handler.stop_stream()
         return 0 if mode == 'collect' else recognized_persons
 
     frame_index = 0
-    print(f"[INFO] Bắt đầu xử lý video (Mode: {mode})...")
+    print(f"[PROCESS INFO] Bắt đầu vòng lặp xử lý (Mode: {mode})...")
     try:
-        while not stop_event.is_set(): # Kiểm tra sự kiện dừng
+        while not stop_event.is_set():
             frame = video_handler.get_frame()
             if frame is None:
                 time.sleep(0.01)
                 continue
 
-            frame_to_display = frame.copy() # Frame để vẽ lên và gửi đi
-            roi_frame_for_processing = None # Frame con ROI để xử lý
+            frame_to_display = frame.copy()
+            roi_frame_for_processing = None
 
-            # Nếu có ROI, crop frame để xử lý và vẽ hình chữ nhật lên frame hiển thị
             if roi:
                 orig_h, orig_w = frame.shape[:2]
-                scale = orig_w / FRAME_WIDTH # Giả sử ROI được chọn trên frame có width=FRAME_WIDTH
+                scale = orig_w / FRAME_WIDTH
                 orig_rx = int(rx * scale)
                 orig_ry = int(ry * scale)
                 orig_rw = int(rw * scale)
@@ -466,42 +459,36 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 orig_rh = min(orig_rh, orig_h - orig_ry)
 
                 if orig_rw > 0 and orig_rh > 0:
-                    # Vẽ ROI lên frame_to_display
                     cv2.rectangle(frame_to_display, (orig_rx, orig_ry), (orig_rx + orig_rw, orig_ry + orig_rh), (255, 0, 0), 2)
                     try:
-                        # Chỉ lấy ROI để xử lý nếu mode là collect hoặc recognize
                         if mode in ['collect', 'recognize']:
                             roi_frame_for_processing = frame[orig_ry:orig_ry + orig_rh, orig_rx:orig_rx + orig_rw].copy()
                             if roi_frame_for_processing.size == 0:
-                                roi_frame_for_processing = None # Đặt lại nếu ROI rỗng
+                                roi_frame_for_processing = None
                     except Exception as e:
-                         print(f"[ERROR] Lỗi khi crop ROI: {e}")
+                         print(f"[PROCESS ERROR] Lỗi khi crop ROI: {e}")
                          roi_frame_for_processing = None
                 else:
-                    roi_frame_for_processing = None # ROI không hợp lệ
+                    roi_frame_for_processing = None
 
-            # Chỉ xử lý frame ROI nếu cần và ROI hợp lệ
             if mode in ['collect', 'recognize'] and roi_frame_for_processing is not None:
                 frame_index += 1
                 if frame_index % FRAME_SKIP != 0:
-                    output_handler.set_frame(frame_to_display) # Vẫn gửi frame gốc có vẽ ROI
+                    output_handler.set_frame(frame_to_display)
                     continue
 
                 try:
-                    # Resize roi_frame về kích thước chuẩn để xử lý (nếu cần)
-                    # roi_frame_resized = imutils.resize(roi_frame_for_processing, width=FACE_WIDTH*2) # Ví dụ
-                    roi_frame_resized = roi_frame_for_processing # Sử dụng ROI gốc
+                    roi_frame_resized = roi_frame_for_processing
                     roi_gray = cv2.cvtColor(roi_frame_resized, cv2.COLOR_BGR2GRAY)
                     faces = detector(roi_gray, 0)
                 except Exception as detect_err:
-                    print(f"[ERROR] Lỗi trong quá trình phát hiện khuôn mặt: {detect_err}")
-                    faces = [] # Coi như không có khuôn mặt nếu lỗi
+                    print(f"[PROCESS ERROR] Lỗi trong quá trình phát hiện khuôn mặt: {detect_err}")
+                    faces = []
 
-                detected_in_frame = set() # Reset cho mỗi frame xử lý
+                detected_in_frame = set()
                 if faces:
                     for face in faces:
                         (fx, fy, fw, fh) = face_utils.rect_to_bb(face)
-                        # Tọa độ để vẽ trên frame gốc (frame_to_display)
                         draw_x = orig_rx + int(fx * (orig_rw / roi_frame_resized.shape[1]))
                         draw_y = orig_ry + int(fy * (orig_rh / roi_frame_resized.shape[0]))
                         draw_w = int(fw * (orig_rw / roi_frame_resized.shape[1]))
@@ -510,7 +497,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                         try:
                             face_aligned = fa.align(roi_frame_resized, roi_gray, face)
                         except Exception as align_err:
-                            print(f"[ERROR] Lỗi căn chỉnh mặt: {align_err}")
+                            print(f"[PROCESS ERROR] Lỗi căn chỉnh mặt: {align_err}")
                             continue
 
                         if mode == 'collect':
@@ -518,44 +505,40 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                             img_path = os.path.join(output_dir, f"{username}_{sample_count}.jpg")
                             cv2.imwrite(img_path, face_aligned)
 
-                            # Vẽ lên frame_to_display
                             cv2.rectangle(frame_to_display, (draw_x, draw_y), (draw_x + draw_w, draw_y + draw_h), (0, 255, 0), 1)
                             cv2.putText(frame_to_display, f"Sample: {sample_count}", (draw_x, draw_y - 5),
                                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
 
                             if sample_count >= max_samples:
-                                print(f"[INFO] Đã thu thập đủ {max_samples} mẫu.")
-                                stop_event.set() # Dừng xử lý
+                                print(f"[PROCESS INFO] Đã thu thập đủ {max_samples} mẫu.")
+                                stop_event.set()
                                 break
 
                         elif mode == 'recognize':
                             (pred_idx, prob) = predict(face_aligned, svc)
                             prob_value = float(prob[0])
                             person_name = "Unknown"
-                            color = (0, 0, 255) # Đỏ cho Unknown
+                            color = (0, 0, 255)
 
                             if pred_idx != [-1]:
                                 person_name = encoder.inverse_transform(pred_idx)[0]
                                 detected_in_frame.add(person_name)
-                                color = (0, 255, 0) # Xanh lá nếu nhận diện được
+                                color = (0, 255, 0)
 
-                                if prob_value >= 0.5: # Chỉ tăng count nếu prob đủ cao
+                                if prob_value >= 0.5:
                                     recognition_counts[person_name] = recognition_counts.get(person_name, 0) + 1
                                 else:
-                                    recognition_counts[person_name] = 0 # Reset nếu không chắc chắn
+                                    recognition_counts[person_name] = 0
 
                                 if recognition_counts[person_name] >= recognition_threshold:
                                     if not recognized_persons.get(person_name, False):
                                         print(f"[RECOGNIZED] {person_name}")
                                         recognized_persons[person_name] = True
-                                    # Xử lý chấm công (giữ nguyên logic)
-                                    # ... (logic chấm công hiện tại của bạn) ...
                                     try:
-                                        # Tìm hoặc tạo người dùng
                                         try:
                                             user = User.objects.get(username=person_name)
                                         except User.DoesNotExist:
-                                            print(f"[INFO] Tạo mới người dùng '{person_name}' trong cơ sở dữ liệu.")
+                                            print(f"[PROCESS INFO] Tạo mới người dùng '{person_name}' trong cơ sở dữ liệu.")
                                             user = User.objects.create_user(
                                                 username=person_name,
                                                 password=f"default_{person_name}",
@@ -565,7 +548,6 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         now = timezone.now()
                                         today = now.date()
 
-                                        # Tìm hoặc tạo bản ghi chấm công
                                         record, created = AttendanceRecord.objects.get_or_create(
                                             user=user,
                                             date=today,
@@ -573,18 +555,15 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         )
 
                                         if created:
-                                            # Nếu là check in đầu tiên
                                             face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_in', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
                                             os.makedirs(os.path.dirname(face_path), exist_ok=True)
                                             cv2.imwrite(face_path, face_aligned)
                                             record.check_in_face = os.path.join('attendance_faces', 'check_in', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
                                             record.save()
                                             last_save_time[person_name] = now
-                                            print(f"[INFO] Đã lưu check-in cho '{person_name}'")
+                                            print(f"[PROCESS INFO] Đã lưu check-in cho '{person_name}'")
                                         else:
-                                            # Luôn cập nhật check out
-                                            last_saved = last_save_time.get(person_name) # Lấy thời gian lưu cuối cùng
-                                            # Chỉ cập nhật check out nếu đã qua 10 giây kể từ lần lưu cuối cùng
+                                            last_saved = last_save_time.get(person_name)
                                             if last_saved is None or (now - last_saved).total_seconds() >= 10:
                                                 record.check_out = now
                                                 face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_out', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
@@ -592,64 +571,57 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                                 cv2.imwrite(face_path, face_aligned)
                                                 record.check_out_face = os.path.join('attendance_faces', 'check_out', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
                                                 record.save()
-                                                last_save_time[person_name] = now # Cập nhật thời gian lưu cuối
-                                                print(f"[INFO] Đã cập nhật check-out cho '{person_name}'")
+                                                last_save_time[person_name] = now
+                                                print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}'")
 
                                     except Exception as e:
-                                        print(f"[ERROR] Lỗi khi lưu thông tin chấm công: {e}")
+                                        print(f"[PROCESS ERROR] Lỗi khi lưu thông tin chấm công: {e}")
                                         import traceback
                                         traceback.print_exc()
 
-                                    color = (0, 255, 255) # Vàng nếu đã xác nhận
-                            else: # pred_idx == [-1]
-                                if prob_value > 0: # Hiển thị prob nếu có
+                                    color = (0, 255, 255)
+                            else:
+                                if prob_value > 0:
                                     person_name = f"Unknown ({prob_value:.2f})"
                                 else:
                                     person_name = "Unknown (0.00)"
 
-                            # Vẽ bounding box và tên lên frame_to_display
                             cv2.rectangle(frame_to_display, (draw_x, draw_y), (draw_x + draw_w, draw_y + draw_h), color, 1)
                             cv2.putText(frame_to_display, person_name, (draw_x, draw_y - 5),
                                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
-                    # Reset recognition_counts cho những người không được phát hiện trong frame này
                     if mode == 'recognize':
                          for name in recognition_counts:
                              if name not in detected_in_frame:
                                  recognition_counts[name] = 0
-                # Nếu không có khuôn mặt nào được phát hiện trong frame ROI
                 elif mode == 'recognize':
-                     # Reset tất cả recognition_counts
                      for name in recognition_counts:
                          recognition_counts[name] = 0
 
-            # --- Kết thúc phần xử lý ROI ---
-
-            # Đặt frame cuối cùng (đã vẽ nếu cần) vào output_handler
             output_handler.set_frame(frame_to_display)
 
-            # Ngắt nếu chế độ collect đã xong
             if mode == 'collect' and stop_event.is_set():
                 break
 
-            # Thêm một khoảng nghỉ nhỏ để giảm tải CPU
+            if frame_index % 100 == 0: # Print every 100 frames processed in ROI
+                 print(f"[PROCESS LOOP] Frame index: {frame_index}, Mode: {mode}, stop_event: {stop_event.is_set()}")
+
             time.sleep(0.001)
 
     except Exception as e:
-        print(f"[ERROR] Lỗi không mong đợi trong quá trình xử lý: {e}")
+        print(f"[PROCESS ERROR] Lỗi trong vòng lặp xử lý: {e}")
         import traceback
         traceback.print_exc()
     finally:
-        print("[INFO] Dừng xử lý video thread.")
+        print("[PROCESS INFO] Kết thúc vòng lặp, dừng video handler...")
         video_handler.stop()
-        output_handler.stop_stream() # Báo dừng stream và xóa frame cuối
+        output_handler.stop_stream()
 
-    # Trả về kết quả tùy theo mode
+    print("[PROCESS END] Kết thúc hàm process_video_with_roi")
     if mode == 'collect':
-        print(f"[INFO] Đã lưu tổng cộng {sample_count} mẫu cho {username}.")
+        print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho {username}.")
         return sample_count
     elif mode == 'recognize':
-        # ... (giữ nguyên phần trả về kết quả recognize) ...
         print("--- Kết quả Nhận diện Cuối cùng (khi dừng) ---")
         final_recognized = {name: status for name, status in recognized_persons.items() if status}
         if not final_recognized:
@@ -659,9 +631,8 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 print(f"- {name}")
         print("------------------------------------")
         return final_recognized
-    else: # mode == 'stream'
-         return {} # Không có kết quả cụ thể để trả về
-
+    else:
+        return {}
 
 # --- Example Usage (for testing this module directly) ---
 if __name__ == '__main__':
