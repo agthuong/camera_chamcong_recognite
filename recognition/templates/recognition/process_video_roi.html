@@ -56,26 +56,63 @@
             max-width: 100px;
             max-height: 100px;
         }
+        .video-container {
+            position: relative;
+            width: 100%;
+            /* padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            background-color: #000;
+            margin-bottom: 1rem;
+        }
+        .video-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .control-buttons button {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
 
-<div class="container mt-4">
+<div class="container-fluid mt-4"> <!-- Sử dụng container-fluid để rộng hơn -->
     <div class="row">
-        <!-- Phần xử lý video -->
-        <div class="col-md-6">
+        <!-- Cột Video Stream và Controls (rộng hơn) -->
+        <div class="col-lg-8 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Xử lý Video với Vùng Quan Tâm (ROI)</h4>
+                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Video Stream</h4>
+                     <!-- Nút Stop được đặt ở header -->
+                     <form method="POST" style="display: inline;">
+                         {% csrf_token %}
+                         <input type="hidden" name="action" value="stop">
+                         <button type="submit" class="btn btn-danger btn-sm" {% if not is_processing %}disabled{% endif %}>
+                             <i class="fas fa-stop"></i> Dừng Xử lý
+                         </button>
+                     </form>
                 </div>
                 <div class="card-body">
-                    <p class="card-text">
-                        Chọn camera từ danh sách. ROI đã cấu hình sẽ được sử dụng tự động.
-                        Nếu chưa có camera hoặc muốn thêm, nhấn nút "Thêm Camera".
-                    </p>
-                    <hr>
+                    <div class="video-container">
+                        <!-- Thẻ img để hiển thị video stream -->
+                        {% if is_processing %}
+                             <img id="video-stream" src="{% url 'video-feed' %}" alt="Video Stream">
+                        {% else %}
+                             <img id="video-stream" src="{% static 'recognition/img/placeholder.png' %}" alt="Video Stream Stopped"> <!-- Ảnh placeholder -->
+                        {% endif %}
+                    </div>
+                </div>
+             </div>
+        </div>
 
-                    {% if messages %}
+        <!-- Cột Cấu hình và Log/Bảng Chấm công (hẹp hơn) -->
+        <div class="col-lg-4">
+            <!-- Card Cấu hình -->
+            <div class="card shadow-sm mb-4">
+                 <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Cấu hình & Bắt đầu</h4>
+                </div>
+                <div class="card-body">
+                     {% if messages %}
                         {% for message in messages %}
                             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                                 {{ message }}
@@ -84,125 +121,89 @@
                         {% endfor %}
                     {% endif %}
 
-                    <!-- Form chính bắt đầu từ đây -->
                     <form method="POST" id="process-form" novalidate>
-                        {% csrf_token %}
+                         {% csrf_token %}
+                        <input type="hidden" name="action" value="start"> <!-- Action mặc định là start -->
 
                         <!-- Phần chọn Camera và nút Add -->
-                        <div class="camera-section mb-3">
-                            <div class="form-group">
-                                <!-- Render dropdown camera trực tiếp -->
+                         <div class="camera-section mb-3">
+                             <div class="form-group mb-0">
                                 {{ form.camera|as_crispy_field }}
                                 <a href="{% url 'add-camera' %}" class="btn btn-success btn-sm mt-4" title="Thêm Camera Mới">
-                                    <i class="fas fa-plus"></i> <span class="d-none d-md-inline">Thêm</span> <!-- Ẩn chữ trên màn nhỏ -->
+                                    <i class="fas fa-plus"></i>
                                 </a>
                             </div>
-                             <small class="form-text text-muted">
-                                ROI sẽ được lấy tự động từ camera đã chọn. Cấu hình ROI trong trang Admin hoặc dùng nút "Cấu hình ROI" bên dưới.
+                            <small class="form-text text-muted mt-0 mb-2">
+                                ROI sẽ được lấy tự động. <a href="#" id="configure-roi-link">Cấu hình ROI?</a>
                             </small>
                         </div>
-                   
-                        <!-- Hiển thị các trường còn lại của form (Mode, Username) -->
+
+                        <!-- Chế độ xử lý -->
                          <div class="form-group">
                             {{ form.mode|as_crispy_field }}
                         </div>
-                         <div class="form-group">
+                         <div class="form-group" id="username-field-group">
                              {{ form.username|as_crispy_field }}
                         </div>
-                        
-                        <!-- Nút Xử lý và Cấu hình ROI -->
-                        <div class="form-group mt-4 text-center">
-                            <button class="btn btn-primary" type="submit">Bắt đầu Xử lý</button>
-                             <button type="button" id="configure-roi-button" class="btn btn-secondary ml-2">Cấu hình ROI cho Camera</button>
-                        </div>
-                    </form> <!-- Kết thúc form chính -->
 
-                    <hr>
-                    <p class="text-muted small">
-                        <strong>Lưu ý:</strong> Quá trình xử lý video sẽ mở cửa sổ OpenCV trên server.
-                    </p>
-                </div>
-                <div class="card-footer text-center">
-                    <a href="{% url 'train' %}" id="train-button" class="btn btn-info btn-sm">Huấn luyện Model</a>
-                </div>
-            </div>
-        </div>
+                        <!-- Nút Bắt đầu -->
+                        <div class="form-group mt-3 text-center control-buttons">
+                            <button class="btn btn-primary" type="submit" {% if is_processing %}disabled{% endif %}>
+                                 <i class="fas fa-play"></i> Bắt đầu Xử lý
+                             </button>
+                         </div>
+                     </form>
+                     <hr>
+                     <div class="text-center">
+                         <a href="{% url 'train' %}" id="train-button" class="btn btn-info btn-sm">Huấn luyện Model</a>
+                     </div>
+                 </div>
+             </div>
 
-        <!-- Phần bảng chấm công -->
-        <div class="col-md-6">
+            <!-- Card Bảng Chấm Công -->
             <div class="card shadow-sm">
                 <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">Bảng chấm công</h4>
+                    <h4 class="mb-0">Chấm công gần đây</h4>
                 </div>
                 <div class="card-body">
-                    <!-- Form tìm kiếm -->
-                    <form method="get" class="mb-4">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label for="start_date">Từ ngày:</label>
-                                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="end_date">Đến ngày:</label>
-                                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
-                            </div>
-                            <div class="col-md-12 mt-2">
-                                <label for="search">Tìm kiếm:</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" id="search" name="search" placeholder="Nhập tên người dùng..." value="{{ search_query }}">
-                                    <div class="input-group-append">
-                                        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Form tìm kiếm (có thể giữ hoặc bỏ) -->
+                     <form method="get" class="mb-3">
+                         <div class="input-group input-group-sm">
+                             <input type="text" class="form-control" name="search" placeholder="Tìm tên..." value="{{ search_query }}">
+                             <div class="input-group-append">
+                                 <button type="submit" class="btn btn-secondary">Tìm</button>
+                             </div>
+                         </div>
                     </form>
-
                     <!-- Bảng chấm công -->
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
-                            <thead class="thead-light">
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;"> <!-- Giới hạn chiều cao và scroll -->
+                        <table class="table table-sm table-striped table-hover">
+                             <thead class="thead-light sticky-top"> <!-- Header cố định khi scroll -->
                                 <tr>
                                     <th>Ngày</th>
                                     <th>Người dùng</th>
-                                    <th>Check in</th>
-                                    <th>Check out</th>
-                                    <th>Ảnh check in</th>
-                                    <th>Ảnh check out</th>
+                                    <th>In</th>
+                                    <th>Out</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for record in records %}
                                 <tr>
-                                    <td>{{ record.date|date:"d/m/Y" }}</td>
-                                    <td>{{ record.user.get_full_name|default:record.user.username }}</td>
-                                    <td>{{ record.check_in|date:"H:i:s"|default:"-" }}</td>
-                                    <td>{{ record.check_out|date:"H:i:s"|default:"-" }}</td>
-                                    <td>
-                                        {% if record.check_in_face %}
-                                        <img src="{{ record.check_in_face.url }}" alt="Check in face" class="img-thumbnail">
-                                        {% else %}
-                                        -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if record.check_out_face %}
-                                        <img src="{{ record.check_out_face.url }}" alt="Check out face" class="img-thumbnail">
-                                        {% else %}
-                                        -
-                                        {% endif %}
-                                    </td>
+                                     <td>{{ record.date|date:"d/m" }}</td>
+                                    <td>{{ record.user.get_full_name|default:record.user.username|truncatechars:15 }}</td>
+                                    <td>{{ record.check_in|date:"H:i"|default:"-" }}</td>
+                                    <td>{{ record.check_out|date:"H:i"|default:"-" }}</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="6" class="text-center">Không có dữ liệu chấm công</td>
+                                    <td colspan="4" class="text-center text-muted">Chưa có dữ liệu</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
+                 </div>
+             </div>
         </div>
     </div>
 </div>
@@ -211,35 +212,29 @@
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
 <script>
     $(document).ready(function() {
-        // Bỏ code di chuyển dropdown cũ
-        // var cameraDropdown = $("#div_id_camera"); 
-        // $("#camera-dropdown-placeholder").replaceWith(cameraDropdown);
-        // cameraDropdown.find('label').remove(); 
-        // cameraDropdown.find('select').attr('id', 'id_camera_select');
-        
-        // Gán ID cho select để dễ lấy giá trị (Crispy thường tạo là id_FIELDNAME)
-        var cameraSelect = $('#id_camera'); 
+        var cameraSelect = $('#id_camera');
         var modeSelect = $('#id_mode');
-        var usernameField = $('#div_id_username');
+        var usernameFieldGroup = $('#username-field-group'); // Div chứa trường username
+        var processForm = $("#process-form");
+        var startButton = processForm.find("button[type='submit']");
+        var stopButton = $("form button:contains('Dừng Xử lý')"); // Tìm nút Stop
+        var videoStreamImg = $("#video-stream");
+        var placeholderSrc = "{% static 'recognition/img/placeholder.png' %}"; // Cache placeholder src
+        var videoFeedUrl = "{% url 'video-feed' %}";
 
         // Ẩn/hiện trường username dựa vào mode
         function toggleUsernameField() {
             if (modeSelect.val() === 'collect') {
-                usernameField.show();
+                usernameFieldGroup.show();
             } else {
-                usernameField.hide();
+                usernameFieldGroup.hide();
             }
         }
-
-        // Khởi đầu ẩn/hiện dựa trên giá trị ban đầu
-        toggleUsernameField();
-
-        // Khi thay đổi mode
-        modeSelect.change(function() {
-            toggleUsernameField();
-        });
+        toggleUsernameField(); // Chạy lần đầu
+        modeSelect.change(toggleUsernameField); // Chạy khi mode thay đổi
 
         // Đóng alert
         $('.alert .close').on('click', function(e) {
@@ -248,41 +243,76 @@
 
         // Cảnh báo nút Train
         $("#train-button").click(function(e){
-            alert("Bắt đầu quá trình huấn luyện. Việc này có thể mất vài phút. Vui lòng đợi và không đóng trang.");
+            if (!confirm("Bắt đầu quá trình huấn luyện? Việc này có thể mất vài phút và không thể dừng.")) {
+                e.preventDefault(); // Ngăn chặn nếu người dùng hủy
+            }
         });
 
-        // --- Xử lý nút Cấu hình ROI ---
-        $("#configure-roi-button").click(function(){
-            var selectedCameraId = cameraSelect.val(); // Lấy ID từ select#id_camera
+        // --- Xử lý link Cấu hình ROI ---
+        $("#configure-roi-link").click(function(e){
+            e.preventDefault(); // Ngăn link chuyển trang
+            var selectedCameraId = cameraSelect.val();
             if (!selectedCameraId) {
                 alert("Vui lòng chọn một camera trước khi cấu hình ROI.");
                 return;
             }
-            var selectUrl = `/select_roi/${selectedCameraId}/`; // URL cần cập nhật trong urls.py
-            alert("Chuẩn bị mở cửa sổ chọn ROI cho camera đã chọn. Vui lòng kiểm tra cửa sổ OpenCV trên server và làm theo hướng dẫn...");
-            window.location.href = selectUrl; 
+            var selectUrl = `/select_roi/${selectedCameraId}/`;
+            alert("Mở cửa sổ chọn ROI cho camera đã chọn. Kiểm tra cửa sổ OpenCV và làm theo hướng dẫn...");
+            window.location.href = selectUrl;
         });
-        
-        // --- Xử lý Submit Form Chính ---
-         $("#process-form").submit(function(e) {
-             var selectedCameraId = cameraSelect.val();
-             if (!selectedCameraId) {
-                 alert("Vui lòng chọn một camera từ danh sách.");
-                 e.preventDefault(); 
+
+        // --- Xử lý Submit Form Bắt đầu ---
+        processForm.submit(function(e) {
+            var selectedCameraId = cameraSelect.val();
+            if (!selectedCameraId) {
+                alert("Vui lòng chọn camera.");
+                e.preventDefault();
+                return false;
+            }
+            var mode = modeSelect.val();
+            var username = $("#id_username").val();
+            if (mode === 'collect' && !username) {
+                 alert("Vui lòng nhập Username khi chọn chế độ Thu thập dữ liệu.");
+                 e.preventDefault();
                  return false;
-             }
-             // Các kiểm tra khác (username nếu cần)
-             var mode = $("input[name='mode']:checked").val();
-             var username = $("#id_username").val();
-             if (mode === 'collect' && !username) {
-                  alert("Vui lòng nhập Username khi chọn chế độ Thu thập dữ liệu.");
-                  e.preventDefault(); 
-                  return false;
-             }
-             // Hidden field không còn cần thiết vì field 'camera' đã có trong form
-             // $('#selected_camera_id').val(selectedCameraId); 
-             return true; 
+            }
+            // Vô hiệu hóa nút Start và kích hoạt nút Stop (giao diện)
+            startButton.prop('disabled', true);
+            stopButton.prop('disabled', false);
+            // Thay ảnh placeholder bằng stream
+            videoStreamImg.attr("src", videoFeedUrl + "?t=" + new Date().getTime()); // Thêm timestamp để tránh cache
+
+            // Submit form để Django xử lý phía server
+            return true;
         });
+
+         // --- Xử lý khi trang tải với tiến trình đang chạy --- 
+        {% if is_processing %}
+             startButton.prop('disabled', true);
+             stopButton.prop('disabled', false);
+             // Đảm bảo img src là URL video feed
+             if (videoStreamImg.attr('src') !== videoFeedUrl) {
+                 videoStreamImg.attr('src', videoFeedUrl + "?t=" + new Date().getTime());
+             }
+        {% else %}
+             startButton.prop('disabled', false);
+             stopButton.prop('disabled', true);
+             // Đảm bảo img src là placeholder
+              if (videoStreamImg.attr('src') !== placeholderSrc) {
+                 videoStreamImg.attr('src', placeholderSrc);
+             }
+        {% endif %}
+
+        // Optional: Reload image on error to try reconnecting (simple approach)
+        // videoStreamImg.on('error', function() {
+        //     console.log("Stream error, attempting reload...");
+        //     setTimeout(() => {
+        //         // Only reload if we are supposed to be processing
+        //         if (stopButton.prop('disabled') === false) {
+        //              $(this).attr('src', videoFeedUrl + "?t=" + new Date().getTime());
+        //         }
+        //     }, 5000); // Wait 5 seconds before retrying
+        // });
 
     });
 </script>

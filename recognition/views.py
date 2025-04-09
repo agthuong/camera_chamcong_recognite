@@ -44,7 +44,12 @@ from rest_framework.decorators import api_view
 from .serializers import AttendanceRecordSerializer
 from django.utils.dateparse import parse_date
 from django.http import StreamingHttpResponse
+import threading
 mpl.use('Agg')
+
+# Khởi tạo biến global ở cấp độ module
+processing_thread = None
+stop_processing_event = threading.Event()
 
 # Định nghĩa RTSP stream URL, hãy thay đổi URL này theo cấu hình của bạn.
 RTSP_STREAM_URL = 0
@@ -713,13 +718,97 @@ def view_my_attendance_employee_login(request):
 
 @login_required
 def process_video_roi_view(request):
+    global processing_thread, stop_processing_event # Vẫn cần khai báo global để sửa đổi
     if not request.user.is_superuser:
         return redirect('not-authorised')
+
+    # --- Xử lý yêu cầu POST (Bắt đầu/Dừng xử lý) ---
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        # --- Dừng xử lý --- 
+        if action == 'stop':
+            if processing_thread and processing_thread.is_alive():
+                print("[View] Gửi tín hiệu dừng...")
+                stop_processing_event.set() # Gửi tín hiệu dừng
+                processing_thread.join(timeout=5.0) # Đợi thread kết thúc
+                if processing_thread.is_alive():
+                     print("[View] Cảnh báo: Thread xử lý không dừng kịp thời.")
+                else:
+                     print("[View] Thread xử lý đã dừng.")
+                processing_thread = None
+                video_roi_processor.stream_output.stop_stream() # Đảm bảo dừng stream
+                messages.info(request, 'Đã dừng xử lý video.')
+            else:
+                messages.warning(request, 'Không có tiến trình nào đang chạy để dừng.')
+            return redirect('process-video-roi')
+        
+        # --- Bắt đầu xử lý --- 
+        elif action == 'start':
+             if processing_thread and processing_thread.is_alive():
+                 messages.warning(request, 'Tiến trình xử lý đã chạy. Vui lòng dừng trước khi bắt đầu lại.')
+                 return redirect('process-video-roi')
+                 
+             form = VideoRoiForm(request.POST)
+             if form.is_valid():
+                 camera = form.cleaned_data['camera']
+                 mode = form.cleaned_data['mode'] # Chế độ xử lý (collect, recognize, stream)
+                 username = form.cleaned_data.get('username')
+                 
+                 if mode == 'collect' and not username:
+                     messages.error(request, 'Vui lòng nhập username khi chọn chế độ thu thập dữ liệu')
+                     return redirect('process-video-roi')
+                 
+                 roi = camera.get_roi_tuple()
+                 # Cho phép stream không cần ROI, nhưng collect/recognize thì cần
+                 if mode in ['collect', 'recognize'] and not roi:
+                     messages.error(request, f'Camera {camera.name} chưa được cấu hình ROI. Cần ROI cho chế độ {mode}.')
+                     return redirect('process-video-roi')
+                 
+                 # Reset cờ dừng và khởi tạo thread
+                 stop_processing_event.clear()
+                 video_roi_processor.stream_output.start_stream() # Bật stream output
+                 
+                 print(f"[View] Bắt đầu thread xử lý (Mode: {mode}, Camera: {camera.name}, ROI: {roi})")
+                 processing_thread = threading.Thread(
+                     target=video_roi_processor.process_video_with_roi,
+                     args=(
+                         camera.source,
+                         mode,
+                         roi,
+                         stop_processing_event, # Truyền sự kiện dừng
+                         video_roi_processor.stream_output, # Truyền output handler
+                         username, # Có thể là None nếu mode không phải collect
+                     ),
+                     daemon=True # Thread sẽ tự kết thúc khi chương trình chính thoát
+                 )
+                 processing_thread.start()
+                 messages.success(request, f'Đã bắt đầu xử lý video ở chế độ: {mode}.')
+                 # Không cần đợi thread ở đây, redirect ngay
+                 return redirect('process-video-roi')
+             else:
+                 # Form không hợp lệ khi nhấn Start
+                 messages.error(request, "Dữ liệu form không hợp lệ để bắt đầu.")
+                 # Render lại trang với form lỗi
+                 context = {
+                    'form': form, # Hiển thị lỗi form
+                    'is_processing': False, # Giả sử chưa chạy
+                    'records': AttendanceRecord.objects.all().order_by('-date', '-check_in')[:10] # Hiển thị vài bản ghi
+                 }
+                 return render(request, 'recognition/process_video_roi.html', context)
+        else:
+             messages.error(request, "Hành động không hợp lệ.")
+             return redirect('process-video-roi')
+             
+    # --- Xử lý yêu cầu GET (Hiển thị trang) --- 
+    else:
+        form = VideoRoiForm() # Form trống cho GET request
+        is_processing = processing_thread is not None and processing_thread.is_alive()
+
+    # Lấy dữ liệu chấm công gần đây (có thể giới hạn lại nếu nhiều)
+    records = AttendanceRecord.objects.all().order_by('-date', '-check_in')[:20] # Lấy 20 bản ghi mới nhất
     
-    # Lấy dữ liệu chấm công
-    records = AttendanceRecord.objects.all().order_by('-date', '-check_in')
-    
-    # Xử lý tìm kiếm
+    # Xử lý tìm kiếm (giữ nguyên logic tìm kiếm của bạn)
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     search_query = request.GET.get('search')
@@ -735,50 +824,9 @@ def process_video_roi_view(request):
             Q(user__last_name__icontains=search_query)
         )
     
-    if request.method == 'POST':
-        form = VideoRoiForm(request.POST)
-        if form.is_valid():
-            camera = form.cleaned_data['camera']
-            mode = form.cleaned_data['mode']
-            username = form.cleaned_data.get('username')
-            
-            if mode == 'collect' and not username:
-                messages.error(request, 'Vui lòng nhập username khi chọn chế độ thu thập dữ liệu')
-                return redirect('process-video-roi')
-            
-            roi = camera.get_roi_tuple()
-            if not roi:
-                messages.error(request, f'Camera {camera.name} chưa được cấu hình ROI')
-                return redirect('process-video-roi')
-            
-            if mode == 'collect':
-                result = video_roi_processor.process_video_with_roi(
-                    video_source=camera.source,
-                    mode='collect',
-                    roi=roi,
-                    username=username
-                )
-                if result > 0:
-                    messages.success(request, f'Đã thu thập {result} mẫu khuôn mặt cho {username}')
-                else:
-                    messages.error(request, 'Không thể thu thập dữ liệu. Vui lòng kiểm tra lại camera và ROI')
-            else:
-                result = video_roi_processor.process_video_with_roi(
-                    video_source=camera.source,
-                    mode='recognize',
-                    roi=roi
-                )
-                if result:
-                    messages.success(request, f'Đã nhận diện: {", ".join(result.keys())}')
-                else:
-                    messages.error(request, 'Không thể nhận diện. Vui lòng kiểm tra lại camera và ROI')
-            
-            return redirect('process-video-roi')
-    else:
-        form = VideoRoiForm()
-    
     context = {
         'form': form,
+        'is_processing': is_processing,
         'records': records,
         'start_date': start_date,
         'end_date': end_date,
@@ -891,6 +939,37 @@ def attendance_records(request):
     }
     
     return render(request, 'recognition/attendance_records.html', context)
+
+# --- Video Stream View ---
+def generate_frames():
+    """Generator function to yield JPEG encoded frames."""
+    print("[Stream] Bắt đầu generate_frames")
+    while True:
+        frame_bytes = video_roi_processor.stream_output.get_frame_bytes()
+        if frame_bytes:
+            # Yield the frame in the required format for multipart response
+            yield (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n\r\n'
+            )
+        else:
+            # Nếu không có frame, đợi một chút
+            # print("[Stream] Không có frame, đợi...")
+            time.sleep(0.05) # Giảm tải CPU khi không có frame mới
+            # Hoặc có thể yield một ảnh placeholder
+
+@login_required # Đảm bảo chỉ người dùng đăng nhập mới xem được stream
+def video_feed(request):
+    """View function that returns the MJPEG stream."""
+    print("[Stream] Yêu cầu video_feed")
+    # Check if processing is running? (Optional)
+    # if not video_roi_processor.stream_output.running:
+    #    return HttpResponse("Video processing is not running.")
+
+    return StreamingHttpResponse(
+        generate_frames(),
+        content_type='multipart/x-mixed-replace; boundary=frame'
+    )
 
 # API Views
 class AttendanceRecordList(generics.ListAPIView):
