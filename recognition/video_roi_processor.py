@@ -15,6 +15,14 @@ from recognition.models import AttendanceRecord
 from django.contrib.auth.models import User
 from django.conf import settings
 import threading
+import re
+from unidecode import unidecode
+
+# --- Global state for tracking collection progress ---
+# Format: { 'sanitized_username': {'current': 0, 'total': 150, 'active': False} }
+# --- Chuyển về dùng username gốc làm key ---
+# Format: { 'username': {'current': 0, 'total': 150, 'active': False, 'sanitized': 'sanitized_username'} }
+collect_progress_tracker = {}
 
 # --- Constants and Paths --- (Adjust if necessary)
 PREDICTOR_PATH = 'face_recognition_data/shape_predictor_68_face_landmarks.dat'
@@ -23,8 +31,11 @@ CLASSES_PATH = 'face_recognition_data/classes.npy'
 TRAINING_DATA_DIR = 'face_recognition_data/training_dataset/'
 FACE_WIDTH = 96 # Width for aligned faces
 FRAME_WIDTH = 800 # Width to resize video frames
-DEFAULT_MAX_SAMPLES = 150 # Default samples to collect
+DEFAULT_MAX_SAMPLES = 50 # Default samples to collect
 DEFAULT_RECOGNITION_THRESHOLD = 3 # Default consecutive detections for recognition
+# --- Thêm ngưỡng check-out --- 
+CHECK_OUT_RECOGNITION_THRESHOLD = 4 # Số lần nhận diện liên tiếp cho check-out
+# --- Kết thúc --- 
 FRAME_SKIP = 3 # Process every Nth frame
 
 class StreamOutput:
@@ -183,6 +194,25 @@ def select_roi_from_source(video_source, frame_skip_on_next=5):
     
     # roi will be None if cancelled, or the tuple (x,y,w,h) if selected
     return roi
+
+# --- Hàm chuẩn hóa tên file/thư mục ---
+def sanitize_filename(filename):
+    """
+    Chuẩn hóa tên file/thư mục: bỏ dấu, thay ký tự đặc biệt bằng '_', chuyển về chữ thường.
+    """
+    if not filename:
+        return ""
+    # Bỏ dấu
+    sanitized = unidecode(filename)
+    # Thay thế các ký tự không phải chữ/số/gạch dưới/gạch ngang bằng gạch dưới
+    sanitized = re.sub(r'[^\w\-]+', '_', sanitized)
+    # Chuyển về chữ thường và loại bỏ gạch dưới thừa ở đầu/cuối
+    sanitized = sanitized.lower().strip('_')
+    # Xử lý trường hợp tên rỗng sau khi chuẩn hóa
+    if not sanitized:
+        return "_" # Hoặc trả về một giá trị mặc định khác
+    return sanitized
+# --- Kết thúc hàm chuẩn hóa ---
 
 # Thêm class VideoSourceHandler để xử lý luồng video tốt hơn
 class VideoSourceHandler:
@@ -345,6 +375,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                            max_samples=DEFAULT_MAX_SAMPLES,
                            recognition_threshold=DEFAULT_RECOGNITION_THRESHOLD):
     
+    global collect_progress_tracker # Để có thể cập nhật biến global
     # --- DEBUG PRINTS --- 
     print("-"*30)
     print(f"[PROCESS START] Mode: {mode}, Source: {video_source}, ROI: {roi}, Username: {username}")
@@ -394,13 +425,69 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
     last_save_time = {}
 
     if mode == 'collect':
-        output_dir = os.path.join(TRAINING_DATA_DIR, username)
+        # Sử dụng sanitized_username
+        # --- Hoàn nguyên sử dụng sanitized_username --- 
+        sanitized_username = None
+        if username:
+            sanitized_username = sanitize_filename(username)
+            print(f"[PROCESS INFO] Original username: '{username}', Sanitized: '{sanitized_username}'")
+            if not sanitized_username:
+                 print("[PROCESS ERROR] Username sau khi chuẩn hóa bị rỗng.")
+                 output_handler.stop_stream()
+                 return 0
+        else: # Vẫn cần kiểm tra username gốc
+            print("[PROCESS ERROR] Username bị thiếu cho chế độ collect.")
+            output_handler.stop_stream()
+            return 0
+        output_dir = os.path.join(TRAINING_DATA_DIR, sanitized_username)
+        # --- Kết thúc hoàn nguyên --- 
+
+        # --- Sử dụng username gốc trực tiếp --- 
+        # if not username: # Kiểm tra lại username gốc
+        #     print("[PROCESS ERROR] Username bị thiếu cho chế độ collect.")
+        #     output_handler.stop_stream()
+        #     return 0
+        # output_dir = os.path.join(TRAINING_DATA_DIR, username)
+        # --- Kết thúc sử dụng username gốc ---
         try:
+            # Khởi tạo/Reset tracker cho sanitized_username này
+            # collect_progress_tracker[sanitized_username] = {'current': 0, 'total': max_samples, 'active': True}
+            # print(f"[Tracker INIT] Progress for {sanitized_username}: {collect_progress_tracker[sanitized_username]}")
+            # --- Sử dụng username gốc làm key --- 
+            collect_progress_tracker[username] = {
+                'current': 0, 
+                'total': max_samples, 
+                'active': True,
+                # 'sanitized': username # Chỗ này bị sai ở lần sửa trước, nên là sanitized_username
+                'sanitized': sanitized_username 
+            }
+            print(f"[Tracker INIT] Progress for {username}: {collect_progress_tracker[username]}")
+            # --- Kết thúc thay đổi --- 
+
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
                 print(f"[PROCESS INFO] Đã tạo thư mục: {output_dir}")
+                # --- Tạo file _info.txt --- 
+                info_path = os.path.join(output_dir, '_info.txt')
+                try:
+                    with open(info_path, 'w', encoding='utf-8') as f_info:
+                        f_info.write(username)
+                    print(f"[PROCESS INFO] Đã tạo file thông tin: {info_path}")
+                except Exception as e_info:
+                    print(f"[PROCESS WARNING] Không thể tạo file thông tin '{info_path}': {e_info}")
+                # --- Kết thúc tạo file _info.txt ---
             else:
                 print(f"[PROCESS INFO] Thư mục đã tồn tại: {output_dir}")
+                # --- Kiểm tra và tạo file _info.txt nếu thiếu --- 
+                info_path = os.path.join(output_dir, '_info.txt')
+                if not os.path.exists(info_path):
+                    try:
+                        with open(info_path, 'w', encoding='utf-8') as f_info:
+                           f_info.write(username)
+                        print(f"[PROCESS INFO] Đã tạo file thông tin (thiếu): {info_path}")
+                    except Exception as e_info:
+                        print(f"[PROCESS WARNING] Không thể tạo file thông tin (thiếu) '{info_path}': {e_info}")
+                # --- Kết thúc kiểm tra ---
         except OSError as e:
             print(f"[PROCESS ERROR] Không thể tạo thư mục '{output_dir}': {e}")
             output_handler.stop_stream()
@@ -502,8 +589,23 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
 
                         if mode == 'collect':
                             sample_count += 1
-                            img_path = os.path.join(output_dir, f"{username}_{sample_count}.jpg")
+                            # Sử dụng sanitized_username
+                            # img_path = os.path.join(output_dir, f"{sanitized_username}_{sample_count}.jpg")
+                            # --- Sử dụng username gốc trực tiếp --- 
+                            # img_path = os.path.join(output_dir, f"{username}_{sample_count}.jpg")
+                            # --- Kết thúc sử dụng username gốc ---
+                            # --- Hoàn nguyên sử dụng sanitized_username --- 
+                            img_path = os.path.join(output_dir, f"{sanitized_username}_{sample_count}.jpg")
+                            # --- Kết thúc hoàn nguyên ---
                             cv2.imwrite(img_path, face_aligned)
+
+                            # Cập nhật tiến trình cho sanitized_username
+                            # if sanitized_username in collect_progress_tracker:
+                            #    collect_progress_tracker[sanitized_username]['current'] = sample_count
+                            # --- Cập nhật tiến trình cho username gốc --- 
+                            if username in collect_progress_tracker:
+                                collect_progress_tracker[username]['current'] = sample_count
+                            # --- Kết thúc thay đổi ---
 
                             cv2.rectangle(frame_to_display, (draw_x, draw_y), (draw_x + draw_w, draw_y + draw_h), (0, 255, 0), 1)
                             cv2.putText(frame_to_display, f"Sample: {sample_count}", (draw_x, draw_y - 5),
@@ -535,6 +637,9 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         print(f"[RECOGNIZED] {person_name}")
                                         recognized_persons[person_name] = True
                                     try:
+                                        # --- Chuẩn hóa tên chỉ cho filename --- 
+                                        sanitized_person_name_for_file = sanitize_filename(person_name)
+                                        # --- Kết thúc chuẩn hóa ---
                                         try:
                                             user = User.objects.get(username=person_name)
                                         except User.DoesNotExist:
@@ -555,24 +660,34 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         )
 
                                         if created:
-                                            face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_in', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
+                                            # --- Check-in: Vẫn dùng ngưỡng mặc định (DEFAULT_RECOGNITION_THRESHOLD) --- 
+                                            face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}.jpg'
+                                            face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_in', face_filename)
+                                            relative_face_path = os.path.join('attendance_faces', 'check_in', face_filename)
+                                            # --- Kết thúc sử dụng tên chuẩn hóa ---
                                             os.makedirs(os.path.dirname(face_path), exist_ok=True)
                                             cv2.imwrite(face_path, face_aligned)
-                                            record.check_in_face = os.path.join('attendance_faces', 'check_in', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
+                                            record.check_in_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
                                             record.save()
                                             last_save_time[person_name] = now
                                             print(f"[PROCESS INFO] Đã lưu check-in cho '{person_name}'")
                                         else:
-                                            last_saved = last_save_time.get(person_name)
-                                            if last_saved is None or (now - last_saved).total_seconds() >= 10:
-                                                record.check_out = now
-                                                face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_out', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
-                                                os.makedirs(os.path.dirname(face_path), exist_ok=True)
-                                                cv2.imwrite(face_path, face_aligned)
-                                                record.check_out_face = os.path.join('attendance_faces', 'check_out', f'{person_name}_{today}_{now.strftime("%H%M%S")}.jpg')
-                                                record.save()
-                                                last_save_time[person_name] = now
-                                                print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}'")
+                                            # --- Check-out: Thêm kiểm tra ngưỡng cao hơn --- 
+                                            if recognition_counts[person_name] >= CHECK_OUT_RECOGNITION_THRESHOLD:
+                                                last_saved = last_save_time.get(person_name)
+                                                # Vẫn giữ kiểm tra thời gian để tránh cập nhật quá nhanh
+                                                if last_saved is None or (now - last_saved).total_seconds() >= 10:
+                                                    record.check_out = now
+                                                    face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}.jpg'
+                                                    face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_out', face_filename)
+                                                    relative_face_path = os.path.join('attendance_faces', 'check_out', face_filename)
+                                                    os.makedirs(os.path.dirname(face_path), exist_ok=True)
+                                                    cv2.imwrite(face_path, face_aligned)
+                                                    record.check_out_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
+                                                    record.save()
+                                                    last_save_time[person_name] = now
+                                                    print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (Đạt ngưỡng {CHECK_OUT_RECOGNITION_THRESHOLD})")
+                                            # --- Kết thúc kiểm tra ngưỡng check-out --- 
 
                                     except Exception as e:
                                         print(f"[PROCESS ERROR] Lỗi khi lưu thông tin chấm công: {e}")
@@ -617,9 +732,27 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
         video_handler.stop()
         output_handler.stop_stream()
 
+    # Đánh dấu tiến trình là không hoạt động khi kết thúc (hoặc bị dừng)
+    # Sử dụng sanitized_username
+    # if mode == 'collect' and sanitized_username and sanitized_username in collect_progress_tracker:
+    #    collect_progress_tracker[sanitized_username]['active'] = False
+    #    print(f"[Tracker END] Progress for {sanitized_username}: {collect_progress_tracker[sanitized_username]}")
+    # --- Sử dụng username gốc --- 
+    if mode == 'collect' and username and username in collect_progress_tracker:
+        collect_progress_tracker[username]['active'] = False
+        print(f"[Tracker END] Progress for {username}: {collect_progress_tracker[username]}")
+    # --- Kết thúc thay đổi ---
+
     print("[PROCESS END] Kết thúc hàm process_video_with_roi")
     if mode == 'collect':
-        print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho {username}.")
+        # Sử dụng sanitized_username để thông báo
+        # print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho {sanitized_username}.")
+        # --- Sử dụng username gốc --- 
+        # print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho {username}.")
+        # --- Kết thúc sử dụng username gốc ---
+        # --- Hoàn nguyên sử dụng username gốc và sanitized --- 
+        print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho '{username}' vào thư mục '{sanitized_username}'.")
+        # --- Kết thúc hoàn nguyên ---
         return sample_count
     elif mode == 'recognize':
         print("--- Kết quả Nhận diện Cuối cùng (khi dừng) ---")

@@ -29,7 +29,6 @@ class VideoRoiForm(forms.Form):
     camera = forms.ModelChoiceField(
         queryset=CameraConfig.objects.all(), 
         label='Chọn Camera',
-        empty_label="-- Chọn một Camera đã cấu hình --",
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     mode = forms.ChoiceField(
