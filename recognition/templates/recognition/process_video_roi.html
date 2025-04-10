@@ -167,10 +167,10 @@
                  <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2"> <!-- Giảm padding header -->
                     <h5 class="mb-0 mr-auto">Video Stream</h5> <!-- Giảm cỡ chữ, thêm margin right -->
                      <button id="refresh-stream-btn" class="btn btn-light btn-sm mr-2" title="Làm mới Stream" {% if not is_processing %}disabled{% endif %}><i class="fas fa-sync-alt fa-xs"></i></button>
-                     <form method="POST" style="display: inline;">
+                     <form method="POST" style="display: inline;" id="stop-form">
                          {% csrf_token %}
                          <input type="hidden" name="action" value="stop">
-                         <button type="submit" class="btn btn-danger btn-sm" {% if not is_processing %}disabled{% endif %}>
+                         <button type="button" id="stop-button" class="btn btn-danger btn-sm" {% if not is_processing %}disabled{% endif %}>
                              <i class="fas fa-stop"></i> Dừng
                          </button>
                      </form>
@@ -235,8 +235,8 @@
                                  <button type="button" id="ajax-train-button" class="btn btn-info btn-sm">Huấn luyện Model</button>
                                  <!-- Thêm nút Xem Dataset vào đây -->
                                  <button type="button" id="view-dataset-btn" class="btn btn-secondary btn-sm ml-2"><i class="fas fa-images"></i> Xem Dataset</button>
-                             </div>
-                         </div>
+                        </div>
+                        </div>
                          <hr>
                          <!-- Nút Bắt đầu / Train -->
                          <div class="text-center control-buttons">
@@ -250,11 +250,11 @@
                               <div class="progress">
                                   <div id="collect-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
                  </div>
-                          </div>
+                </div>
                           <!-- Loading indicator for Training -->
                           <div id="training-loading-indicator" class="text-center mt-2" style="display: none;">
                               <span class="text-muted"><i class="fas fa-spinner fa-spin"></i> Đang huấn luyện...</span>
-                          </div>
+                </div>
                       </form>
             </div>
         </div>
@@ -273,44 +273,7 @@
                          </form>
                 </div>
                     <div class="card-body p-0" id="attendance-log-table-container"> 
-                    <div class="table-responsive">
-                            <table class="table table-sm table-striped table-hover mb-0 attendance-table"> 
-                                 <thead class="thead-light sticky-top">
-                                <tr>
-                                    <th>Ngày</th>
-                                    <th>Người dùng</th>
-                                        <th>Ảnh In</th>
-                                        <th>Giờ In</th>
-                                        <th>Ảnh Out</th>
-                                        <th>Giờ Out</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for record in records %}
-                                <tr>
-                                         <td>{{ record.date|date:"d/m" }}</td>
-                                        <td>{{ record.user.get_full_name|default:record.user.username|truncatechars:15 }}</td>
-                                    <td>
-                                        {% if record.check_in_face %}
-                                                <img src="{{ record.check_in_face.url }}" alt="In">
-                                            {% else %}-{% endif %}
-                                    </td>
-                                        <td>{{ record.check_in|date:"H:i"|default:"-" }}</td>
-                                    <td>
-                                        {% if record.check_out_face %}
-                                                <img src="{{ record.check_out_face.url }}" alt="Out">
-                                            {% else %}-{% endif %}
-                                    </td>
-                                        <td>{{ record.check_out|date:"H:i"|default:"-" }}</td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                        <td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                    {% include 'recognition/partials/attendance_log_table.html' %}
                 </div>
                 </div>
             </div>
@@ -398,7 +361,8 @@
         var usernameFieldGroup = $('#div_id_username');
         var processForm = $("#process-form");
         var startButton = processForm.find("button[type='submit']");
-        var stopButton = $("form button:contains('Dừng')"); // Rút gọn selector
+        var stopButton = $("#stop-button"); // Cập nhật selector
+        var stopForm = $("#stop-form"); // Thêm selector cho form dừng
         var videoStreamImg = $("#video-stream");
         var videoContainer = $(".video-container");
         var placeholderText = $(".video-placeholder-text");
@@ -592,17 +556,53 @@
               }
         }
 
-        // --- Stop Button Click Handling ---
-        // Di chuyển phần xử lý stopButton lên đây để đảm bảo nó được định nghĩa trước khi dùng trong submit
-        stopButton.closest('form').submit(function(e){
-            // Khi nhấn nút dừng, chủ động dừng interval cập nhật progress
-            if (progressInterval) {
-                clearInterval(progressInterval);
-                progressInterval = null;
-                collectProgressContainer.hide();
-                console.log("[Progress] Manually stopped interval due to Stop button.");
+        // --- Stop Button Click Handling (AJAX Version) --- 
+        stopButton.click(function(e) {
+            e.preventDefault(); // Ngăn hành vi mặc định
+
+            if (!confirm("Bạn có chắc muốn dừng tiến trình?")) {
+                return;
             }
-            // Form vẫn submit bình thường để dừng backend
+
+            var csrfToken = stopForm.find('input[name="csrfmiddlewaretoken"]').val();
+            var stopUrl = "{% url 'process-video-roi' %}"; // Lấy URL từ Django
+
+            // Vô hiệu hóa nút Dừng và Refresh ngay lập tức để tránh nhấn nhiều lần
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Dừng...');
+            refreshStreamBtn.prop('disabled', true);
+
+            $.ajax({
+                url: stopUrl,
+                type: "POST",
+                data: { action: 'stop', csrfmiddlewaretoken: csrfToken },
+                dataType: "json",
+                success: function(response) {
+                    console.log("[Stop AJAX Success] Response:", response);
+                    // Cập nhật UI khi dừng thành công
+                    startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                    stopButton.prop('disabled', true).html('<i class="fas fa-stop"></i> Dừng'); // Reset text nút dừng
+                    refreshStreamBtn.prop('disabled', true);
+                    videoStreamImg.attr('src', placeholderSrc); // Hiện placeholder
+                    placeholderText.text("Đã dừng xử lý.").show();
+                    videoContainer.removeClass('is-streaming');
+                    $("body").data("is-processing", false);
+
+                    // Dừng cập nhật progress nếu đang chạy
+                    if (progressInterval) {
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+                        collectProgressContainer.hide();
+                        console.log("[Progress] Stopped interval due to successful stop.");
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    console.error("[Stop AJAX Error] Status:", textStatus, "Error:", errorThrown, jqXHR.responseText);
+                    alert("Lỗi khi gửi yêu cầu dừng. Vui lòng thử lại.");
+                    // Kích hoạt lại nút Dừng nếu lỗi để người dùng thử lại
+                    stopButton.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng');
+                    // Giữ nút refresh disabled vì không chắc chắn trạng thái stream
+                }
+            });
         });
 
         // --- Function to update Collection Progress Bar --- 
@@ -755,32 +755,41 @@
                         $("body").data("is-processing", true); // Cập nhật trạng thái data attribute
                         
                         // Bắt đầu cập nhật progress bar chỉ khi backend báo thành công
-                        if (selectedMode === 'collect') {
+                        if ($('input[name="mode"]:checked').val() === 'collect') {
                             console.log("[Progress] Starting progress updates after successful start.");
                             if (progressInterval) clearInterval(progressInterval);
                             setTimeout(updateCollectProgress, 150); // Chờ lâu hơn chút
                         }
                         // Hiển thị message thành công từ backend (nếu có)
                         if(response.message) {
-                             // Tùy chọn: Hiển thị message này bằng cách nào đó (vd: alert hoặc thêm vào div message)
                              console.log("Backend message:", response.message);
                         }
-                    } else {
-                        // Xử lý lỗi từ backend (vd: form invalid, process đã chạy...)
+                        // --- Kích hoạt lại nút Start sau khi thành công --- 
+                        startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                    // --- THÊM XỬ LÝ CHO WARNING --- 
+                    } else if (response.status === 'warning') { 
+                        // Trường hợp camera đã chạy, chỉ hiển thị thông báo
+                        alert(response.message); 
+                        // Giữ nguyên trạng thái nút Start (vẫn disabled vì đang chạy?)
+                        // Cần kích hoạt lại nút start để người dùng có thể chọn camera khác
+                        startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); 
+                        // Không thay đổi trạng thái nút Stop/Refresh
+                    // --- KẾT THÚC THÊM ---
+                    } else { 
+                        // Xử lý lỗi từ backend (vd: form invalid)
                         alert("Lỗi khi bắt đầu xử lý: " + response.message);
-                        // Reset nút Start
+                        // Reset nút Start về trạng thái ban đầu
                         startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
                     }
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
                     console.error("[Start AJAX Error] Status:", textStatus, "Error:", errorThrown, jqXHR.responseText);
                     alert("Lỗi kết nối hoặc lỗi server khi gửi yêu cầu bắt đầu.");
-                    // Reset nút Start
+                    // Reset nút Start về trạng thái ban đầu khi có lỗi kết nối/server
                     startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
                 }
             });
 
-            // return false; // Đảm bảo không submit theo cách cũ
         });
 
          // --- Initial state based on is_processing --- 
@@ -839,19 +848,18 @@
                 data: filterData, // Dữ liệu filter (search, start_date, end_date)
                 dataType: "html", // Mong đợi nhận về HTML
                 success: function(responseHtml) {
-                    // Tìm và trích xuất chỉ phần container của bảng từ response
-                    var newTableContent = $(responseHtml).find('#attendance-log-table-container').html();
-                    if (newTableContent) {
-                        logTableContainer.html(newTableContent);
-                        console.log("[Log] Log reloaded successfully.");
-                    } else {
-                        logTableContainer.html('<div class="alert alert-warning m-2">Không thể tải lại dữ liệu log.</div>');
-                        console.error("[Log] Error: Could not find #attendance-log-table-container in response.");
-                    }
+                    // Log phản hồi nhận được để debug
+                    console.log("[Log] AJAX Success. Received HTML:", responseHtml.substring(0, 200) + "..."); 
+                    
+                    // --- Đơn giản hóa: Trực tiếp chèn HTML nhận được --- 
+                    // Vì view đảm bảo chỉ trả về nội dung partial cho AJAX
+                    logTableContainer.html(responseHtml);
+                    console.log("[Log] Log reloaded successfully by direct insertion.");
                 },
                 error: function(jqXHR, textStatus, errorThrown) {
-                    console.error("[Log] AJAX Error:", textStatus, errorThrown);
-                    logTableContainer.html(`<div class="alert alert-danger m-2">Lỗi khi tải dữ liệu log: ${textStatus}</div>`);
+                    // Log chi tiết lỗi
+                    console.error("[Log] AJAX Error:", textStatus, jqXHR.status, errorThrown, jqXHR.responseText);
+                    logTableContainer.html(`<div class="alert alert-danger m-2">Lỗi khi tải dữ liệu log: ${textStatus} (${jqXHR.status})</div>`);
                 }
             });
         }

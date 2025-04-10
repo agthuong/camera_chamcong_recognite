@@ -148,5 +148,32 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
 }
 
+# Đường dẫn gốc cho dữ liệu nhận diện
+RECOGNITION_DATA_DIR = os.path.join(BASE_DIR, 'face_recognition_data')
+
+# Đường dẫn file model và dữ liệu
+RECOGNITION_PREDICTOR_PATH = os.path.join(RECOGNITION_DATA_DIR, 'shape_predictor_68_face_landmarks.dat')
+RECOGNITION_SVC_PATH = os.path.join(RECOGNITION_DATA_DIR, 'svc.sav')
+RECOGNITION_CLASSES_PATH = os.path.join(RECOGNITION_DATA_DIR, 'classes.npy')
+RECOGNITION_TRAINING_DIR = os.path.join(RECOGNITION_DATA_DIR, 'training_dataset')
+RECOGNITION_VISUALIZATION_PATH = os.path.join(BASE_DIR, 'recognition', 'static', 'recognition', 'img', 'training_visualisation.png') # Đường dẫn lưu ảnh visualize
+
+# Thư mục lưu ảnh chấm công (trong MEDIA_ROOT)
+RECOGNITION_ATTENDANCE_FACES_DIR = 'attendance_faces' # Đường dẫn tương đối trong MEDIA_ROOT
+RECOGNITION_CHECK_IN_SUBDIR = 'check_in'
+RECOGNITION_CHECK_OUT_SUBDIR = 'check_out'
+
+# Tham số xử lý ảnh và video
+RECOGNITION_FACE_WIDTH = 96        # Chiều rộng mong muốn của khuôn mặt đã căn chỉnh
+RECOGNITION_FRAME_WIDTH = 800      # Chiều rộng resize frame video để xử lý/hiển thị
+RECOGNITION_FRAME_SKIP = 2         # Xử lý mỗi N frame (giảm từ 3 xuống 2 để thử nghiệm)
+RECOGNITION_PREDICTION_THRESHOLD = 0.65 # Ngưỡng xác suất để chấp nhận nhận diện (thay đổi từ 0.7)
+
+# Tham số thu thập dữ liệu
+RECOGNITION_DEFAULT_MAX_SAMPLES = 50 # Số mẫu tối đa cần thu thập
+
+# Tham số ngưỡng nhận diện (số lần liên tiếp)
+RECOGNITION_CHECK_IN_THRESHOLD = 3  # Ngưỡng cho check-in
+RECOGNITION_CHECK_OUT_THRESHOLD = 4 # Ngưỡng cho check-out
 
 

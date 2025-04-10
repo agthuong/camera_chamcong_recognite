@@ -25,18 +25,20 @@ from unidecode import unidecode
 collect_progress_tracker = {}
 
 # --- Constants and Paths --- (Adjust if necessary)
-PREDICTOR_PATH = 'face_recognition_data/shape_predictor_68_face_landmarks.dat'
-SVC_PATH = "face_recognition_data/svc.sav"
-CLASSES_PATH = 'face_recognition_data/classes.npy'
-TRAINING_DATA_DIR = 'face_recognition_data/training_dataset/'
-FACE_WIDTH = 96 # Width for aligned faces
-FRAME_WIDTH = 800 # Width to resize video frames
-DEFAULT_MAX_SAMPLES = 50 # Default samples to collect
-DEFAULT_RECOGNITION_THRESHOLD = 3 # Default consecutive detections for recognition
+# PREDICTOR_PATH = 'face_recognition_data/shape_predictor_68_face_landmarks.dat' # Thay bằng settings
+# SVC_PATH = "face_recognition_data/svc.sav" # Thay bằng settings
+# CLASSES_PATH = 'face_recognition_data/classes.npy' # Thay bằng settings
+# TRAINING_DATA_DIR = 'face_recognition_data/training_dataset/' # Thay bằng settings
+# FACE_WIDTH = 96 # Width for aligned faces # Thay bằng settings
+# FRAME_WIDTH = 800 # Width to resize video frames # Thay bằng settings
+# DEFAULT_MAX_SAMPLES = 50 # Default samples to collect # Thay bằng settings
+# DEFAULT_RECOGNITION_THRESHOLD = 3 # Default consecutive detections for recognition # Thay bằng settings
 # --- Thêm ngưỡng check-out --- 
-CHECK_OUT_RECOGNITION_THRESHOLD = 4 # Số lần nhận diện liên tiếp cho check-out
+# CHECK_OUT_RECOGNITION_THRESHOLD = 4 # Số lần nhận diện liên tiếp cho check-out # Thay bằng settings
 # --- Kết thúc --- 
-FRAME_SKIP = 3 # Process every Nth frame
+# FRAME_SKIP = 3 # Process every Nth frame # Thay bằng settings
+
+# --- Lấy giá trị từ settings ---
 
 class StreamOutput:
     def __init__(self):
@@ -69,10 +71,8 @@ class StreamOutput:
 
 # Global instance (Cân nhắc giải pháp tốt hơn cho production)
 stream_output = StreamOutput()
-processing_thread = None
-stop_processing_event = threading.Event()
 
-def predict(face_aligned, svc, threshold=0.7):
+def predict(face_aligned, svc, threshold=settings.RECOGNITION_PREDICTION_THRESHOLD):
     """
     Predicts face from aligned image using the loaded SVC model.
     Returns: Tuple (list containing predicted class index or -1, highest probability)
@@ -96,17 +96,20 @@ def predict(face_aligned, svc, threshold=0.7):
 
     try:
         prob = svc.predict_proba(face_encodings_list)
-        # prob is like [[0.1, 0.8, 0.1]]
         best_class_index = np.argmax(prob[0])
         best_class_probability = prob[0][best_class_index]
 
         # print(f"Debug: Probabilities: {prob[0]}, Best Index: {best_class_index}, Prob: {best_class_probability:.2f}")
 
+        # --- Sử dụng ngưỡng từ settings --- 
         if best_class_probability >= threshold:
             return ([best_class_index], [best_class_probability])
         else:
             # print(f"Debug: Probability {best_class_probability:.2f} below threshold {threshold}")
-            return ([-1], [best_class_probability]) # Return -1 but still provide the probability
+            # --- Thay đổi: Trả về ngưỡng đã dùng để debug --- 
+            # return ([-1], [best_class_probability]) # Return -1 but still provide the probability
+            return ([-1], [best_class_probability])
+            # --- Kết thúc thay đổi ---
 
     except Exception as e:
         # print(f"Debug: Error during prediction: {e}")
@@ -148,7 +151,8 @@ def select_roi_from_source(video_source, frame_skip_on_next=5):
             break
 
         frame_count += 1
-        frame_display = imutils.resize(frame, width=FRAME_WIDTH).copy()
+        # --- Sử dụng FRAME_WIDTH từ settings --- 
+        frame_display = imutils.resize(frame, width=settings.RECOGNITION_FRAME_WIDTH).copy() # Thay FRAME_WIDTH bằng settings
         cv2.putText(frame_display, f"Frame: {frame_count}", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
         cv2.putText(frame_display, "Nhan 'n': Next, ENTER/SPACE: Chon, ESC/q: Huy", (10, frame_display.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         cv2.imshow(window_title, frame_display)
@@ -214,6 +218,9 @@ def sanitize_filename(filename):
     return sanitized
 # --- Kết thúc hàm chuẩn hóa ---
 
+# --- Xóa định nghĩa FRAME_WIDTH ở đây vì nó sẽ được lấy từ settings --- 
+# FRAME_WIDTH = 800 
+
 # Thêm class VideoSourceHandler để xử lý luồng video tốt hơn
 class VideoSourceHandler:
     """
@@ -260,10 +267,7 @@ class VideoSourceHandler:
             # Không sử dụng MJPEG có thể giảm lag với một số camera
             self.capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('H', '2', '6', '4'))
             # Đặt thời gian timeout - có thể điều chỉnh tùy camera
-            try:
-                self.capture.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)  # 5 giây timeout
-            except AttributeError:
-                print("[INFO] cv2.CAP_PROP_OPEN_TIMEOUT_MSEC không khả dụng trong phiên bản OpenCV này")
+
             # Cho phép kết nối lại nhanh hơn
             self.max_consecutive_errors = 3  # Giảm số lỗi trước khi kết nối lại
             print("[INFO] Đã áp dụng cấu hình đặc biệt cho luồng RTSP/Streaming")
@@ -372,8 +376,8 @@ class VideoSourceHandler:
             return self.current_frame.copy()  # Trả về bản sao để tránh conflict
 
 def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, username=None,
-                           max_samples=DEFAULT_MAX_SAMPLES,
-                           recognition_threshold=DEFAULT_RECOGNITION_THRESHOLD):
+                           max_samples=settings.RECOGNITION_DEFAULT_MAX_SAMPLES,
+                           recognition_threshold=settings.RECOGNITION_CHECK_IN_THRESHOLD):
     
     global collect_progress_tracker # Để có thể cập nhật biến global
     # --- DEBUG PRINTS --- 
@@ -407,12 +411,12 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
         print("[PROCESS INFO] Đang tải bộ phát hiện khuôn mặt...")
         try:
             detector = dlib.get_frontal_face_detector()
-            if not os.path.exists(PREDICTOR_PATH):
-                print(f"[PROCESS ERROR] Không tìm thấy file shape predictor tại: {PREDICTOR_PATH}")
+            if not os.path.exists(settings.RECOGNITION_PREDICTOR_PATH):
+                print(f"[PROCESS ERROR] Không tìm thấy file shape predictor tại: {settings.RECOGNITION_PREDICTOR_PATH}")
                 output_handler.stop_stream()
                 return 0 if mode == 'collect' else {}
-            predictor = dlib.shape_predictor(PREDICTOR_PATH)
-            fa = FaceAligner(predictor, desiredFaceWidth=FACE_WIDTH)
+            predictor = dlib.shape_predictor(settings.RECOGNITION_PREDICTOR_PATH)
+            fa = FaceAligner(predictor, desiredFaceWidth=settings.RECOGNITION_FACE_WIDTH)
         except Exception as e:
             print(f"[PROCESS ERROR] Lỗi khi khởi tạo dlib/FaceAligner: {e}")
             output_handler.stop_stream()
@@ -439,7 +443,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
             print("[PROCESS ERROR] Username bị thiếu cho chế độ collect.")
             output_handler.stop_stream()
             return 0
-        output_dir = os.path.join(TRAINING_DATA_DIR, sanitized_username)
+        output_dir = os.path.join(settings.RECOGNITION_TRAINING_DIR, sanitized_username)
         # --- Kết thúc hoàn nguyên --- 
 
         # --- Sử dụng username gốc trực tiếp --- 
@@ -495,15 +499,15 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
         print(f"[PROCESS INFO] Chế độ COLLECT: Sẽ lưu tối đa {max_samples} mẫu vào '{output_dir}'")
 
     elif mode == 'recognize':
-        if not os.path.exists(SVC_PATH) or not os.path.exists(CLASSES_PATH):
+        if not os.path.exists(settings.RECOGNITION_SVC_PATH) or not os.path.exists(settings.RECOGNITION_CLASSES_PATH):
             print("Lỗi: Không tìm thấy file model (svc.sav) hoặc classes (classes.npy). Vui lòng huấn luyện trước.")
             output_handler.stop_stream()
             return {}
         try:
-            with open(SVC_PATH, 'rb') as f:
+            with open(settings.RECOGNITION_SVC_PATH, 'rb') as f:
                 svc = pickle.load(f)
             encoder = LabelEncoder()
-            encoder.classes_ = np.load(CLASSES_PATH)
+            encoder.classes_ = np.load(settings.RECOGNITION_CLASSES_PATH)
             for name in encoder.classes_:
                 recognized_persons[name] = False
                 recognition_counts[name] = 0
@@ -535,7 +539,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
 
             if roi:
                 orig_h, orig_w = frame.shape[:2]
-                scale = orig_w / FRAME_WIDTH
+                scale = orig_w / settings.RECOGNITION_FRAME_WIDTH
                 orig_rx = int(rx * scale)
                 orig_ry = int(ry * scale)
                 orig_rw = int(rw * scale)
@@ -560,7 +564,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
 
             if mode in ['collect', 'recognize'] and roi_frame_for_processing is not None:
                 frame_index += 1
-                if frame_index % FRAME_SKIP != 0:
+                if frame_index % settings.RECOGNITION_FRAME_SKIP != 0:
                     output_handler.set_frame(frame_to_display)
                     continue
 
@@ -660,33 +664,48 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         )
 
                                         if created:
-                                            # --- Check-in: Vẫn dùng ngưỡng mặc định (DEFAULT_RECOGNITION_THRESHOLD) --- 
+                                            # --- Check-in: Vẫn dùng ngưỡng mặc định (recognition_threshold đã lấy từ settings) ---
                                             face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}.jpg'
-                                            face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_in', face_filename)
-                                            relative_face_path = os.path.join('attendance_faces', 'check_in', face_filename)
-                                            # --- Kết thúc sử dụng tên chuẩn hóa ---
+                                            # --- Sử dụng settings cho đường dẫn ảnh check-in ---
+                                            # face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_in', face_filename)
+                                            # relative_face_path = os.path.join('attendance_faces', 'check_in', face_filename)
+                                            face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
+                                            relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
+                                            # --- Kết thúc sử dụng settings ---
                                             os.makedirs(os.path.dirname(face_path), exist_ok=True)
-                                            cv2.imwrite(face_path, face_aligned)
-                                            record.check_in_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
-                                            record.save()
-                                            last_save_time[person_name] = now
-                                            print(f"[PROCESS INFO] Đã lưu check-in cho '{person_name}'")
+                                            # --- Thêm kiểm tra lưu ảnh --- 
+                                            saved_img_in = cv2.imwrite(face_path, face_aligned)
+                                            if not saved_img_in:
+                                                print(f"[PROCESS ERROR] Không thể lưu ảnh check-in tại: {face_path}")
+                                            else:
+                                                record.check_in_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
+                                                record.save() # Lưu record chỉ khi ảnh lưu thành công (hoặc di chuyển save ra ngoài if này nếu ảnh không bắt buộc)
+                                                last_save_time[person_name] = now # Cập nhật thời gian chỉ khi save thành công
+                                                print(f"[PROCESS INFO] Đã lưu check-in cho '{person_name}'")
                                         else:
                                             # --- Check-out: Thêm kiểm tra ngưỡng cao hơn --- 
-                                            if recognition_counts[person_name] >= CHECK_OUT_RECOGNITION_THRESHOLD:
+                                            if recognition_counts[person_name] >= settings.RECOGNITION_CHECK_OUT_THRESHOLD:
                                                 last_saved = last_save_time.get(person_name)
                                                 # Vẫn giữ kiểm tra thời gian để tránh cập nhật quá nhanh
                                                 if last_saved is None or (now - last_saved).total_seconds() >= 10:
                                                     record.check_out = now
                                                     face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}.jpg'
-                                                    face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_out', face_filename)
-                                                    relative_face_path = os.path.join('attendance_faces', 'check_out', face_filename)
+                                                    # --- Sử dụng settings cho đường dẫn ảnh check-out ---
+                                                    # face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_out', face_filename)
+                                                    # relative_face_path = os.path.join('attendance_faces', 'check_out', face_filename)
+                                                    face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
+                                                    relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
+                                                    # --- Kết thúc sử dụng settings ---
                                                     os.makedirs(os.path.dirname(face_path), exist_ok=True)
-                                                    cv2.imwrite(face_path, face_aligned)
-                                                    record.check_out_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
-                                                    record.save()
-                                                    last_save_time[person_name] = now
-                                                    print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (Đạt ngưỡng {CHECK_OUT_RECOGNITION_THRESHOLD})")
+                                                    # --- Thêm kiểm tra lưu ảnh --- 
+                                                    saved_img_out = cv2.imwrite(face_path, face_aligned)
+                                                    if not saved_img_out:
+                                                        print(f"[PROCESS ERROR] Không thể lưu ảnh check-out tại: {face_path}")
+                                                    else:
+                                                        record.check_out_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
+                                                        record.save() # Lưu record chỉ khi ảnh lưu thành công
+                                                        last_save_time[person_name] = now # Cập nhật thời gian chỉ khi save thành công
+                                                        print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (Đạt ngưỡng {settings.RECOGNITION_CHECK_OUT_THRESHOLD})")
                                             # --- Kết thúc kiểm tra ngưỡng check-out --- 
 
                                     except Exception as e:
