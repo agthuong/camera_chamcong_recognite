@@ -230,6 +230,16 @@
                          <!-- Username (sẽ được di chuyển) -->
                          <div class="form-group {% if form.mode.value != 'collect' %}d-none{% endif %}" id="div_id_username">
                              {{ form.username|as_crispy_field }}
+                             
+                             <!-- Thêm trường ID nhân viên -->
+                             {{ form.employee_id|as_crispy_field }}
+                             
+                             <!-- Thêm trường Project -->
+                             {{ form.project|as_crispy_field }}
+                             
+                             <!-- Thêm trường Company -->
+                             {{ form.company|as_crispy_field }}
+                             
                              <!-- Di chuyển nút Huấn luyện vào đây -->
                              <div class="mt-2 text-center">
                                  <button type="button" id="ajax-train-button" class="btn btn-info btn-sm">Huấn luyện Model</button>

@@ -7,12 +7,12 @@ class CameraConfig(models.Model):
     name = models.CharField(
         max_length=100, 
         unique=True, # Tên camera nên là duy nhất
-        help_text="Tên gợi nhớ cho camera (ví dụ: Camera Cổng Trước)"
+
     )
     source = models.CharField(
         max_length=255, 
         unique=True, # Nguồn cũng nên là duy nhất
-        help_text="Nguồn video (ID Webcam, đường dẫn file, URL RTSP)"
+
     )
     roi_x = models.IntegerField(null=True, blank=True, help_text="Tọa độ X của góc trên bên trái ROI")
     roi_y = models.IntegerField(null=True, blank=True, help_text="Tọa độ Y của góc trên bên trái ROI")
@@ -40,12 +40,20 @@ class CameraConfig(models.Model):
         ordering = ['name'] # Sắp xếp theo tên khi hiển thị
 
 class AttendanceRecord(models.Model):
+    COMPANY_CHOICES = [
+        ('DBplus', 'DBplus'),
+        ('DBhomes', 'DBhomes'),
+    ]
+    
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    employee_id = models.CharField(max_length=50, null=True, blank=True, verbose_name="ID nhân viên")
+    project = models.CharField(max_length=255, null=True, blank=True, verbose_name="Dự án")
+    company = models.CharField(max_length=50, choices=COMPANY_CHOICES, default='DBplus', verbose_name="Công ty")
     date = models.DateField(default=timezone.now)
     check_in = models.DateTimeField(null=True, blank=True)
     check_out = models.DateTimeField(null=True, blank=True)
-    check_in_face = models.ImageField(upload_to='attendance_faces/check_in/', null=True, blank=True)
-    check_out_face = models.ImageField(upload_to='attendance_faces/check_out/', null=True, blank=True)
+    check_in_image_url = models.ImageField(upload_to='attendance_faces/check_in/', null=True, blank=True, verbose_name="Ảnh Check-in")
+    check_out_image_url = models.ImageField(upload_to='attendance_faces/check_out/', null=True, blank=True, verbose_name="Ảnh Check-out")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -56,6 +64,7 @@ class AttendanceRecord(models.Model):
         unique_together = ['user', 'date']  # Mỗi người chỉ có 1 bản ghi mỗi ngày
 
     def __str__(self):
-        return f"{self.user.username} - {self.date} - Check in: {self.check_in}, Check out: {self.check_out}"
+        check_in_time = self.check_in.strftime("%H:%M:%S") if self.check_in else "Chưa có"
+        check_out_time = self.check_out.strftime("%H:%M:%S") if self.check_out else "Chưa có"
+        return f"{self.user.username} - {self.project} - {self.company} - {self.date} - Check in: {check_in_time}, Check out: {check_out_time}"
 
-# Create your models here. (Các model khác nếu có)

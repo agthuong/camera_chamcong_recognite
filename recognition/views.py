@@ -37,7 +37,8 @@ from django.utils import timezone
 from django.db.models import Q
 from rest_framework import generics, filters, status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
 from .serializers import AttendanceRecordSerializer
 from django.utils.dateparse import parse_date
 from django.http import StreamingHttpResponse, JsonResponse
@@ -49,6 +50,7 @@ import random
 import base64
 from .video_roi_processor import sanitize_filename
 from django.conf import settings
+from .firebase_util import push_attendance_to_firebase
 
 mpl.use('Agg') # Đảm bảo mpl.use('Agg') được gọi trước plt
 
@@ -777,6 +779,9 @@ def process_video_roi_view(request):
              requested_camera = form.cleaned_data['camera']
              requested_mode = form.cleaned_data['mode']
              requested_username = form.cleaned_data.get('username')
+             requested_employee_id = form.cleaned_data.get('employee_id')
+             requested_project = form.cleaned_data.get('project')
+             requested_company = form.cleaned_data.get('company')
 
              if requested_mode == 'collect' and not requested_username:
                  return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập username khi chọn chế độ thu thập dữ liệu.'})
@@ -833,6 +838,11 @@ def process_video_roi_view(request):
                          stream_output,
                          requested_username,
                      ),
+                     kwargs={
+                         'employee_id': requested_employee_id,
+                         'project': requested_project,
+                         'company': requested_company
+                     },
                      daemon=True
                  )
                  processing_thread.start()
@@ -986,6 +996,10 @@ class AttendanceRecordList(generics.ListAPIView):
     filter_backends = [filters.SearchFilter]
     search_fields = ['user__username', 'user__first_name', 'user__last_name']
     
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+    
     def get_queryset(self):
         queryset = AttendanceRecord.objects.all().order_by('-date', '-check_in')
         
@@ -1042,7 +1056,7 @@ class UserAttendanceRecordList(generics.ListAPIView):
 def today_attendance(request):
     today = datetime.now().date()
     records = AttendanceRecord.objects.filter(date=today)
-    serializer = AttendanceRecordSerializer(records, many=True)
+    serializer = AttendanceRecordSerializer(records, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['GET'])
@@ -1070,7 +1084,7 @@ def my_attendance(request):
         except Exception:
             pass
             
-    serializer = AttendanceRecordSerializer(queryset, many=True)
+    serializer = AttendanceRecordSerializer(queryset, many=True, context={'request': request})
     return Response(serializer.data)
 
 @require_POST
@@ -1424,3 +1438,52 @@ def get_random_dataset_images_view(request, username):
         return JsonResponse({'status': 'error', 'message': 'Lỗi server khi lấy ảnh.'}, status=500)
 
     return JsonResponse({'status': 'success', 'images': images_base64})
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])  # Chỉ admin mới có thể gọi API này
+def sync_to_firebase(request):
+    """
+    Đẩy dữ liệu chấm công lên Firebase. Có thể lọc theo date hoặc đẩy tất cả.
+    
+    Params:
+        date (string, optional): Ngày cần đồng bộ theo định dạng YYYY-MM-DD.
+        camera_name (string, optional): Tên camera để gán cho các bản ghi.
+    """
+    date_str = request.data.get('date')
+    camera_name = request.data.get('camera_name')  # Thêm thông tin camera từ request
+    
+    if date_str:
+        try:
+            sync_date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            records = AttendanceRecord.objects.filter(date=sync_date)
+            target_desc = f"cho ngày {date_str}"
+        except ValueError:
+            return Response({"error": "Định dạng ngày không hợp lệ. Sử dụng định dạng YYYY-MM-DD."}, status=400)
+    else:
+        records = AttendanceRecord.objects.all()
+        target_desc = "tất cả"
+    
+    if camera_name:
+        target_desc += f" với camera '{camera_name}'"
+    
+    if not records.exists():
+        return Response({"message": f"Không có dữ liệu chấm công {target_desc} để đồng bộ."}, status=200)
+    
+    success_count = 0
+    error_count = 0
+    
+    for record in records:
+        try:
+            if push_attendance_to_firebase(record, camera_name):
+                success_count += 1
+            else:
+                error_count += 1
+        except Exception:
+            error_count += 1
+    
+    return Response({
+        "message": f"Đồng bộ dữ liệu {target_desc} lên Firebase hoàn tất.",
+        "total": records.count(),
+        "success": success_count,
+        "error": error_count
+    }, status=200)

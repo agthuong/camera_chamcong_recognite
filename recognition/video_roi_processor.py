@@ -17,6 +17,7 @@ from django.conf import settings
 import threading
 import re
 from unidecode import unidecode
+from .firebase_util import push_attendance_to_firebase  # Thêm import này
 
 # --- Global state for tracking collection progress ---
 # Format: { 'sanitized_username': {'current': 0, 'total': 150, 'active': False} }
@@ -377,15 +378,29 @@ class VideoSourceHandler:
 
 def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, username=None,
                            max_samples=settings.RECOGNITION_DEFAULT_MAX_SAMPLES,
-                           recognition_threshold=settings.RECOGNITION_CHECK_IN_THRESHOLD):
+                           recognition_threshold=settings.RECOGNITION_CHECK_IN_THRESHOLD,
+                           employee_id=None, project=None, company=None):
     
     global collect_progress_tracker # Để có thể cập nhật biến global
     # --- DEBUG PRINTS --- 
     print("-"*30)
     print(f"[PROCESS START] Mode: {mode}, Source: {video_source}, ROI: {roi}, Username: {username}")
+    print(f"[PROCESS START] Employee ID: {employee_id}, Project: {project}, Company: {company}")
     print(f"[PROCESS START] stop_event set: {stop_event.is_set()}")
     # --- END DEBUG PRINTS --- 
     
+    # Xác định tên camera từ nguồn video nếu có thể
+    camera_name = None
+    try:
+        from .models import CameraConfig
+        # Thử tìm camera trong cơ sở dữ liệu
+        camera_obj = CameraConfig.objects.filter(source=str(video_source)).first()
+        if camera_obj:
+            camera_name = camera_obj.name
+            print(f"[PROCESS INFO] Đã xác định camera: {camera_name}")
+    except Exception as cam_err:
+        print(f"[PROCESS INFO] Không thể xác định camera từ nguồn {video_source}: {cam_err}")
+
     output_handler.start_stream() 
 
     if mode == 'collect' and not username:
@@ -660,8 +675,21 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         record, created = AttendanceRecord.objects.get_or_create(
                                             user=user,
                                             date=today,
-                                            defaults={'check_in': now}
+                                            defaults={
+                                                'check_in': now,
+                                                'project': project,
+                                                'company': company,
+                                                'employee_id': employee_id
+                                            }
                                         )
+
+                                        # Cập nhật thông tin dự án và công ty nếu có
+                                        if project and not record.project:
+                                            record.project = project
+                                        if company and not record.company:
+                                            record.company = company
+                                        if employee_id and not record.employee_id:
+                                            record.employee_id = employee_id
 
                                         if created:
                                             # --- Check-in: Vẫn dùng ngưỡng mặc định (recognition_threshold đã lấy từ settings) ---
@@ -678,10 +706,17 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                             if not saved_img_in:
                                                 print(f"[PROCESS ERROR] Không thể lưu ảnh check-in tại: {face_path}")
                                             else:
-                                                record.check_in_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
+                                                record.check_in_image_url = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
                                                 record.save() # Lưu record chỉ khi ảnh lưu thành công (hoặc di chuyển save ra ngoài if này nếu ảnh không bắt buộc)
                                                 last_save_time[person_name] = now # Cập nhật thời gian chỉ khi save thành công
                                                 print(f"[PROCESS INFO] Đã lưu check-in cho '{person_name}'")
+                                                
+                                                # Đẩy dữ liệu lên Firebase sau khi check-in
+                                                try:
+                                                    push_attendance_to_firebase(record, camera_name)
+                                                    print(f"[PROCESS INFO] Đã đẩy dữ liệu check-in lên Firebase cho '{person_name}'")
+                                                except Exception as firebase_err:
+                                                    print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-in lên Firebase: {firebase_err}")
                                         else:
                                             # --- Check-out: Thêm kiểm tra ngưỡng cao hơn --- 
                                             if recognition_counts[person_name] >= settings.RECOGNITION_CHECK_OUT_THRESHOLD:
@@ -702,12 +737,17 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                                     if not saved_img_out:
                                                         print(f"[PROCESS ERROR] Không thể lưu ảnh check-out tại: {face_path}")
                                                     else:
-                                                        record.check_out_face = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
+                                                        record.check_out_image_url = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
                                                         record.save() # Lưu record chỉ khi ảnh lưu thành công
                                                         last_save_time[person_name] = now # Cập nhật thời gian chỉ khi save thành công
                                                         print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (Đạt ngưỡng {settings.RECOGNITION_CHECK_OUT_THRESHOLD})")
-                                            # --- Kết thúc kiểm tra ngưỡng check-out --- 
-
+                                                        
+                                                        # Đẩy dữ liệu lên Firebase sau khi check-out
+                                                        try:
+                                                            push_attendance_to_firebase(record, camera_name)
+                                                            print(f"[PROCESS INFO] Đã đẩy dữ liệu check-out lên Firebase cho '{person_name}'")
+                                                        except Exception as firebase_err:
+                                                            print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-out lên Firebase: {firebase_err}")
                                     except Exception as e:
                                         print(f"[PROCESS ERROR] Lỗi khi lưu thông tin chấm công: {e}")
                                         import traceback

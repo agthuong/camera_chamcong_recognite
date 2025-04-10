@@ -49,4 +49,5 @@ urlpatterns = [
     path('api/attendance/user/<str:username>/', recog_views.UserAttendanceRecordList.as_view(), name='api-user-attendance'),
     path('api/attendance/today/', recog_views.today_attendance, name='api-today-attendance'),
     path('api/attendance/me/', recog_views.my_attendance, name='api-my-attendance'),
+    path('api/sync-firebase/', recog_views.sync_to_firebase, name='api-sync-firebase'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

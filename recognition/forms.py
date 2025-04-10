@@ -48,6 +48,30 @@ class VideoRoiForm(forms.Form):
         help_text='Chỉ cần nhập khi chọn chế độ Thu thập dữ liệu.',
         widget=forms.TextInput(attrs={'placeholder': 'Nhập username'})
     )
+    employee_id = forms.CharField(
+        label='ID nhân viên',
+        max_length=30,
+        required=False,
+        help_text='ID nhân viên dùng cho thu thập dữ liệu.',
+        widget=forms.TextInput(attrs={'placeholder': 'Nhập ID'})
+    )
+    project = forms.CharField(
+        label='Dự án',
+        max_length=255,
+        required=False,
+        help_text='Dự án của nhân viên.',
+        widget=forms.TextInput(attrs={'placeholder': 'Nhập tên dự án'})
+    )
+    company = forms.ChoiceField(
+        label='Công ty',
+        choices=[
+            ('DBplus', 'DBplus'),
+            ('DBhomes', 'DBhomes')
+        ],
+        required=False,
+        initial='DBplus',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
     def clean(self):
         cleaned_data = super().clean()
