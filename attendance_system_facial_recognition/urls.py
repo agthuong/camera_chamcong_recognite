@@ -69,6 +69,8 @@ urlpatterns = [
     path('api/assign-worker/', recog_views.assign_worker, name='assign-worker'),
     path('api/get-worker-info/', recog_views.get_worker_info, name='get-worker-info'),
     path('api/update-worker/', recog_views.update_worker, name='update-worker'),
+    # API đồng bộ danh sách worker theo supervisor vào Firebase
+    path('api/sync-supervisor-worker-firebase/', recog_views.sync_supervisor_worker_firebase, name='sync-supervisor-worker-firebase'),
 
     # Quản lý cơ sở dữ liệu
     path('database_manager/', recog_views.database_manager_view, name='database-manager'),

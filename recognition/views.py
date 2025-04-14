@@ -1937,3 +1937,59 @@ def update_worker(request):
         return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Worker hoặc Supervisor'}, status=404)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@require_POST
+@login_required
+@permission_required('is_staff', raise_exception=True)
+def sync_supervisor_worker_firebase(request):
+    """
+    Đồng bộ danh sách worker theo supervisor vào collection 'list_worker' trên Firebase.
+    Mỗi document trong collection sẽ là email của supervisor và chứa danh sách ID của các worker.
+    """
+    from .firebase_util import initialize_firebase, firestore
+    
+    db = initialize_firebase()
+    if db is None:
+        return JsonResponse({'status': 'error', 'message': 'Không thể kết nối đến Firebase.'}, status=500)
+
+    try:
+        # Lấy tất cả các Supervisor
+        supervisors = Profile.objects.filter(role='supervisor').select_related('user')
+        
+        # Sử dụng batch để ghi nhiều document hiệu quả
+        batch = db.batch()
+        sync_count = 0
+        
+        for supervisor_profile in supervisors:
+            supervisor_user = supervisor_profile.user
+            supervisor_email = supervisor_user.email
+
+            if not supervisor_email:
+                print(f"[SYNC WARNING] Supervisor {supervisor_user.username} không có email, bỏ qua.")
+                continue # Bỏ qua supervisor nếu không có email
+
+            # Lấy danh sách ID của các worker thuộc supervisor này
+            worker_ids = list(
+                supervisor_profile.workers.values_list('user_id', flat=True)
+            )
+            # Chuyển đổi sang list string
+            worker_ids_str = [str(id) for id in worker_ids]
+            
+            # Tạo hoặc ghi đè document trong list_worker
+            doc_ref = db.collection('list_worker').document(supervisor_email)
+            batch.set(doc_ref, {'workers': worker_ids_str}) # Ghi đè bằng set thay vì merge/ArrayUnion
+            sync_count += 1
+            print(f"[SYNC INFO] Chuẩn bị đồng bộ {len(worker_ids_str)} worker cho {supervisor_email}")
+
+        # Commit batch
+        batch.commit()
+        
+        message = f"Đồng bộ thành công {sync_count} supervisor và danh sách worker của họ."
+        print(f"[SYNC SUCCESS] {message}")
+        return JsonResponse({'status': 'success', 'message': message})
+
+    except Exception as e:
+        print(f"[SYNC ERROR] Lỗi trong quá trình đồng bộ: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'status': 'error', 'message': f'Lỗi server: {e}'}, status=500)

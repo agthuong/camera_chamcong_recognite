@@ -51,6 +51,7 @@ def push_attendance_to_firebase(record, camera_name=None):
     """
     Đẩy thông tin chấm công lên Firebase theo cấu trúc mới:
     users/[user_id]/attendance_logs/[date]
+    Đồng thời cập nhật collection list_worker/{supervisor_email} với danh sách ID worker.
     
     Với worker, sẽ sử dụng email của supervisor thay vì email riêng.
     Worker không có email, chỉ có supervisor_email.
@@ -90,6 +91,7 @@ def push_attendance_to_firebase(record, camera_name=None):
         supervisor_username = None
         supervisor_email = None
         user_email = user.email if user.email else None
+        worker_id_for_list = str(user.id) # Lấy ID worker để thêm vào list
         
         # Kiểm tra thông tin vai trò từ Profile model
         try:
@@ -175,6 +177,18 @@ def push_attendance_to_firebase(record, camera_name=None):
         # Lưu dữ liệu chấm công vào subcollection attendance_logs
         attendance_log_ref = user_doc_ref.collection('attendance_logs').document(date_str)
         attendance_log_ref.set(attendance_data, merge=True)
+        
+        # === Cập nhật danh sách worker cho supervisor ===
+        if user_role == 'worker' and supervisor_email:
+            try:
+                list_worker_doc_ref = db.collection('list_worker').document(supervisor_email)
+                list_worker_doc_ref.set({
+                    'workers': firestore.ArrayUnion([worker_id_for_list])
+                }, merge=True)
+                print(f"[FIREBASE] Đã cập nhật worker ID {worker_id_for_list} vào danh sách của supervisor {supervisor_email}")
+            except Exception as e:
+                print(f"[FIREBASE ERROR] Lỗi khi cập nhật list_worker cho {supervisor_email}: {e}")
+        # === Kết thúc cập nhật danh sách worker ===
         
         # Log dữ liệu sẽ đẩy lên
         print(f"[FIREBASE] Đẩy dữ liệu lên Firebase cho {user.username} với đường dẫn: users/{user.id}/attendance_logs/{date_str}")

@@ -5,7 +5,12 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h1 class="text-center mb-4">Mối quan hệ Supervisor và Worker</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-center mb-0">Danh sách Supervisor và Worker</h1>
+        <button class="btn btn-warning" id="sync-firebase-btn" title="Đồng bộ danh sách Supervisor-Worker lên Firebase">
+            <i class="fas fa-sync-alt"></i> Đồng bộ lên Firebase
+        </button>
+    </div>
     
     <!-- Thêm CSS inline để khắc phục vấn đề hiển thị -->
     <style>
@@ -369,6 +374,7 @@
 {% endblock %}
 
 {% block extrajs %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- Thêm SweetAlert2 -->
 <script>
     $(document).ready(function() {
         // Hiệu ứng đếm số
@@ -567,6 +573,66 @@
                 }
             });
         });
+
+        // === Xử lý nút Đồng bộ Firebase ===
+        $('#sync-firebase-btn').click(function() {
+            const button = $(this);
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang đồng bộ...');
+
+            // Lấy CSRF token từ form bất kỳ trên trang (nếu có) hoặc từ cookie
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val(); 
+
+            Swal.fire({
+                title: 'Xác nhận đồng bộ?',
+                text: "Hành động này sẽ cập nhật toàn bộ danh sách worker theo supervisor lên Firestore. Dữ liệu cũ trong collection 'list_worker' có thể bị ghi đè.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Đồng ý đồng bộ!',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Thực hiện AJAX call
+                    $.ajax({
+                        url: '{% url "sync-supervisor-worker-firebase" %}', // URL sẽ tạo ở bước sau
+                        type: 'POST',
+                        headers: { "X-CSRFToken": csrfToken }, // Gửi CSRF token trong header
+                        dataType: 'json',
+                        success: function(response) {
+                            button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Đồng bộ lên Firebase');
+                            if (response.status === 'success') {
+                                Swal.fire(
+                                    'Thành công!',
+                                    response.message || 'Đã đồng bộ danh sách worker lên Firebase thành công.',
+                                    'success'
+                                );
+                            } else {
+                                Swal.fire(
+                                    'Lỗi!',
+                                    response.message || 'Có lỗi xảy ra trong quá trình đồng bộ.',
+                                    'error'
+                                );
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                            button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Đồng bộ lên Firebase');
+                            console.error("Firebase Sync Error:", textStatus, errorThrown);
+                            Swal.fire(
+                                'Lỗi Kết Nối!',
+                                'Không thể kết nối đến server để đồng bộ. Vui lòng thử lại.',
+                                'error'
+                            );
+                        }
+                    });
+                } else {
+                    // Nếu người dùng hủy
+                    button.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Đồng bộ lên Firebase');
+                }
+            });
+        });
+        // === Kết thúc xử lý nút Đồng bộ Firebase ===
+
     });
 </script>
 {% endblock %} 
