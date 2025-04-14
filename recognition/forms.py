@@ -88,15 +88,26 @@ class VideoRoiForm(forms.Form):
         widget=forms.Select(attrs={'class': 'form-control'}) # Dùng Select widget
     )
     
+    # --- Thêm trường nhà thầu (Contractor) ---
+    contractor = forms.CharField(
+        label='Nhà thầu',
+        max_length=100,
+        required=False, # Sẽ validate trong clean() chỉ cho worker
+        widget=forms.TextInput(attrs={'placeholder': 'Nhập tên nhà thầu (bắt buộc cho Worker)', 'class': 'form-control'})
+    )
+    
+    # --- Thêm trường lĩnh vực (Field) ---
+    field = forms.CharField(
+        label='Lĩnh vực',
+        max_length=100,
+        required=False, # Sẽ validate trong clean() chỉ cho worker
+        widget=forms.TextInput(attrs={'placeholder': 'Nhập lĩnh vực công việc (bắt buộc cho Worker)', 'class': 'form-control'})
+    )
+    
     # --- Bỏ trường employee_id --- 
     # employee_id = forms.CharField(max_length=50, required=False, label="Mã NV")
     # --- Bỏ trường project --- 
     # project = forms.CharField(max_length=100, required=False, label="Dự án")
-
-    # Bỏ __init__ nếu không cần logic đặc biệt khi khởi tạo nữa
-    # def __init__(self, *args, **kwargs):
-    #    super(VideoRoiForm, self).__init__(*args, **kwargs)
-    #    # ... logic cũ đã bị xóa ...
 
     def clean(self):
         cleaned_data = super().clean()
@@ -105,6 +116,9 @@ class VideoRoiForm(forms.Form):
         email = cleaned_data.get("email") # Lấy email
         role = cleaned_data.get("role")
         supervisor = cleaned_data.get("supervisor")
+        # Lấy giá trị của các trường mới
+        contractor = cleaned_data.get("contractor")
+        field = cleaned_data.get("field")
         # --- Bỏ employee_id và project --- 
         # employee_id = cleaned_data.get("employee_id")
         company = cleaned_data.get("company")
@@ -117,10 +131,15 @@ class VideoRoiForm(forms.Form):
             # Role là bắt buộc khi collect
             if not role:
                 self.add_error('role', "Vui lòng chọn vai trò cho người dùng.")
-            # Nếu là worker, supervisor là bắt buộc
+            # Nếu là worker, supervisor, contractor và field là bắt buộc
             elif role == 'worker':
                 if not supervisor:
                     self.add_error('supervisor', "Vui lòng chọn Supervisor cho Worker.")
+                # Kiểm tra nhà thầu và lĩnh vực cho worker
+                if not contractor:
+                    self.add_error('contractor', "Vui lòng nhập Nhà thầu cho Worker.")
+                if not field:
+                    self.add_error('field', "Vui lòng nhập Lĩnh vực công việc cho Worker.")
             # Nếu là supervisor, email là bắt buộc
             elif role == 'supervisor':
                 if not email:
@@ -135,14 +154,6 @@ class VideoRoiForm(forms.Form):
              # Bỏ validation cho project
              # if not project:
              #    self.add_error('project', "Vui lòng nhập Dự án.")
-            
-            # Kiểm tra nếu username đã tồn tại
-            # Lưu ý: Chỉ kiểm tra khi tạo mới, cần logic khác nếu cho phép cập nhật
-            # User_exists = User.objects.filter(username=username).exists()
-            # if User_exists:
-            #     # Kiểm tra xem form có instance không (nghĩa là đang update hay create)
-            #     # if not self.instance or self.instance.username != username:
-            #     self.add_error('username', "Username này đã tồn tại.")
             
             # Kiểm tra nếu email đã tồn tại (nếu email phải là duy nhất)
             if email and role == 'supervisor':

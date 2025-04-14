@@ -1,45 +1,70 @@
-from django.shortcuts import render, redirect
-from .forms import usernameForm, DateForm, UsernameAndDateForm, DateForm_2, VideoRoiForm, AddCameraForm
-from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User
-import cv2
-import dlib
-import imutils
-from imutils import face_utils
-from imutils.video import VideoStream
-from imutils.face_utils import FaceAligner
+from django.contrib.auth.decorators import login_required, permission_required
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse, Http404
+from django.contrib import messages
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q, Count
+from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.conf import settings
+
+import threading
 import time
-from attendance_system_facial_recognition.settings import BASE_DIR
+import json
+import cv2
 import os
-import face_recognition
-from face_recognition.face_recognition_cli import image_files_in_folder
-import pickle
+import platform
+import uuid
+import base64
+import numpy as np
+import random
+from datetime import date, datetime, timedelta
+from django.utils.timezone import make_aware, now
+from pathlib import Path
+import re
+import traceback
+
+# REST API
+from rest_framework import status, generics, filters
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+
+# Import Profile từ ứng dụng users
+from users.models import Profile
+
+# Import từ firebase_util
+from .firebase_util import push_attendance_to_firebase, initialize_firebase
+from firebase_admin import firestore
+
+# Import các form từ forms.py
+from .forms import usernameForm, DateForm, UsernameAndDateForm, DateForm_2, VideoRoiForm, AddCameraForm
+
+# Import các model từ models.py
+from .models import CameraConfig, AttendanceRecord
+
+# Import các hàm xử lý video từ video_roi_processor.py
+from .video_roi_processor import sanitize_filename, stream_output, process_video_with_roi, select_roi_from_source
+
+# Import các hàm xử lý dữ liệu từ sklearn
 from sklearn.preprocessing import LabelEncoder
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-import numpy as np
-from django.contrib.auth.decorators import login_required, permission_required
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
-import datetime
 from django_pandas.io import read_frame
-from users.models import Present, Time
-import seaborn as sns
-import pandas as pd
-from django.db.models import Count
-import matplotlib.pyplot as plt
 from pandas.plotting import register_matplotlib_converters
 from matplotlib import rcParams
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+import matplotlib.pyplot as plt
 import math
-from .models import CameraConfig, AttendanceRecord
-from django.utils import timezone
-from django.db.models import Q
-from rest_framework import generics, filters, status
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from .serializers import AttendanceRecordSerializer
 from django.utils.dateparse import parse_date
 from django.http import StreamingHttpResponse, JsonResponse
 import threading
@@ -48,7 +73,17 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import random
 import base64
-from .video_roi_processor import sanitize_filename
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+from .serializers import AttendanceRecordSerializer, UserSerializer
+from django.utils.dateparse import parse_date
+from django.http import StreamingHttpResponse, JsonResponse
+import threading
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+import json
+import random
+import base64
 from django.conf import settings
 from .firebase_util import push_attendance_to_firebase
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -74,6 +109,8 @@ from .video_roi_processor import process_video_with_roi, stream_output, select_r
 from .firebase_util import push_attendance_to_firebase
 from users.models import Profile
 
+# Thêm import matplotlib
+import matplotlib as mpl
 mpl.use('Agg') # Đảm bảo mpl.use('Agg') được gọi trước plt
 
 # Khởi tạo biến global ở cấp độ module
@@ -783,6 +820,9 @@ def process_video_roi_view(request):
             supervisor = form_data.get('supervisor')
             company = form_data.get('company') # Lấy company từ form
             email = form_data.get('email') # Lấy email từ form nếu là supervisor
+            # Lấy thông tin nhà thầu và lĩnh vực
+            contractor = form_data.get('contractor')
+            field = form_data.get('field')
 
             # --- Đảm bảo có giá trị company hợp lệ --- 
             if not company:
@@ -801,8 +841,13 @@ def process_video_roi_view(request):
                 # Validate role-specific inputs
                 if role == 'supervisor' and not email:
                     return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Email cho Supervisor.'})
-                elif role == 'worker' and not supervisor:
-                    return JsonResponse({'status': 'error', 'message': 'Vui lòng chọn Supervisor cho Worker.'})
+                elif role == 'worker':
+                    if not supervisor:
+                        return JsonResponse({'status': 'error', 'message': 'Vui lòng chọn Supervisor cho Worker.'})
+                    if not contractor:
+                        return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Nhà thầu cho Worker.'})
+                    if not field:
+                        return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Lĩnh vực công việc cho Worker.'})
                 
                 try:
                     # Kiểm tra username và tạo User nếu chưa có
@@ -838,6 +883,11 @@ def process_video_roi_view(request):
                         'company': company,
                         'supervisor': Profile.objects.get(user=supervisor) if role == 'worker' and supervisor else None
                     }
+                    
+                    # Thêm thông tin nhà thầu và lĩnh vực cho worker
+                    if role == 'worker':
+                        profile_data['contractor'] = contractor
+                        profile_data['field'] = field
                     
                     # Sử dụng get_or_create hoặc update_or_create
                     profile, created = Profile.objects.get_or_create(
@@ -901,7 +951,9 @@ def process_video_roi_view(request):
                 thread_kwargs = {
                     'company': company, # Đã lấy và xử lý ở trên
                     'project': None, # Tạm thời để None vì đã bỏ trường này
-                    'camera_name': requested_camera.name # Thêm tên camera vào kwargs
+                    'camera_name': requested_camera.name, # Thêm tên camera vào kwargs
+                    'contractor': contractor if role == 'worker' else None, # Thêm nhà thầu
+                    'field': field if role == 'worker' else None # Thêm lĩnh vực
                 }
 
                 processing_thread = threading.Thread(
@@ -1749,20 +1801,22 @@ def update_supervisor(request):
             # Kiểm tra xem email đã tồn tại chưa
             existing_user = User.objects.filter(email=email).exclude(id=supervisor.user.id).first()
             if existing_user:
-                return JsonResponse({'status': 'error', 'message': 'Email đã được sử dụng bởi người dùng khác'})
+                return JsonResponse({'status': 'error', 'message': f'Email {email} đã được sử dụng bởi người dùng khác'})
             
+            # Cập nhật email cho user
             supervisor.user.email = email
             supervisor.user.save()
         
-        # Cập nhật công ty cho supervisor
-        supervisor.company = company
-        supervisor.save()
+        # Cập nhật company cho profile
+        if company:
+            supervisor.company = company
+            supervisor.save()
         
-        return JsonResponse({'status': 'success'})
+        return JsonResponse({'status': 'success', 'message': 'Đã cập nhật thông tin supervisor thành công'})
     except Profile.DoesNotExist:
-        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Supervisor'}, status=404)
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy supervisor'}, status=404)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Lỗi khi cập nhật supervisor: {str(e)}'}, status=500)
 
 @login_required
 @require_POST
@@ -1815,6 +1869,9 @@ def add_worker(request):
     username = request.POST.get('username')
     company = request.POST.get('company')
     supervisor_id = request.POST.get('supervisor_id')
+    # Lấy thêm contractor và field
+    contractor = request.POST.get('contractor')
+    field = request.POST.get('field')
     
     if not username:
         return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp username'})
@@ -1838,12 +1895,14 @@ def add_worker(request):
             except Profile.DoesNotExist:
                 pass
         
-        # Tạo profile
+        # Tạo profile với thông tin contractor và field
         Profile.objects.create(
             user=user,
             role='worker',
             company=company,
-            supervisor=supervisor
+            supervisor=supervisor,
+            contractor=contractor, # Thêm contractor
+            field=field # Thêm field
         )
         
         return JsonResponse({'status': 'success'})
@@ -1894,7 +1953,9 @@ def get_worker_info(request):
         data = {
             'username': worker.user.username,
             'company': worker.company or '',
-            'supervisor_id': worker.supervisor.id if worker.supervisor else ''
+            'supervisor_id': worker.supervisor.id if worker.supervisor else '',
+            'contractor': worker.contractor or '', # Thêm contractor
+            'field': worker.field or '' # Thêm field
         }
         
         return JsonResponse({'status': 'success', 'data': data})
@@ -1913,6 +1974,9 @@ def update_worker(request):
     worker_id = request.POST.get('worker_id')
     company = request.POST.get('company')
     supervisor_id = request.POST.get('supervisor_id')
+    # Lấy thêm contractor và field
+    contractor = request.POST.get('contractor')
+    field = request.POST.get('field')
     
     if not worker_id:
         return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp worker_id'})
@@ -1920,8 +1984,10 @@ def update_worker(request):
     try:
         worker = Profile.objects.get(id=worker_id, role='worker')
         
-        # Cập nhật công ty
+        # Cập nhật công ty, contractor, field
         worker.company = company
+        worker.contractor = contractor # Thêm contractor
+        worker.field = field # Thêm field
         
         # Cập nhật supervisor
         if supervisor_id:
@@ -1947,6 +2013,7 @@ def sync_supervisor_worker_firebase(request):
     Mỗi document trong collection sẽ là email của supervisor và chứa:
     - Danh sách ID của các worker
     - ID của supervisor
+    - Thông tin thêm của worker: nhà thầu, lĩnh vực
     """
     from .firebase_util import initialize_firebase, firestore
     
@@ -1972,11 +2039,10 @@ def sync_supervisor_worker_firebase(request):
                 continue # Bỏ qua supervisor nếu không có email
 
             # Lấy danh sách ID của các worker thuộc supervisor này
-            worker_ids = list(
-                supervisor_profile.workers.values_list('user_id', flat=True)
-            )
+            worker_profiles = supervisor_profile.workers.all().select_related('user')
+            
             # Chuyển đổi sang list string
-            worker_ids_str = [str(id) for id in worker_ids]
+            worker_ids_str = [str(worker.user_id) for worker in worker_profiles]
             
             # Tạo hoặc ghi đè document trong list_worker
             doc_ref = db.collection('list_worker').document(supervisor_email)
@@ -1986,18 +2052,179 @@ def sync_supervisor_worker_firebase(request):
                 'username': supervisor_user.username,  # Thêm username cho dễ đọc
                 'company': supervisor_profile.company or "Unknown"  # Thêm thông tin công ty
             })
+            
+            # Thêm thông tin chi tiết của từng worker vào subcollection
+            for worker_profile in worker_profiles:
+                worker_user = worker_profile.user
+                worker_id = str(worker_user.id)
+                
+                # Tạo dữ liệu worker chi tiết
+                worker_data = {
+                    'id': worker_id,
+                    'username': worker_user.username,
+                }
+                
+                # Thêm thông tin nhà thầu và lĩnh vực nếu có
+                if worker_profile.contractor:
+                    worker_data['contractor'] = worker_profile.contractor
+                if worker_profile.field:
+                    worker_data['field'] = worker_profile.field
+                
+                # Tạo reference tới document chi tiết worker
+                worker_detail_ref = doc_ref.collection('worker_details').document(worker_id)
+                batch.set(worker_detail_ref, worker_data)
+            
             sync_count += 1
-            print(f"[SYNC INFO] Chuẩn bị đồng bộ supervisor {supervisor_user.username} (ID: {supervisor_id}) với {len(worker_ids_str)} worker")
-
-        # Commit batch
+            
+        # Thực hiện commit batch
         batch.commit()
         
-        message = f"Đồng bộ thành công {sync_count} supervisor và danh sách worker của họ."
-        print(f"[SYNC SUCCESS] {message}")
-        return JsonResponse({'status': 'success', 'message': message})
-
+        return JsonResponse({
+            'status': 'success', 
+            'message': f'Đã đồng bộ thành công {sync_count} supervisor và thông tin worker của họ lên Firebase.'
+        })
+        
     except Exception as e:
-        print(f"[SYNC ERROR] Lỗi trong quá trình đồng bộ: {e}")
         import traceback
         traceback.print_exc()
-        return JsonResponse({'status': 'error', 'message': f'Lỗi server: {e}'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Lỗi khi đồng bộ: {str(e)}'}, status=500)
+
+# Thêm hàm xóa worker
+@login_required
+@require_POST
+def delete_worker(request):
+    """API để xóa Worker"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    worker_id = request.POST.get('worker_id')
+    
+    if not worker_id:
+        return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp worker_id'})
+    
+    try:
+        worker = Profile.objects.get(id=worker_id, role='worker')
+        user = worker.user
+        
+        # Xóa profile trước
+        worker.delete()
+        
+        # Xóa user
+        user.delete()
+        
+        return JsonResponse({'status': 'success', 'message': 'Đã xóa worker thành công'})
+    except Profile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Worker'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Lỗi khi xóa worker: {str(e)}'}, status=500)
+
+# Thêm hàm xóa supervisor
+@login_required
+@require_POST
+def delete_supervisor(request):
+    """API để xóa Supervisor"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    supervisor_id = request.POST.get('supervisor_id')
+    
+    if not supervisor_id:
+        return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp supervisor_id'})
+    
+    try:
+        supervisor = Profile.objects.get(id=supervisor_id, role='supervisor')
+        
+        # Kiểm tra xem supervisor có worker nào không
+        if Profile.objects.filter(supervisor=supervisor).exists():
+            return JsonResponse({
+                'status': 'error', 
+                'message': 'Supervisor này đang có workers. Vui lòng chuyển workers sang supervisor khác trước khi xóa.'
+            })
+        
+        user = supervisor.user
+        
+        # Xóa profile trước
+        supervisor.delete()
+        
+        # Xóa user
+        user.delete()
+        
+        return JsonResponse({'status': 'success', 'message': 'Đã xóa supervisor thành công'})
+    except Profile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Supervisor'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Lỗi khi xóa supervisor: {str(e)}'}, status=500)
+
+@api_view(['POST'])
+@login_required
+def save_contractor_to_firebase(request):
+    """API để lưu danh sách nhà thầu và lĩnh vực vào Firebase"""
+    if not request.user.is_superuser:
+        return Response({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    try:
+        # Khởi tạo Firebase
+        db = initialize_firebase()
+        if not db:
+            return Response({'status': 'error', 'message': 'Không thể kết nối đến Firebase'}, status=500)
+        
+        # Lấy dữ liệu từ request.data
+        data = request.data
+        
+        # Kiểm tra các định dạng dữ liệu khác nhau
+        contractors = []
+        
+        # Trường hợp 1: data là list các đối tượng có thuộc tính name và field
+        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+            print(f"[CONTRACTOR] Dữ liệu dạng danh sách đối tượng: {data}")
+            contractors = data
+        # Trường hợp 2: data có thuộc tính contractors
+        elif isinstance(data, dict) and 'contractors' in data:
+            print(f"[CONTRACTOR] Dữ liệu có thuộc tính contractors: {data['contractors']}")
+            if isinstance(data['contractors'], list):
+                contractors = data['contractors']
+            else:
+                # Trường hợp contractors không phải là list
+                return Response({'status': 'error', 'message': 'Dữ liệu contractors không đúng định dạng'}, status=400)
+        # Trường hợp 3: data không phải là định dạng hợp lệ
+        else:
+            print(f"[CONTRACTOR] Dữ liệu không đúng định dạng: {data}")
+            return Response({'status': 'error', 'message': 'Dữ liệu không đúng định dạng'}, status=400)
+        
+        if not contractors:
+            return Response({'status': 'error', 'message': 'Không có dữ liệu nhà thầu'}, status=400)
+        
+        # Lưu danh sách nhà thầu vào collection 'contractors'
+        contractors_ref = db.collection('contractors')
+        batch = db.batch()
+        
+        # Xử lý từng nhà thầu
+        for contractor in contractors:
+            # Tùy thuộc vào định dạng của mỗi contractor
+            if isinstance(contractor, dict) and 'name' in contractor:
+                contractor_data = {
+                    'name': contractor['name']
+                }
+                # Thêm field nếu có
+                if 'field' in contractor:
+                    contractor_data['field'] = contractor['field']
+            else:
+                # Nếu contractor chỉ là chuỗi
+                contractor_data = {'name': str(contractor)}
+            
+            # Tạo ID dựa trên tên để tránh trùng lặp
+            doc_id = contractor_data['name'].lower().replace(' ', '_')
+            doc_ref = contractors_ref.document(doc_id)
+            batch.set(doc_ref, contractor_data, merge=True)
+        
+        # Thực hiện commit batch
+        batch.commit()
+        
+        return Response({
+            'status': 'success', 
+            'message': f'Đã lưu {len(contractors)} nhà thầu vào Firebase'
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response({'status': 'error', 'message': f'Lỗi: {str(e)}'}, status=500)

@@ -93,6 +93,10 @@ def push_attendance_to_firebase(record, camera_name=None):
         user_email = user.email if user.email else None
         worker_id_for_list = str(user.id) # Lấy ID worker để thêm vào list
         
+        # Khởi tạo biến để lưu thông tin nhà thầu và lĩnh vực
+        contractor_info = None
+        field_info = None
+        
         # Kiểm tra thông tin vai trò từ Profile model
         try:
             # Kiểm tra xem user có Profile không
@@ -105,6 +109,12 @@ def push_attendance_to_firebase(record, camera_name=None):
                 # Lấy thông tin công ty nếu có
                 if profile.company:
                     company_name = profile.company
+                
+                # Lấy thông tin nhà thầu và lĩnh vực nếu có
+                if profile.contractor:
+                    contractor_info = profile.contractor
+                if profile.field:
+                    field_info = profile.field
                 
                 # Nếu là worker, lấy thông tin supervisor
                 if user_role == 'worker' and profile.supervisor:
@@ -137,6 +147,13 @@ def push_attendance_to_firebase(record, camera_name=None):
             'role': user_role,  # Đảm bảo luôn có trường role
             'company': company_name,
         }
+        
+        # Thêm thông tin nhà thầu và lĩnh vực nếu có
+        if user_role == 'worker':
+            if contractor_info:
+                user_data['contractor'] = contractor_info
+            if field_info:
+                user_data['field'] = field_info
         
         # Chỉ thêm email cho supervisor, không thêm cho worker
         if user_role == 'supervisor' and user_email:
@@ -181,11 +198,31 @@ def push_attendance_to_firebase(record, camera_name=None):
         # === Cập nhật danh sách worker cho supervisor ===
         if user_role == 'worker' and supervisor_email:
             try:
+                # Dữ liệu worker cần đẩy lên danh sách
+                worker_data = {
+                    'id': worker_id_for_list,
+                    'username': user.username
+                }
+                
+                # Thêm thông tin nhà thầu và lĩnh vực
+                if contractor_info:
+                    worker_data['contractor'] = contractor_info
+                if field_info:
+                    worker_data['field'] = field_info
+                
+                # Cập nhật danh sách worker với cả thông tin chi tiết
                 list_worker_doc_ref = db.collection('list_worker').document(supervisor_email)
+                
+                # Đầu tiên, thêm worker ID vào mảng workers (để duy trì tương thích với code cũ)
                 list_worker_doc_ref.set({
                     'workers': firestore.ArrayUnion([worker_id_for_list])
                 }, merge=True)
-                print(f"[FIREBASE] Đã cập nhật worker ID {worker_id_for_list} vào danh sách của supervisor {supervisor_email}")
+                
+                # Sau đó, lưu thông tin chi tiết của worker vào subcollection worker_details
+                worker_details_ref = list_worker_doc_ref.collection('worker_details').document(worker_id_for_list)
+                worker_details_ref.set(worker_data, merge=True)
+                
+                print(f"[FIREBASE] Đã cập nhật worker ID {worker_id_for_list} với thông tin chi tiết vào danh sách của supervisor {supervisor_email}")
             except Exception as e:
                 print(f"[FIREBASE ERROR] Lỗi khi cập nhật list_worker cho {supervisor_email}: {e}")
         # === Kết thúc cập nhật danh sách worker ===

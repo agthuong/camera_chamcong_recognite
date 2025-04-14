@@ -380,13 +380,14 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                            max_samples=settings.RECOGNITION_DEFAULT_MAX_SAMPLES,
                            recognition_threshold=settings.RECOGNITION_CHECK_IN_THRESHOLD,
                            employee_id=None, project=None, company=None,
-                           camera_name=None):
+                           camera_name=None, contractor=None, field=None):
     
     global collect_progress_tracker # Để có thể cập nhật biến global
     # --- DEBUG PRINTS --- 
     print("-"*30)
     print(f"[PROCESS START] Mode: {mode}, Source: {video_source}, ROI: {roi}, Username: {username}")
     print(f"[PROCESS START] Employee ID: {employee_id}, Project: {project}, Company: {company}")
+    print(f"[PROCESS START] Contractor: {contractor}, Field: {field}")
     print(f"[PROCESS START] stop_event set: {stop_event.is_set()}")
     # --- END DEBUG PRINTS --- 
     

@@ -28,6 +28,10 @@ class Profile(models.Model):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, blank=False, null=False)
     # Trường lưu công ty
     company = models.CharField(max_length=100, blank=True, null=True)
+    # Thêm trường nhà thầu
+    contractor = models.CharField(max_length=100, blank=True, null=True, verbose_name='Nhà thầu')
+    # Thêm trường lĩnh vực
+    field = models.CharField(max_length=100, blank=True, null=True, verbose_name='Lĩnh vực')
     # Liên kết tới Profile của supervisor (chỉ dành cho worker)
     supervisor = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='workers', limit_choices_to={'role': 'supervisor'})
 
