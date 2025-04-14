@@ -1944,7 +1944,9 @@ def update_worker(request):
 def sync_supervisor_worker_firebase(request):
     """
     Đồng bộ danh sách worker theo supervisor vào collection 'list_worker' trên Firebase.
-    Mỗi document trong collection sẽ là email của supervisor và chứa danh sách ID của các worker.
+    Mỗi document trong collection sẽ là email của supervisor và chứa:
+    - Danh sách ID của các worker
+    - ID của supervisor
     """
     from .firebase_util import initialize_firebase, firestore
     
@@ -1963,6 +1965,7 @@ def sync_supervisor_worker_firebase(request):
         for supervisor_profile in supervisors:
             supervisor_user = supervisor_profile.user
             supervisor_email = supervisor_user.email
+            supervisor_id = str(supervisor_user.id)  # ID của supervisor
 
             if not supervisor_email:
                 print(f"[SYNC WARNING] Supervisor {supervisor_user.username} không có email, bỏ qua.")
@@ -1977,9 +1980,14 @@ def sync_supervisor_worker_firebase(request):
             
             # Tạo hoặc ghi đè document trong list_worker
             doc_ref = db.collection('list_worker').document(supervisor_email)
-            batch.set(doc_ref, {'workers': worker_ids_str}) # Ghi đè bằng set thay vì merge/ArrayUnion
+            batch.set(doc_ref, {
+                'workers': worker_ids_str,
+                'supervisor_id': supervisor_id,  # Thêm ID của supervisor
+                'username': supervisor_user.username,  # Thêm username cho dễ đọc
+                'company': supervisor_profile.company or "Unknown"  # Thêm thông tin công ty
+            })
             sync_count += 1
-            print(f"[SYNC INFO] Chuẩn bị đồng bộ {len(worker_ids_str)} worker cho {supervisor_email}")
+            print(f"[SYNC INFO] Chuẩn bị đồng bộ supervisor {supervisor_user.username} (ID: {supervisor_id}) với {len(worker_ids_str)} worker")
 
         # Commit batch
         batch.commit()
