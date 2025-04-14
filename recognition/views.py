@@ -1689,3 +1689,251 @@ def get_processing_status_view(request):
         is_processing = processing_thread is not None and processing_thread.is_alive()
         
     return JsonResponse({'is_processing': is_processing})
+
+@login_required
+def supervisor_worker_view(request):
+    """Hiển thị mối quan hệ giữa Supervisor và Worker theo dạng trực quan"""
+    from users.models import Profile
+    from django.contrib.auth.models import User
+    
+    # Lấy tất cả supervisor
+    supervisors = Profile.objects.filter(role='supervisor')
+    
+    # Chuẩn bị dữ liệu để hiển thị
+    supervisor_data = []
+    for supervisor in supervisors:
+        # Lấy danh sách workers thuộc supervisor này
+        workers = Profile.objects.filter(role='worker', supervisor=supervisor)
+        
+        # Thêm thông tin supervisor và workers vào danh sách
+        supervisor_data.append({
+            'supervisor': supervisor,
+            'workers': workers,
+            'worker_count': workers.count(),
+        })
+    
+    # Thêm thông tin workers không có supervisor (nếu có)
+    workers_without_supervisor = Profile.objects.filter(role='worker', supervisor__isnull=True)
+    has_unassigned = workers_without_supervisor.exists()
+    
+    # Tổng số supervisor và worker
+    total_supervisors = supervisors.count()
+    total_workers = Profile.objects.filter(role='worker').count()
+    
+    context = {
+        'supervisor_data': supervisor_data,
+        'workers_without_supervisor': workers_without_supervisor,
+        'has_unassigned': has_unassigned,
+        'total_supervisors': total_supervisors,
+        'total_workers': total_workers,
+    }
+    
+    return render(request, 'recognition/supervisor_worker.html', context)
+
+@login_required
+@require_POST
+def update_supervisor(request):
+    """API để cập nhật thông tin Supervisor"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    supervisor_id = request.POST.get('supervisor_id')
+    email = request.POST.get('email')
+    company = request.POST.get('company')
+    
+    try:
+        supervisor = Profile.objects.get(id=supervisor_id, role='supervisor')
+        
+        # Cập nhật email cho user
+        if email:
+            # Kiểm tra xem email đã tồn tại chưa
+            existing_user = User.objects.filter(email=email).exclude(id=supervisor.user.id).first()
+            if existing_user:
+                return JsonResponse({'status': 'error', 'message': 'Email đã được sử dụng bởi người dùng khác'})
+            
+            supervisor.user.email = email
+            supervisor.user.save()
+        
+        # Cập nhật công ty cho supervisor
+        supervisor.company = company
+        supervisor.save()
+        
+        return JsonResponse({'status': 'success'})
+    except Profile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Supervisor'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def add_supervisor(request):
+    """API để thêm Supervisor mới"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    username = request.POST.get('username')
+    email = request.POST.get('email')
+    company = request.POST.get('company')
+    
+    if not username or not email:
+        return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp đầy đủ thông tin'})
+    
+    try:
+        # Kiểm tra tên người dùng đã tồn tại chưa
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'status': 'error', 'message': 'Username đã tồn tại'})
+        
+        # Kiểm tra email đã tồn tại chưa
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'status': 'error', 'message': 'Email đã tồn tại'})
+        
+        # Tạo người dùng mới
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=f"default_{username}"  # Mật khẩu mặc định
+        )
+        
+        # Tạo profile
+        Profile.objects.create(
+            user=user,
+            role='supervisor',
+            company=company
+        )
+        
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def add_worker(request):
+    """API để thêm Worker mới"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    username = request.POST.get('username')
+    company = request.POST.get('company')
+    supervisor_id = request.POST.get('supervisor_id')
+    
+    if not username:
+        return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp username'})
+    
+    try:
+        # Kiểm tra tên người dùng đã tồn tại chưa
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'status': 'error', 'message': 'Username đã tồn tại'})
+        
+        # Tạo người dùng mới
+        user = User.objects.create_user(
+            username=username,
+            password=f"default_{username}"  # Mật khẩu mặc định
+        )
+        
+        # Lấy supervisor nếu có
+        supervisor = None
+        if supervisor_id:
+            try:
+                supervisor = Profile.objects.get(id=supervisor_id, role='supervisor')
+            except Profile.DoesNotExist:
+                pass
+        
+        # Tạo profile
+        Profile.objects.create(
+            user=user,
+            role='worker',
+            company=company,
+            supervisor=supervisor
+        )
+        
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def assign_worker(request):
+    """API để phân công Worker cho Supervisor"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    worker_id = request.POST.get('worker_id')
+    supervisor_id = request.POST.get('supervisor_id')
+    
+    if not worker_id or not supervisor_id:
+        return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp đầy đủ thông tin'})
+    
+    try:
+        worker = Profile.objects.get(id=worker_id, role='worker')
+        supervisor = Profile.objects.get(id=supervisor_id, role='supervisor')
+        
+        # Cập nhật supervisor cho worker
+        worker.supervisor = supervisor
+        worker.save()
+        
+        return JsonResponse({'status': 'success'})
+    except Profile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Worker hoặc Supervisor'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+def get_worker_info(request):
+    """API để lấy thông tin Worker để chỉnh sửa"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    worker_id = request.GET.get('worker_id')
+    
+    if not worker_id:
+        return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp worker_id'})
+    
+    try:
+        worker = Profile.objects.get(id=worker_id, role='worker')
+        
+        data = {
+            'username': worker.user.username,
+            'company': worker.company or '',
+            'supervisor_id': worker.supervisor.id if worker.supervisor else ''
+        }
+        
+        return JsonResponse({'status': 'success', 'data': data})
+    except Profile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Worker'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+@login_required
+@require_POST
+def update_worker(request):
+    """API để cập nhật thông tin Worker"""
+    if not request.user.is_superuser:
+        return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập'}, status=403)
+    
+    worker_id = request.POST.get('worker_id')
+    company = request.POST.get('company')
+    supervisor_id = request.POST.get('supervisor_id')
+    
+    if not worker_id:
+        return JsonResponse({'status': 'error', 'message': 'Vui lòng cung cấp worker_id'})
+    
+    try:
+        worker = Profile.objects.get(id=worker_id, role='worker')
+        
+        # Cập nhật công ty
+        worker.company = company
+        
+        # Cập nhật supervisor
+        if supervisor_id:
+            supervisor = Profile.objects.get(id=supervisor_id, role='supervisor')
+            worker.supervisor = supervisor
+        else:
+            worker.supervisor = None
+        
+        worker.save()
+        
+        return JsonResponse({'status': 'success'})
+    except Profile.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy Worker hoặc Supervisor'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

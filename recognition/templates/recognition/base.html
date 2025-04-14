@@ -28,7 +28,8 @@
               <!-- Thêm các link khác nếu cần -->
                {% if user.is_authenticated and user.is_superuser %}
                  <a class="nav-item nav-link" href="{% url 'process-video-roi' %}">Xử lý Video</a>
-                 <a class="nav-item nav-link" href="{% url 'view-dataset' %}">Dataset</a>
+                 <a class="nav-item nav-link" href="{% url 'supervisor-worker' %}">Supervisor-Worker</a>
+                 <a class="nav-item nav-link" href="{% url 'database-manager' %}">Quản lý DB</a>
                  <a class="nav-item nav-link" href="{% url 'admin:index' %}">Admin</a>
                {% endif %}
             </div>
@@ -71,8 +72,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
     
-    {% block scripts %}
+    {% block extrajs %}
     <!-- Chỗ để các template con thêm script riêng -->
-    {% endblock scripts %}
+    {% endblock extrajs %}
 </body>
 </html>

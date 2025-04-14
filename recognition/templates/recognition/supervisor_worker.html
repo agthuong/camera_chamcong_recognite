@@ -1,0 +1,572 @@
+{% extends 'recognition/base.html' %}
+{% load static %}
+
+{% block title %}Quản lý Supervisor và Worker{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Mối quan hệ Supervisor và Worker</h1>
+    
+    <!-- Thêm CSS inline để khắc phục vấn đề hiển thị -->
+    <style>
+        /* Đảm bảo các card có chiều cao đồng đều */
+        .supervisor-card {
+            height: 100%;
+            margin-bottom: 20px;
+        }
+        
+        /* Đảm bảo các card xuống hàng đúng sau mỗi 3 card trên màn hình lớn */
+        @media (min-width: 992px) {
+            .clearfix-lg {
+                clear: both;
+                display: block;
+            }
+        }
+        
+        /* Đảm bảo các card xuống hàng đúng sau mỗi 2 card trên màn hình trung bình */
+        @media (min-width: 768px) and (max-width: 991.98px) {
+            .clearfix-md {
+                clear: both;
+                display: block;
+            }
+        }
+        
+        /* Fix một số vấn đề với Bootstrap 4 */
+        .me-2 {
+            margin-right: 0.5rem !important;
+        }
+        
+        .text-end {
+            text-align: right !important;
+        }
+    </style>
+    
+    <!-- Thống kê trực quan -->
+    <div class="row mb-4 justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-primary shadow">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-chart-pie"></i> Thống kê tổng quan
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 text-center">
+                            <div class="py-3 rounded mb-3">
+                                <i class="fas fa-user-tie fa-3x mb-3 text-primary"></i>
+                                <h2 class="counter display-4">{{ total_supervisors }}</h2>
+                                <h5>Supervisor</h5>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-center">
+                            <div class="py-3 rounded mb-3">
+                                <i class="fas fa-user fa-3x mb-3 text-success"></i>
+                                <h2 class="counter display-4">{{ total_workers }}</h2>
+                                <h5>Worker</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hiển thị danh sách Supervisor và Worker -->
+    <div class="row">
+        {% for item in supervisor_data %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card border-success supervisor-card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-user-tie"></i> {{ item.supervisor.user.username }}</h5>
+                        <div>
+                            <span class="badge bg-light text-dark mr-2">{{ item.worker_count }} worker</span>
+                            <button class="btn btn-sm btn-light edit-supervisor-btn" data-id="{{ item.supervisor.id }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="supervisor-info" id="supervisor-info-{{ item.supervisor.id }}">
+                        <div class="mb-3">
+                            <p class="card-subtitle mb-2 text-muted">
+                                <i class="fas fa-envelope"></i> {{ item.supervisor.user.email|default:"Không có email" }}
+                            </p>
+                            <p class="card-subtitle mb-3 text-muted">
+                                <i class="fas fa-building"></i> {{ item.supervisor.company|default:"Không có công ty" }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="supervisor-edit-form d-none" id="supervisor-form-{{ item.supervisor.id }}">
+                        <form class="mb-3 supervisor-form" data-id="{{ item.supervisor.id }}">
+                            {% csrf_token %}
+                            <input type="hidden" name="supervisor_id" value="{{ item.supervisor.id }}">
+                            <div class="mb-2">
+                                <label class="form-label"><i class="fas fa-envelope"></i> Email</label>
+                                <input type="email" class="form-control form-control-sm" name="email" value="{{ item.supervisor.user.email|default:'' }}">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label"><i class="fas fa-building"></i> Công ty</label>
+                                <input type="text" class="form-control form-control-sm" name="company" value="{{ item.supervisor.company|default:'' }}">
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-sm btn-secondary cancel-edit-btn" data-id="{{ item.supervisor.id }}">Hủy</button>
+                                <button type="submit" class="btn btn-sm btn-primary">Lưu</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <h6 class="border-bottom pb-2 mb-3 d-flex align-items-center justify-content-between">
+                        <span>Danh sách Worker:</span>
+                        <button class="btn btn-sm btn-outline-primary add-worker-btn" data-supervisor-id="{{ item.supervisor.id }}">
+                            <i class="fas fa-plus"></i> Thêm
+                        </button>
+                    </h6>
+                    
+                    <div id="workers-list-{{ item.supervisor.id }}">
+                        {% if item.workers %}
+                            <ul class="list-group list-group-flush">
+                                {% for worker in item.workers %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span><i class="fas fa-user text-secondary"></i> {{ worker.user.username }}</span>
+                                    <div>
+                                        <span class="badge bg-primary text-white mr-2">{{ worker.company|default:"Chưa có" }}</span>
+                                        <button class="btn btn-sm btn-outline-secondary edit-worker-btn" data-id="{{ worker.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted text-center">
+                                <i class="fas fa-info-circle"></i> Không có Worker nào được quản lý.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Thêm clearfix sau mỗi 3 supervisor trên màn hình lớn và sau mỗi 2 trên màn hình trung bình -->
+        {% if forloop.counter|divisibleby:3 %}
+        <div class="clearfix clearfix-lg"></div>
+        {% endif %}
+        {% if forloop.counter|divisibleby:2 %}
+        <div class="clearfix clearfix-md"></div>
+        {% endif %}
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Không tìm thấy Supervisor nào trong hệ thống.
+                <button class="btn btn-warning ml-3" id="add-supervisor-btn">
+                    <i class="fas fa-plus"></i> Thêm Supervisor
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Hiển thị Worker không có Supervisor -->
+    {% if has_unassigned %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card border-warning shadow-sm">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Worker chưa được phân công Supervisor</h5>
+                    <button class="btn btn-sm btn-dark" id="add-worker-btn">
+                        <i class="fas fa-plus"></i> Thêm Worker mới
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row" id="unassigned-workers-list">
+                        {% for worker in workers_without_supervisor %}
+                        <div class="col-md-3 mb-3">
+                            <div class="card shadow-sm">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-user text-warning"></i> {{ worker.user.username }}
+                                        </h6>
+                                        <button class="btn btn-sm btn-outline-secondary edit-unassigned-btn" data-id="{{ worker.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </div>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <i class="fas fa-building"></i> {{ worker.company|default:"Chưa có công ty" }}
+                                        </small>
+                                    </p>
+                                    <button class="btn btn-sm btn-outline-success w-100 assign-worker-btn" data-id="{{ worker.id }}">
+                                        Phân công
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row mt-4 justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body text-center">
+                    <p class="mb-2">Tất cả Worker đã được phân công Supervisor.</p>
+                    <button class="btn btn-primary" id="add-worker-btn">
+                        <i class="fas fa-plus"></i> Thêm Worker mới
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal thêm Supervisor -->
+<div class="modal fade" id="addSupervisorModal" tabindex="-1" aria-labelledby="addSupervisorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addSupervisorModalLabel">Thêm Supervisor mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-supervisor-form">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="supervisor-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="supervisor-username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="supervisor-email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="supervisor-email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="supervisor-company" class="form-label">Công ty</label>
+                        <input type="text" class="form-control" id="supervisor-company" name="company">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="save-supervisor-btn">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal thêm Worker -->
+<div class="modal fade" id="addWorkerModal" tabindex="-1" aria-labelledby="addWorkerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addWorkerModalLabel">Thêm Worker mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="add-worker-form">
+                    {% csrf_token %}
+                    <input type="hidden" id="worker-supervisor-id" name="supervisor_id" value="">
+                    <div class="mb-3">
+                        <label for="worker-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="worker-username" name="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="worker-company" class="form-label">Công ty</label>
+                        <input type="text" class="form-control" id="worker-company" name="company">
+                    </div>
+                    <div class="mb-3">
+                        <label for="worker-supervisor" class="form-label">Supervisor</label>
+                        <select class="form-select" id="worker-supervisor" name="supervisor">
+                            <option value="">-- Chưa phân công --</option>
+                            {% for item in supervisor_data %}
+                            <option value="{{ item.supervisor.id }}">{{ item.supervisor.user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="reset-worker-form-btn">Xóa thông tin</button>
+                <button type="button" class="btn btn-primary" id="save-worker-btn">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal phân công Worker -->
+<div class="modal fade" id="assignWorkerModal" tabindex="-1" aria-labelledby="assignWorkerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignWorkerModalLabel">Phân công Worker cho Supervisor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assign-worker-form">
+                    {% csrf_token %}
+                    <input type="hidden" id="assign-worker-id" name="worker_id" value="">
+                    <div class="mb-3">
+                        <label for="assign-supervisor" class="form-label">Chọn Supervisor</label>
+                        <select class="form-select" id="assign-supervisor" name="supervisor_id" required>
+                            <option value="">-- Chọn Supervisor --</option>
+                            {% for item in supervisor_data %}
+                            <option value="{{ item.supervisor.id }}">{{ item.supervisor.user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="save-assignment-btn">Phân công</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chỉnh sửa Worker -->
+<div class="modal fade" id="editWorkerModal" tabindex="-1" aria-labelledby="editWorkerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editWorkerModalLabel">Chỉnh sửa thông tin Worker</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-worker-form">
+                    {% csrf_token %}
+                    <input type="hidden" id="edit-worker-id" name="worker_id" value="">
+                    <div class="mb-3">
+                        <label for="edit-worker-username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="edit-worker-username" name="username" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-worker-company" class="form-label">Công ty</label>
+                        <input type="text" class="form-control" id="edit-worker-company" name="company">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-worker-supervisor" class="form-label">Supervisor</label>
+                        <select class="form-select" id="edit-worker-supervisor" name="supervisor_id">
+                            <option value="">-- Chưa phân công --</option>
+                            {% for item in supervisor_data %}
+                            <option value="{{ item.supervisor.id }}">{{ item.supervisor.user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="update-worker-btn">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+    $(document).ready(function() {
+        // Hiệu ứng đếm số
+        $('.counter').each(function() {
+            $(this).prop('Counter', 0).animate({
+                Counter: $(this).text()
+            }, {
+                duration: 1500,
+                easing: 'swing',
+                step: function(now) {
+                    $(this).text(Math.ceil(now));
+                }
+            });
+        });
+        
+        // Xử lý khi click vào Edit cho supervisor
+        $('.edit-supervisor-btn').click(function() {
+            const id = $(this).data('id');
+            $(`#supervisor-info-${id}`).addClass('d-none');
+            $(`#supervisor-form-${id}`).removeClass('d-none');
+        });
+        
+        // Xử lý khi click Hủy chỉnh sửa supervisor
+        $('.cancel-edit-btn').click(function() {
+            const id = $(this).data('id');
+            $(`#supervisor-form-${id}`).addClass('d-none');
+            $(`#supervisor-info-${id}`).removeClass('d-none');
+        });
+        
+        // Xử lý submit form chỉnh sửa supervisor
+        $('.supervisor-form').submit(function(e) {
+            e.preventDefault();
+            const id = $(this).data('id');
+            const formData = $(this).serialize();
+            
+            $.ajax({
+                url: '{% url "update-supervisor" %}',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Cập nhật thông tin hiển thị
+                        location.reload(); // Tạm thời reload trang
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Đã xảy ra lỗi khi cập nhật thông tin.');
+                }
+            });
+        });
+        
+        // Mở modal thêm Supervisor
+        $('#add-supervisor-btn').click(function() {
+            $('#addSupervisorModal').modal('show');
+        });
+        
+        // Lưu Supervisor mới
+        $('#save-supervisor-btn').click(function() {
+            const formData = $('#add-supervisor-form').serialize();
+            
+            $.ajax({
+                url: '{% url "add-supervisor" %}',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#addSupervisorModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Đã xảy ra lỗi khi thêm Supervisor.');
+                }
+            });
+        });
+        
+        // Mở modal thêm Worker
+        $('#add-worker-btn, .add-worker-btn').click(function() {
+            const supervisorId = $(this).data('supervisor-id') || '';
+            $('#worker-supervisor-id').val(supervisorId);
+            $('#worker-supervisor').val(supervisorId);
+            $('#add-worker-form')[0].reset(); // Reset form trước khi mở
+            $('#worker-supervisor-id').val(supervisorId); // Đặt lại giá trị supervisor_id sau khi reset
+            $('#worker-supervisor').val(supervisorId); // Đặt lại giá trị supervisor sau khi reset
+            $('#addWorkerModal').modal('show');
+        });
+        
+        // Xử lý nút xóa thông tin form thêm worker
+        $('#reset-worker-form-btn').click(function() {
+            const supervisorId = $('#worker-supervisor-id').val();
+            $('#add-worker-form')[0].reset();
+            $('#worker-supervisor-id').val(supervisorId); // Giữ lại supervisor_id
+            $('#worker-supervisor').val(supervisorId); // Giữ lại supervisor
+            $('#worker-username').focus();
+        });
+        
+        // Lưu Worker mới
+        $('#save-worker-btn').click(function() {
+            const formData = $('#add-worker-form').serialize();
+            
+            $.ajax({
+                url: '{% url "add-worker" %}',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#addWorkerModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Đã xảy ra lỗi khi thêm Worker.');
+                }
+            });
+        });
+        
+        // Mở modal phân công Worker
+        $('.assign-worker-btn').click(function() {
+            const workerId = $(this).data('id');
+            $('#assign-worker-id').val(workerId);
+            $('#assignWorkerModal').modal('show');
+        });
+        
+        // Lưu phân công Worker
+        $('#save-assignment-btn').click(function() {
+            const formData = $('#assign-worker-form').serialize();
+            
+            $.ajax({
+                url: '{% url "assign-worker" %}',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#assignWorkerModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Đã xảy ra lỗi khi phân công Worker.');
+                }
+            });
+        });
+        
+        // Mở modal chỉnh sửa Worker
+        $('.edit-worker-btn, .edit-unassigned-btn').click(function() {
+            const workerId = $(this).data('id');
+            
+            // Lấy thông tin Worker để điền vào form
+            $.ajax({
+                url: '{% url "get-worker-info" %}',
+                type: 'GET',
+                data: { worker_id: workerId },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#edit-worker-id').val(workerId);
+                        $('#edit-worker-username').val(response.data.username);
+                        $('#edit-worker-company').val(response.data.company);
+                        $('#edit-worker-supervisor').val(response.data.supervisor_id);
+                        $('#editWorkerModal').modal('show');
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Đã xảy ra lỗi khi lấy thông tin Worker.');
+                }
+            });
+        });
+        
+        // Cập nhật thông tin Worker
+        $('#update-worker-btn').click(function() {
+            const formData = $('#edit-worker-form').serialize();
+            
+            $.ajax({
+                url: '{% url "update-worker" %}',
+                type: 'POST',
+                data: formData,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#editWorkerModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('Đã xảy ra lỗi khi cập nhật thông tin Worker.');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %} 
