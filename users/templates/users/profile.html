@@ -1,0 +1,69 @@
+{% extends "recognition/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow mt-4 mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Hồ sơ của {{ user.username }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <fieldset class="form-group mb-4">
+                            <legend class="border-bottom mb-3">Thông tin cơ bản</legend>
+                            <div class="mb-3">
+                                <label for="{{ u_form.username.id_for_label }}" class="form-label">Tên đăng nhập</label>
+                                {{ u_form.username }}
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ u_form.first_name.id_for_label }}" class="form-label">Tên</label>
+                                    {{ u_form.first_name }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ u_form.last_name.id_for_label }}" class="form-label">Họ</label>
+                                    {{ u_form.last_name }}
+                                </div>
+                            </div>
+                        </fieldset>
+                        
+                        <fieldset class="form-group mb-4">
+                            <legend class="border-bottom mb-3">Thông tin chi tiết</legend>
+                            <div class="mb-3">
+                                <label for="{{ p_form.employee_id.id_for_label }}" class="form-label">Mã nhân viên</label>
+                                {{ p_form.employee_id }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ p_form.company.id_for_label }}" class="form-label">Công ty</label>
+                                {{ p_form.company }}
+                            </div>
+                            <div class="mb-3">
+                                <label for="{{ p_form.project.id_for_label }}" class="form-label">Dự án</label>
+                                {{ p_form.project }}
+                            </div>
+                        </fieldset>
+                        
+                        <div class="form-group">
+                            <button class="btn btn-primary" type="submit">Cập nhật</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Hiển thị thống kê điểm danh của người dùng (nếu cần) -->
+            <div class="card shadow mt-4">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">Thống kê điểm danh</h4>
+                </div>
+                <div class="card-body">
+                    <p>Tính năng thống kê điểm danh sẽ được hiển thị ở đây.</p>
+                    <a href="{% url 'api-my-attendance' %}" class="btn btn-outline-info">Xem lịch sử điểm danh</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

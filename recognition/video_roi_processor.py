@@ -379,7 +379,8 @@ class VideoSourceHandler:
 def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, username=None,
                            max_samples=settings.RECOGNITION_DEFAULT_MAX_SAMPLES,
                            recognition_threshold=settings.RECOGNITION_CHECK_IN_THRESHOLD,
-                           employee_id=None, project=None, company=None):
+                           employee_id=None, project=None, company=None,
+                           camera_name=None):
     
     global collect_progress_tracker # Để có thể cập nhật biến global
     # --- DEBUG PRINTS --- 
@@ -389,17 +390,19 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
     print(f"[PROCESS START] stop_event set: {stop_event.is_set()}")
     # --- END DEBUG PRINTS --- 
     
-    # Xác định tên camera từ nguồn video nếu có thể
-    camera_name = None
-    try:
-        from .models import CameraConfig
-        # Thử tìm camera trong cơ sở dữ liệu
-        camera_obj = CameraConfig.objects.filter(source=str(video_source)).first()
-        if camera_obj:
-            camera_name = camera_obj.name
-            print(f"[PROCESS INFO] Đã xác định camera: {camera_name}")
-    except Exception as cam_err:
-        print(f"[PROCESS INFO] Không thể xác định camera từ nguồn {video_source}: {cam_err}")
+    # Xác định tên camera từ nguồn video nếu có thể và chưa có tên camera
+    if camera_name is None:
+        try:
+            from .models import CameraConfig
+            # Thử tìm camera trong cơ sở dữ liệu
+            camera_obj = CameraConfig.objects.filter(source=str(video_source)).first()
+            if camera_obj:
+                camera_name = camera_obj.name
+                print(f"[PROCESS INFO] Đã xác định camera: {camera_name}")
+        except Exception as cam_err:
+            print(f"[PROCESS INFO] Không thể xác định camera từ nguồn {video_source}: {cam_err}")
+    else:
+        print(f"[PROCESS INFO] Sử dụng tên camera đã cung cấp: {camera_name}")
 
     output_handler.start_stream() 
 
@@ -713,41 +716,48 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                                 
                                                 # Đẩy dữ liệu lên Firebase sau khi check-in
                                                 try:
-                                                    push_attendance_to_firebase(record, camera_name)
-                                                    print(f"[PROCESS INFO] Đã đẩy dữ liệu check-in lên Firebase cho '{person_name}'")
+                                                    success = push_attendance_to_firebase(record, camera_name)
+                                                    if success:
+                                                        print(f"[PROCESS INFO] Đã đẩy dữ liệu check-in lên Firebase cho '{person_name}'")
+                                                    else:
+                                                        print(f"[PROCESS ERROR] Không thể đẩy dữ liệu lên Firebase cho '{person_name}'")
                                                 except Exception as firebase_err:
                                                     print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-in lên Firebase: {firebase_err}")
                                         else:
-                                            # --- Check-out: Thêm kiểm tra ngưỡng cao hơn --- 
-                                            if recognition_counts[person_name] >= settings.RECOGNITION_CHECK_OUT_THRESHOLD:
-                                                last_saved = last_save_time.get(person_name)
-                                                # Vẫn giữ kiểm tra thời gian để tránh cập nhật quá nhanh
-                                                if last_saved is None or (now - last_saved).total_seconds() >= 10:
-                                                    record.check_out = now
-                                                    face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}.jpg'
-                                                    # --- Sử dụng settings cho đường dẫn ảnh check-out ---
-                                                    # face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_out', face_filename)
-                                                    # relative_face_path = os.path.join('attendance_faces', 'check_out', face_filename)
-                                                    face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
-                                                    relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
-                                                    # --- Kết thúc sử dụng settings ---
-                                                    os.makedirs(os.path.dirname(face_path), exist_ok=True)
-                                                    # --- Thêm kiểm tra lưu ảnh --- 
-                                                    saved_img_out = cv2.imwrite(face_path, face_aligned)
-                                                    if not saved_img_out:
-                                                        print(f"[PROCESS ERROR] Không thể lưu ảnh check-out tại: {face_path}")
+                                            # Người dùng đã check-in trước đó, cập nhật thành check-out
+                                            # Lưu thời gian nhận diện gần nhất làm check-out time
+                                            record.check_out = now
+                                            
+                                            # Lưu ảnh check-out
+                                            face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}_out.jpg'
+                                            face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
+                                                                    settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
+                                            relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
+                                                                        settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
+                                            
+                                            os.makedirs(os.path.dirname(face_path), exist_ok=True)
+                                            saved_img_out = cv2.imwrite(face_path, face_aligned)
+                                            
+                                            if not saved_img_out:
+                                                print(f"[PROCESS ERROR] Không thể lưu ảnh check-out tại: {face_path}")
+                                            else:
+                                                record.check_out_image_url = relative_face_path
+                                                record.save()  # Lưu record với thông tin check-out mới
+                                                last_save_time[person_name] = now
+                                                
+                                                check_in_time_str = record.check_in.strftime('%H:%M:%S') if record.check_in else "không rõ"
+                                                check_out_time_str = record.check_out.strftime('%H:%M:%S')
+                                                print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (check-in: {check_in_time_str}, check-out: {check_out_time_str})")
+                                                
+                                                # Đẩy dữ liệu lên Firebase sau khi check-out
+                                                try:
+                                                    success = push_attendance_to_firebase(record, camera_name)
+                                                    if success:
+                                                        print(f"[PROCESS INFO] Đã đẩy dữ liệu check-out lên Firebase cho '{person_name}'")
                                                     else:
-                                                        record.check_out_image_url = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
-                                                        record.save() # Lưu record chỉ khi ảnh lưu thành công
-                                                        last_save_time[person_name] = now # Cập nhật thời gian chỉ khi save thành công
-                                                        print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (Đạt ngưỡng {settings.RECOGNITION_CHECK_OUT_THRESHOLD})")
-                                                        
-                                                        # Đẩy dữ liệu lên Firebase sau khi check-out
-                                                        try:
-                                                            push_attendance_to_firebase(record, camera_name)
-                                                            print(f"[PROCESS INFO] Đã đẩy dữ liệu check-out lên Firebase cho '{person_name}'")
-                                                        except Exception as firebase_err:
-                                                            print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-out lên Firebase: {firebase_err}")
+                                                        print(f"[PROCESS ERROR] Không thể đẩy dữ liệu check-out lên Firebase cho '{person_name}'")
+                                                except Exception as firebase_err:
+                                                    print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-out lên Firebase: {firebase_err}")
                                     except Exception as e:
                                         print(f"[PROCESS ERROR] Lỗi khi lưu thông tin chấm công: {e}")
                                         import traceback

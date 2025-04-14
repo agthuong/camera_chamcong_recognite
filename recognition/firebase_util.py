@@ -63,6 +63,19 @@ def push_attendance_to_firebase(record, camera_name=None):
         return False
     
     try:
+        # Lưu thông tin camera vào record nếu được cung cấp và model có trường này
+        if camera_name:
+            try:
+                has_camera_field = hasattr(record, 'recognized_by_camera')
+                if has_camera_field and not record.recognized_by_camera:
+                    record.recognized_by_camera = camera_name
+                    record.save(update_fields=['recognized_by_camera'])
+                    print(f"[FIREBASE] Đã cập nhật thông tin camera '{camera_name}' cho record của {record.user.username}")
+            except AttributeError:
+                print(f"[FIREBASE] Model không hỗ trợ trường recognized_by_camera, bỏ qua cập nhật")
+            except Exception as e:
+                print(f"[FIREBASE] Lỗi khi cập nhật camera: {e}")
+        
         # Lấy dữ liệu từ record
         company_name = record.company if record.company else "Unknown"
         project_name = record.project if record.project else "Unknown"
@@ -83,7 +96,14 @@ def push_attendance_to_firebase(record, camera_name=None):
         # Thêm thông tin camera nếu có
         if camera_name:
             data['camera'] = camera_name
-            
+        else:
+            # Chỉ thêm từ model nếu trường tồn tại
+            try:
+                if hasattr(record, 'recognized_by_camera') and record.recognized_by_camera:
+                    data['camera'] = record.recognized_by_camera
+            except Exception:
+                pass
+        
         # Thêm URLs ảnh nếu có
         if record.check_in_image_url:
             # Tạo URL đầy đủ cho ảnh check-in

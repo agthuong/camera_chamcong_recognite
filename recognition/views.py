@@ -18,7 +18,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 import numpy as np
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
@@ -38,7 +38,7 @@ from django.db.models import Q
 from rest_framework import generics, filters, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from .serializers import AttendanceRecordSerializer
 from django.utils.dateparse import parse_date
 from django.http import StreamingHttpResponse, JsonResponse
@@ -51,6 +51,28 @@ import base64
 from .video_roi_processor import sanitize_filename
 from django.conf import settings
 from .firebase_util import push_attendance_to_firebase
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ObjectDoesNotExist
+from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.utils import timezone
+import datetime
+from django.db.models import Q
+import io
+import matplotlib
+matplotlib.use('Agg')
+from .forms import * # Import các form mới từ forms.py
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse, FileResponse
+from rest_framework import generics, permissions, filters
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from django.utils.translation import gettext_lazy as _
+from .serializers import AttendanceRecordSerializer, UserSerializer
+from .video_roi_processor import process_video_with_roi, stream_output, select_roi_from_source
+from .firebase_util import push_attendance_to_firebase
+from users.models import Profile
 
 mpl.use('Agg') # Đảm bảo mpl.use('Agg') được gọi trước plt
 
@@ -738,126 +760,177 @@ def process_video_roi_view(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-
-        # --- Sử dụng Lock cho việc dừng --- 
+        
+        # Xử lý đặc biệt cho hành động dừng
         if action == 'stop':
-            with processing_lock: # Đảm bảo kiểm tra và dừng thread an toàn
+            with processing_lock:
                 if processing_thread and processing_thread.is_alive():
-                    print("[View] Gửi tín hiệu dừng...")
+                    print("[View] Nhận lệnh dừng quá trình xử lý video.")
                     stop_processing_event.set()
-                    try:
-                        processing_thread.join(timeout=5.0)
-                    except RuntimeError:
-                        pass
-                    if processing_thread.is_alive():
-                         print("[View] Cảnh báo: Thread xử lý không dừng kịp thời.")
-                    else:
-                         print("[View] Thread xử lý đã dừng.")
-                    processing_thread = None
-                    current_processing_camera_id = None # Reset camera ID khi dừng
-                    stream_output.stop_stream()
-                    messages.info(request, 'Đã dừng xử lý video.') # Có thể bỏ message này nếu dùng JSON
+                    # Không cần .join() ở đây vì có thể gây treo giao diện người dùng
+                    return JsonResponse({'status': 'success', 'message': 'Đã gửi lệnh dừng quá trình xử lý.'})
                 else:
-                    messages.warning(request, 'Không có tiến trình nào đang chạy để dừng.') # Có thể bỏ message này nếu dùng JSON
-            return JsonResponse({'status': 'success', 'message': 'Đã dừng xử lý hoặc không có gì để dừng.'}) # Thông báo chung
+                    return JsonResponse({'status': 'info', 'message': 'Không có quá trình xử lý nào đang chạy.'})
+                    
+        # Các hành động khác như bắt đầu xử lý - cần xác thực form đầy đủ
+        form = VideoRoiForm(request.POST)
+        if form.is_valid():
+            form_data = form.cleaned_data
+            camera_id = form_data.get('camera').id
+            mode = form_data.get('mode')
+            username = form_data.get('username')
+            role = form_data.get('role')
+            supervisor = form_data.get('supervisor')
+            company = form_data.get('company') # Lấy company từ form
+            email = form_data.get('email') # Lấy email từ form nếu là supervisor
 
-        # --- Cập nhật logic Start với Lock và kiểm tra camera --- 
-        elif action == 'start':
-             # --- Lấy thông tin camera yêu cầu bên ngoài Lock --- 
-             form = VideoRoiForm(request.POST)
-             if not form.is_valid(): # Kiểm tra form trước khi vào lock
-                 print("--- FORM ERRORS ---")
-                 print(form.errors)
-                 print("-------------------")
-                 error_message = "Dữ liệu form không hợp lệ: "
-                 error_list = []
-                 for field, errors in form.errors.items():
-                      error_list.append(f"{field}: {'; '.join(errors)}")
-                 error_message += "; ".join(error_list)
-                 return JsonResponse({'status': 'error', 'message': error_message})
+            # --- Đảm bảo có giá trị company hợp lệ --- 
+            if not company:
+                company = 'DBplus' # Sử dụng giá trị mặc định nếu không được cung cấp
+                print(f"[View Info] Company không được cung cấp, sử dụng mặc định: {company}")
+            
+            requested_camera = CameraConfig.objects.filter(id=camera_id).first()
+            if not requested_camera:
+                return JsonResponse({'status': 'error', 'message': 'Không tìm thấy camera được chọn.'}) 
+            
+            # --- Xử lý logic User & Profile chỉ khi mode='collect' --- 
+            if mode == 'collect':
+                if not username:
+                    return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Username khi chọn chế độ Thu thập dữ liệu.'})
+                
+                # Validate role-specific inputs
+                if role == 'supervisor' and not email:
+                    return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Email cho Supervisor.'})
+                elif role == 'worker' and not supervisor:
+                    return JsonResponse({'status': 'error', 'message': 'Vui lòng chọn Supervisor cho Worker.'})
+                
+                try:
+                    # Kiểm tra username và tạo User nếu chưa có
+                    user_obj, user_created = User.objects.get_or_create(
+                        username=username,
+                        defaults={
+                            'first_name': username, 
+                            'is_active': True,
+                            'email': email if role == 'supervisor' else ''
+                        }
+                    )
+                    
+                    if user_created:
+                        user_obj.set_unusable_password() # Không cần đặt password thật
+                        user_obj.save()
+                        print(f"[View] Đã tạo người dùng mới: {username}")
+                    # Nếu user đã tồn tại và là supervisor, cập nhật email nếu cần
+                    elif role == 'supervisor' and email:
+                        # Kiểm tra xem email đã được sử dụng bởi người dùng khác chưa
+                        existing_user = User.objects.filter(email=email).exclude(username=username).first()
+                        if existing_user:
+                            return JsonResponse({'status': 'error', 'message': f'Email {email} đã được sử dụng bởi người dùng khác.'})
+                        
+                        # Cập nhật email nếu khác với email hiện tại
+                        if user_obj.email != email:
+                            user_obj.email = email
+                            user_obj.save()
+                            print(f"[View] Đã cập nhật email cho supervisor {username}: {email}")
+                    
+                    # Tạo hoặc cập nhật Profile
+                    profile_data = {
+                        'role': role,
+                        'company': company,
+                        'supervisor': Profile.objects.get(user=supervisor) if role == 'worker' and supervisor else None
+                    }
+                    
+                    # Sử dụng get_or_create hoặc update_or_create
+                    profile, created = Profile.objects.get_or_create(
+                        user=user_obj,
+                        defaults=profile_data
+                    )
+                    
+                    if not created:
+                        # Nếu profile đã tồn tại, cập nhật các trường
+                        for key, value in profile_data.items():
+                            setattr(profile, key, value)
+                        profile.save()
+                        print(f"[View] Đã cập nhật Profile cho: {username} - Role: {role}")
+                    else:
+                        print(f"[View] Đã tạo Profile mới cho: {username} - Role: {role}")
+                    
+                except Exception as e:
+                    print(f"[View Error] Lỗi khi tạo/cập nhật người dùng và profile: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    return JsonResponse({'status': 'error', 'message': f'Lỗi khi lưu thông tin người dùng: {str(e)}'})
+            # --- Kết thúc logic User & Profile --- 
 
-             requested_camera = form.cleaned_data['camera']
-             requested_mode = form.cleaned_data['mode']
-             requested_username = form.cleaned_data.get('username')
-             requested_employee_id = form.cleaned_data.get('employee_id')
-             requested_project = form.cleaned_data.get('project')
-             requested_company = form.cleaned_data.get('company')
-
-             if requested_mode == 'collect' and not requested_username:
-                 return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập username khi chọn chế độ thu thập dữ liệu.'})
-
-             requested_roi = requested_camera.get_roi_tuple()
-             if requested_mode in ['collect', 'recognize'] and not requested_roi:
-                 return JsonResponse({
+            # --- Logic bắt đầu thread --- 
+            requested_roi = requested_camera.get_roi_tuple()
+            if mode in ['collect', 'recognize'] and not requested_roi:
+                return JsonResponse({
                     'status': 'error',
-                    'message': f'Camera "{requested_camera.name}" chưa có ROI. Vui lòng cấu hình ROI trước khi chạy chế độ "{requested_mode}".',
+                    'message': f'Camera "{requested_camera.name}" chưa có ROI. Vui lòng cấu hình ROI.',
                     'action_required': 'configure_roi',
                     'camera_id': requested_camera.id
-                 })
+                })
+            
+            with processing_lock:
+                is_thread_alive = processing_thread is not None and processing_thread.is_alive()
+                if is_thread_alive:
+                    if current_processing_camera_id == requested_camera.id:
+                        print(f"[View] Camera {requested_camera.id} đã đang chạy, nhưng tiếp tục mà không thông báo.")
+                        return JsonResponse({'status': 'success', 'message': f'Đang tiếp tục xử lý camera "{requested_camera.name}" chế độ {mode}.'})
+                    else:
+                        print(f"[View] Dừng camera {current_processing_camera_id} để chuyển sang {requested_camera.id}.")
+                        stop_processing_event.set()
+                        try: 
+                            processing_thread.join(timeout=5.0)
+                        except RuntimeError: 
+                            pass
+                        if processing_thread.is_alive(): 
+                            print("[View] Cảnh báo: Thread cũ không dừng kịp.")
+                        else: 
+                            print("[View] Thread cũ đã dừng.")
+                        processing_thread = None
+                        current_processing_camera_id = None
+                        stream_output.stop_stream()
+                        time.sleep(0.5)
 
-             # --- Bắt đầu khối Lock --- 
-             with processing_lock:
-                 is_thread_alive = processing_thread is not None and processing_thread.is_alive()
+                print(f"[View] Bắt đầu thread (Mode: {mode}, Camera: {requested_camera.name}, ROI: {requested_roi}, Username: {username})")
+                stop_processing_event.clear()
+                stream_output.start_stream()
+                
+                # Lấy các tham số khác cần truyền cho thread
+                thread_kwargs = {
+                    'company': company, # Đã lấy và xử lý ở trên
+                    'project': None, # Tạm thời để None vì đã bỏ trường này
+                    'camera_name': requested_camera.name # Thêm tên camera vào kwargs
+                }
 
-                 if is_thread_alive:
-                     if current_processing_camera_id == requested_camera.id:
-                         # Đã chạy đúng camera -> báo lỗi hoặc không làm gì
-                         print(f"[View] Yêu cầu bắt đầu camera {requested_camera.id} nhưng đã đang chạy.")
-                         return JsonResponse({'status': 'warning', 'message': f'Tiến trình cho camera "{requested_camera.name}" đang chạy.'})
-                     else:
-                         # Đang chạy camera khác -> dừng thread cũ trước
-                         print(f"[View] Đang chạy camera {current_processing_camera_id}. Yêu cầu chuyển sang {requested_camera.id}. Đang dừng thread cũ...")
-                         stop_processing_event.set()
-                         try:
-                             processing_thread.join(timeout=5.0)
-                         except RuntimeError:
-                             pass
-                         if processing_thread.is_alive():
-                              print("[View] Cảnh báo: Thread cũ không dừng kịp thời.")
-                              # Có thể trả về lỗi ở đây nếu muốn đảm bảo dừng hoàn toàn
-                              # return JsonResponse({'status': 'error', 'message': 'Không thể dừng tiến trình cũ kịp thời.'})
-                         else:
-                             print("[View] Thread cũ đã dừng.")
-                         processing_thread = None
-                         current_processing_camera_id = None
-                         stream_output.stop_stream() # Dừng stream cũ
-                         # Chờ một chút để tài nguyên được giải phóng hoàn toàn
-                         time.sleep(0.5)
+                processing_thread = threading.Thread(
+                    target=process_video_with_roi,
+                    args=(
+                        requested_camera.source,
+                        mode, 
+                        requested_roi,
+                        stop_processing_event,
+                        stream_output,
+                        username, 
+                    ),
+                    kwargs=thread_kwargs,
+                    daemon=True
+                )
+                processing_thread.start()
+                current_processing_camera_id = requested_camera.id
+                request.session['last_camera_id'] = requested_camera.id
+                request.session['last_mode'] = mode
 
-                 # --- Bắt đầu thread mới (sau khi đã kiểm tra/dừng thread cũ nếu cần) --- 
-                 print(f"[View] Bắt đầu thread xử lý mới (Mode: {requested_mode}, Camera: {requested_camera.name}, ID: {requested_camera.id}, ROI: {requested_roi})")
-                 stop_processing_event.clear() # Đảm bảo event được reset
-                 stream_output.start_stream() # Bắt đầu stream mới
-                 processing_thread = threading.Thread(
-                     target=process_video_with_roi,
-                     args=(
-                         requested_camera.source,
-                         requested_mode,
-                         requested_roi,
-                         stop_processing_event,
-                         stream_output,
-                         requested_username,
-                     ),
-                     kwargs={
-                         'employee_id': requested_employee_id,
-                         'project': requested_project,
-                         'company': requested_company
-                     },
-                     daemon=True
-                 )
-                 processing_thread.start()
-                 current_processing_camera_id = requested_camera.id # Lưu ID camera mới đang chạy
-                 request.session['last_camera_id'] = requested_camera.id # Lưu vào session để load lại lần sau
-                 request.session['last_mode'] = requested_mode
-
-                 return JsonResponse({'status': 'success', 'message': f'Đã bắt đầu xử lý camera "{requested_camera.name}" ở chế độ: {requested_mode}.'})
-             # --- Kết thúc khối Lock ---
+                return JsonResponse({'status': 'success', 'message': f'Đã bắt đầu xử lý camera "{requested_camera.name}" chế độ {mode}.'})
         else:
-             return JsonResponse({'status': 'error', 'message': 'Hành động không hợp lệ.'})
+            # Form không hợp lệ, trả về lỗi
+            print(f"[View] Form không hợp lệ: {form.errors}")
+            return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors.as_json()})
 
     else:
         last_camera_id = request.session.get('last_camera_id')
-        last_mode = request.session.get('last_mode', 'stream')
+        last_mode = request.session.get('last_mode', 'recognize') # Đổi default thành 'recognize'
         
         initial_data = {'mode': last_mode}
         if last_camera_id:
@@ -1439,6 +1512,21 @@ def get_random_dataset_images_view(request, username):
 
     return JsonResponse({'status': 'success', 'images': images_base64})
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated]) # Chỉ cần đăng nhập để lấy danh sách
+def get_supervisors_api(request):
+    """
+    API trả về danh sách các user là supervisor (username và id).
+    """
+    try:
+        supervisors = User.objects.filter(
+            Q(role_info__role='supervisor') | Q(is_superuser=True)
+        ).distinct().values('id', 'username').order_by('username')
+        return JsonResponse({'status': 'success', 'supervisors': list(supervisors)})
+    except Exception as e:
+        print(f"[API Supervisors Error] Lỗi lấy danh sách supervisor: {e}")
+        return JsonResponse({'status': 'error', 'message': 'Lỗi server khi lấy danh sách supervisor.'}, status=500)
+
 @api_view(['POST'])
 @permission_classes([IsAdminUser])  # Chỉ admin mới có thể gọi API này
 def sync_to_firebase(request):
@@ -1448,9 +1536,25 @@ def sync_to_firebase(request):
     Params:
         date (string, optional): Ngày cần đồng bộ theo định dạng YYYY-MM-DD.
         camera_name (string, optional): Tên camera để gán cho các bản ghi.
+        camera_id (int, optional): ID của camera để gán cho các bản ghi (sẽ được chuyển đổi thành camera_name).
     """
     date_str = request.data.get('date')
     camera_name = request.data.get('camera_name')  # Thêm thông tin camera từ request
+    camera_id = request.data.get('camera_id')  # Thêm thông tin camera_id từ request
+    
+    # Nếu có camera_id nhưng không có camera_name, tìm tên camera từ ID
+    if camera_id and not camera_name:
+        try:
+            camera_id = int(camera_id)
+            from .models import CameraConfig
+            camera = CameraConfig.objects.filter(id=camera_id).first()
+            if camera:
+                camera_name = camera.name
+                print(f"[SYNC] Đã tìm thấy tên camera '{camera_name}' từ ID {camera_id}")
+            else:
+                print(f"[SYNC] Không tìm thấy camera với ID {camera_id}")
+        except (ValueError, Exception) as e:
+            print(f"[SYNC] Lỗi khi tìm camera từ ID: {e}")
     
     if date_str:
         try:
@@ -1487,3 +1591,101 @@ def sync_to_firebase(request):
         "success": success_count,
         "error": error_count
     }, status=200)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])  # Chỉ admin mới có thể gọi API này
+def test_firebase_api(request):
+    """
+    API để kiểm tra kết nối tới Firebase.
+    
+    Returns:
+        Kết quả kiểm tra kết nối Firebase: success, message, và thông tin chi tiết.
+    """
+    from .firebase_util import test_firebase_connection
+    
+    result = test_firebase_connection()
+    return Response(result, status=200 if result['success'] else 500)
+
+# ---------------------- Thêm view để quản lý cơ sở dữ liệu ----------------------
+import sqlite3
+import pandas as pd
+from django.shortcuts import render
+from django.db import connection
+
+@login_required
+@permission_required('is_staff', raise_exception=True)
+def database_manager_view(request):
+    """
+    Trang để xem và quản lý cơ sở dữ liệu SQLite3.
+    """
+    # Lấy danh sách các bảng trong cơ sở dữ liệu
+    tables = []
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [table[0] for table in cursor.fetchall() if not table[0].startswith('sqlite_')]
+    
+    # Khởi tạo các biến
+    selected_table = request.GET.get('table', '')
+    search_query = request.GET.get('search', '')
+    columns = []
+    data = []
+    total_records = 0
+    filtered_records = 0
+    
+    # Lấy dữ liệu của bảng đã chọn
+    if selected_table in tables:
+        with connection.cursor() as cursor:
+            # Lấy thông tin cột
+            cursor.execute(f"PRAGMA table_info({selected_table});")
+            columns = [col[1] for col in cursor.fetchall()]
+            
+            # Đếm tổng số bản ghi
+            cursor.execute(f"SELECT COUNT(*) FROM {selected_table};")
+            total_records = cursor.fetchone()[0]
+            
+            # Tìm kiếm nếu có
+            if search_query:
+                # Xây dựng điều kiện tìm kiếm cho tất cả các cột
+                search_conditions = " OR ".join([f"{col} LIKE '%{search_query}%'" for col in columns])
+                
+                # Đếm số bản ghi sau khi lọc
+                cursor.execute(f"SELECT COUNT(*) FROM {selected_table} WHERE {search_conditions};")
+                filtered_records = cursor.fetchone()[0]
+                
+                # Lấy dữ liệu đã lọc
+                cursor.execute(f"SELECT * FROM {selected_table} WHERE {search_conditions} LIMIT 100;")
+            else:
+                filtered_records = total_records
+                cursor.execute(f"SELECT * FROM {selected_table} LIMIT 100;")
+            
+            # Chuyển đổi dữ liệu thành danh sách các từ điển
+            data = []
+            for row in cursor.fetchall():
+                data.append(dict(zip(columns, row)))
+    
+    context = {
+        'tables': tables,
+        'selected_table': selected_table,
+        'columns': columns,
+        'data': data,
+        'total_records': total_records,
+        'filtered_records': filtered_records,
+        'search_query': search_query,
+        'database_path': connection.settings_dict['NAME'],
+    }
+    
+    return render(request, 'recognition/database_manager.html', context)
+
+@login_required
+def get_processing_status_view(request):
+    """
+    API Endpoint để kiểm tra trạng thái của tiến trình xử lý video.
+    """
+    global processing_thread, processing_lock
+    if not request.user.is_superuser:
+         return JsonResponse({'is_processing': False, 'error': 'Permission denied'}, status=403)
+
+    with processing_lock:
+        is_processing = processing_thread is not None and processing_thread.is_alive()
+        
+    return JsonResponse({'is_processing': is_processing})

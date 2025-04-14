@@ -2,7 +2,11 @@ from django.forms import ModelForm
 from django.contrib.auth.models import User
 from django import forms
 #from django.contrib.admin.widgets import AdminDateWidget
-from .models import CameraConfig # Import model mới
+from .models import CameraConfig 
+# Import Profile từ app 'users'
+from users.models import Profile 
+# Giữ lại Q nếu cần cho các form khác, hoặc bỏ nếu chỉ dùng cho logic cũ
+# from django.db.models import Q 
 
 class usernameForm(forms.Form):
 	username=forms.CharField(max_length=30)
@@ -24,66 +28,132 @@ class DateForm_2(forms.Form):
 	date_to=forms.DateField(widget = forms.SelectDateWidget(empty_label=("Choose Year", "Choose Month", "Choose Day")))
 
 
-# Form mới cho chức năng ROI (ĐÃ CẬP NHẬT)
+# Form mới cho chức năng ROI (ĐÃ CẬP NHẬT theo Profile model)
 class VideoRoiForm(forms.Form):
     camera = forms.ModelChoiceField(
         queryset=CameraConfig.objects.all(), 
         label='Chọn Camera',
+        empty_label="--- Chọn Camera ---", # Thêm empty_label
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     mode = forms.ChoiceField(
         label='Chế độ xử lý',
         choices=[
-            ('stream', 'Chỉ Stream Video'), 
+            # Bỏ 'stream' nếu không xử lý trong view?
+            # ('stream', 'Chỉ Stream Video'), 
             ('recognize', 'Nhận diện'),
             ('collect', 'Thu thập dữ liệu')
         ],
-        initial='stream',
+        initial='recognize', # Có thể đổi initial nếu muốn
         widget=forms.RadioSelect
     )
     username = forms.CharField(
-        label='Username (cho Thu thập dữ liệu)',
-        max_length=30, 
-        required=False,
-        help_text='Chỉ cần nhập khi chọn chế độ Thu thập dữ liệu.',
-        widget=forms.TextInput(attrs={'placeholder': 'Nhập username'})
+        label='Username', # Đơn giản label
+        max_length=150, # Tăng max_length khớp với User model
+        required=False, # Sẽ validate trong clean()
+        widget=forms.TextInput(attrs={'placeholder': 'Nhập username (bắt buộc khi Thu thập)'})
     )
-    employee_id = forms.CharField(
-        label='ID nhân viên',
-        max_length=30,
-        required=False,
-        help_text='ID nhân viên dùng cho thu thập dữ liệu.',
-        widget=forms.TextInput(attrs={'placeholder': 'Nhập ID'})
+    # --- Thêm trường Email (từ User model) --- 
+    email = forms.EmailField(
+        label='Email',
+        required=False, # Chỉ bắt buộc cho Supervisor khi collect
+        widget=forms.EmailInput(attrs={'placeholder': 'Nhập email (bắt buộc cho Supervisor)'})
     )
-    project = forms.CharField(
-        label='Dự án',
-        max_length=255,
-        required=False,
-        help_text='Dự án của nhân viên.',
-        widget=forms.TextInput(attrs={'placeholder': 'Nhập tên dự án'})
+    # --- Cập nhật Role dựa trên Profile model ---
+    role = forms.ChoiceField(
+        label='Vai trò',
+        choices=Profile.ROLE_CHOICES, # Lấy choices từ Profile model
+        required=False, # Sẽ validate trong clean()
+        initial='worker', # Giữ lại initial nếu muốn
+        widget=forms.RadioSelect # Giữ RadioSelect hoặc đổi thành Select nếu muốn
     )
+    # --- Cập nhật Supervisor dựa trên Profile model ---
+    supervisor = forms.ModelChoiceField(
+        queryset=User.objects.filter(profile__role='supervisor'),
+        required=False, # Sẽ validate trong clean()
+        label="Thuộc Supervisor",
+        empty_label="--- Chọn Supervisor ---",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    # --- Chuyển Company thành ChoiceField ---
     company = forms.ChoiceField(
         label='Công ty',
         choices=[
             ('DBplus', 'DBplus'),
             ('DBhomes', 'DBhomes')
         ],
-        required=False,
-        initial='DBplus',
-        widget=forms.Select(attrs={'class': 'form-control'})
+        required=True, # Đặt là True nếu luôn bắt buộc khi collect, validate trong clean()
+        initial='DBplus', # Giữ lại initial nếu muốn
+        widget=forms.Select(attrs={'class': 'form-control'}) # Dùng Select widget
     )
+    
+    # --- Bỏ trường employee_id --- 
+    # employee_id = forms.CharField(max_length=50, required=False, label="Mã NV")
+    # --- Bỏ trường project --- 
+    # project = forms.CharField(max_length=100, required=False, label="Dự án")
+
+    # Bỏ __init__ nếu không cần logic đặc biệt khi khởi tạo nữa
+    # def __init__(self, *args, **kwargs):
+    #    super(VideoRoiForm, self).__init__(*args, **kwargs)
+    #    # ... logic cũ đã bị xóa ...
 
     def clean(self):
         cleaned_data = super().clean()
         mode = cleaned_data.get("mode")
         username = cleaned_data.get("username")
+        email = cleaned_data.get("email") # Lấy email
+        role = cleaned_data.get("role")
+        supervisor = cleaned_data.get("supervisor")
+        # --- Bỏ employee_id và project --- 
+        # employee_id = cleaned_data.get("employee_id")
+        company = cleaned_data.get("company")
 
-        if mode == 'collect' and not username:
-            raise forms.ValidationError(
-                "Vui lòng nhập Username khi chọn chế độ 'Thu thập dữ liệu'.",
-                code='username_required_for_collect'
-            )
-        
+        if mode == 'collect':
+            # Username là bắt buộc khi collect
+            if not username:
+                self.add_error('username', "Vui lòng nhập Username khi chọn chế độ 'Thu thập dữ liệu'.")
+            
+            # Role là bắt buộc khi collect
+            if not role:
+                self.add_error('role', "Vui lòng chọn vai trò cho người dùng.")
+            # Nếu là worker, supervisor là bắt buộc
+            elif role == 'worker':
+                if not supervisor:
+                    self.add_error('supervisor', "Vui lòng chọn Supervisor cho Worker.")
+            # Nếu là supervisor, email là bắt buộc
+            elif role == 'supervisor':
+                if not email:
+                    self.add_error('email', "Vui lòng nhập Email cho Supervisor.")
+                 
+            # Có thể thêm validation cho các trường khác khi collect nếu cần
+            if not company:
+               self.add_error('company', "Vui lòng nhập Công ty.")
+             # Bỏ validation cho employee_id
+             # if not employee_id:
+             #    self.add_error('employee_id', "Vui lòng nhập Mã NV.")
+             # Bỏ validation cho project
+             # if not project:
+             #    self.add_error('project', "Vui lòng nhập Dự án.")
+            
+            # Kiểm tra nếu username đã tồn tại
+            # Lưu ý: Chỉ kiểm tra khi tạo mới, cần logic khác nếu cho phép cập nhật
+            # User_exists = User.objects.filter(username=username).exists()
+            # if User_exists:
+            #     # Kiểm tra xem form có instance không (nghĩa là đang update hay create)
+            #     # if not self.instance or self.instance.username != username:
+            #     self.add_error('username', "Username này đã tồn tại.")
+            
+            # Kiểm tra nếu email đã tồn tại (nếu email phải là duy nhất)
+            if email and role == 'supervisor':
+                # Kiểm tra xem email đã được sử dụng bởi người dùng khác chưa
+                existing_user = User.objects.filter(email=email).exclude(username=username).first()
+                
+                # Kiểm tra xem existing_user có tồn tại không
+                if existing_user:
+                    # Email đã được sử dụng bởi người dùng khác
+                    self.add_error('email', "Email này đã được sử dụng bởi người dùng khác.")
+
         return cleaned_data
 
 # Form để thêm Camera mới từ giao diện người dùng
@@ -105,3 +175,4 @@ class AddCameraForm(forms.ModelForm):
         }
 
        
+

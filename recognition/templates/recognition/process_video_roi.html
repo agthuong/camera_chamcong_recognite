@@ -231,11 +231,18 @@
                          <div class="form-group {% if form.mode.value != 'collect' %}d-none{% endif %}" id="div_id_username">
                              {{ form.username|as_crispy_field }}
                              
-                             <!-- Thêm trường ID nhân viên -->
-                             {{ form.employee_id|as_crispy_field }}
+                             <!-- Thêm trường Email (ẩn ban đầu) -->
+                             <div id="email-field-group" style="display: none;"> 
+                                 {{ form.email|as_crispy_field }}
+                             </div>
                              
-                             <!-- Thêm trường Project -->
-                             {{ form.project|as_crispy_field }}
+                             <!-- Thêm trường Role -->
+                             {{ form.role|as_crispy_field }}
+                             
+                             <!-- Thêm trường Supervisor (ẩn ban đầu) -->
+                             <div id="supervisor-field-group" style="display: none;"> 
+                                 {{ form.supervisor|as_crispy_field }}
+                             </div>
                              
                              <!-- Thêm trường Company -->
                              {{ form.company|as_crispy_field }}
@@ -369,6 +376,8 @@
         var cameraSelect = $('#id_camera');
         // var modeSelect = $('#id_mode'); // Vẫn cần để lấy giá trị ban đầu nếu dùng crispy tag
         var usernameFieldGroup = $('#div_id_username');
+        var emailFieldGroup = $('#email-field-group'); // Thêm selector cho nhóm email
+        var supervisorFieldGroup = $('#supervisor-field-group'); // Thêm selector cho nhóm supervisor
         var processForm = $("#process-form");
         var startButton = processForm.find("button[type='submit']");
         var stopButton = $("#stop-button"); // Cập nhật selector
@@ -422,24 +431,40 @@
         } catch (e) { console.error("Error moving username field:", e); }
 
         // --- Function to toggle Username field --- 
-        function toggleUsernameField() {
+        function toggleConditionalFields() { // Đổi tên hàm cho rõ ràng hơn
             var selectedMode = $('input[name="mode"]:checked').val();
             if (selectedMode === 'collect') {
                 usernameFieldGroup.removeClass('d-none');
+                // Xử lý hiển thị Email và Supervisor dựa trên Role
+                var selectedRole = $('input[name="role"]:checked').val(); // Lấy giá trị từ radio được chọn
+                if (selectedRole === 'worker') {
+                    supervisorFieldGroup.show();
+                    emailFieldGroup.hide(); // Ẩn email cho worker
+                } else if (selectedRole === 'supervisor') {
+                    supervisorFieldGroup.hide(); // Ẩn supervisor cho supervisor
+                    emailFieldGroup.show(); // Hiện email cho supervisor
+                } else {
+                    supervisorFieldGroup.hide();
+                    emailFieldGroup.hide(); // Ẩn cả hai nếu chưa chọn role
+                }
+                 // Hiển thị nút huấn luyện nếu là mode collect
+                 $('#ajax-train-button').parent().removeClass('d-none'); 
             } else {
                 usernameFieldGroup.addClass('d-none');
                 // Ẩn luôn nút huấn luyện khi không phải mode collect
                 $('#ajax-train-button').parent().addClass('d-none'); 
-            }
-            // Hiển thị nút huấn luyện nếu là mode collect
-            if (selectedMode === 'collect'){
-                $('#ajax-train-button').parent().removeClass('d-none');
+                // Ẩn luôn field supervisor khi không phải mode collect
+                supervisorFieldGroup.hide(); 
+                // Ẩn luôn field email khi không phải mode collect
+                emailFieldGroup.hide(); 
             } 
         }
         // Chạy lần đầu để đảm bảo trạng thái đúng dựa trên giá trị initial của form
-        toggleUsernameField(); 
-        // Gắn vào sự kiện change của radio buttons
-        $('input[name="mode"]').change(toggleUsernameField); 
+        toggleConditionalFields(); 
+        // Gắn vào sự kiện change của radio buttons mode
+        $('input[name="mode"]').change(toggleConditionalFields); 
+        // Gắn vào sự kiện change của select role
+        $('input[name="role"]').change(toggleConditionalFields); // Gắn sự kiện cho tất cả radio trong nhóm 'role'
 
         // --- Alert closing, Train Button, Configure ROI Link --- 
         $('.alert .close').on('click', function(e) { $(this).parent().alert('close'); });
@@ -740,9 +765,31 @@
              var username = $("#id_username").val();
             if (selectedMode === 'collect' && !username) { alert("Vui lòng nhập Username cho chế độ Thu thập."); return false; }
             
+            // Thêm validation cho Role và Supervisor nếu cần
+            var selectedRole = $('input[name="role"]:checked').val(); // Lấy giá trị role từ radio đã chọn
+            if (selectedMode === 'collect' && !selectedRole) { 
+                alert("Vui lòng chọn Vai trò."); 
+                return false; 
+            }
+            // Validation cho worker
+            if (selectedMode === 'collect' && selectedRole === 'worker') {
+                var selectedSupervisor = $('#id_supervisor').val(); // Lấy giá trị supervisor
+                if (!selectedSupervisor) { 
+                    alert("Vui lòng chọn Supervisor cho Worker."); 
+                    return false; 
+                }
+            }
+            // Validation cho supervisor
+            if (selectedMode === 'collect' && selectedRole === 'supervisor') {
+                var emailValue = $('#id_email').val(); // Lấy giá trị email
+                if (!emailValue) { 
+                    alert("Vui lòng nhập Email cho Supervisor."); 
+                    return false; 
+                }
+            }
+            
             // Disable start button, enable stop button
             startButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Bắt đầu...');
-            // stopButton.prop('disabled', false); // Enable stop button after successful start
 
             var formData = $(this).serialize(); // Lấy dữ liệu form: action=start&csrfmiddlewaretoken=...&camera=...&mode=...&username=...
 

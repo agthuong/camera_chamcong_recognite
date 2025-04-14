@@ -1,0 +1,115 @@
+{% extends 'recognition/base.html' %}
+{% load recognition_extras %}
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Quản lý Cơ sở dữ liệu SQLite3</h4>
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <h5>Thông tin cơ sở dữ liệu:</h5>
+                <p><strong>Đường dẫn:</strong> {{ database_path }}</p>
+            </div>
+
+            <div class="row">
+                <!-- Danh sách các bảng -->
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Danh sách bảng</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                {% for table in tables %}
+                                <a href="?table={{ table }}" class="list-group-item list-group-item-action {% if table == selected_table %}active{% endif %}">
+                                    {{ table }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hiển thị dữ liệu bảng -->
+                <div class="col-md-9">
+                    {% if selected_table %}
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Bảng: {{ selected_table }}</h5>
+                                <small>Tổng số bản ghi: {{ total_records }}</small>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <form class="mb-3" method="GET" action="">
+                                <input type="hidden" name="table" value="{{ selected_table }}">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" placeholder="Tìm kiếm..." name="search" value="{{ search_query }}">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-primary" type="submit">Tìm</button>
+                                        {% if search_query %}
+                                        <a href="?table={{ selected_table }}" class="btn btn-secondary">Xóa bộ lọc</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </form>
+
+                            {% if filtered_records %}
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead class="thead-dark">
+                                        <tr>
+                                            {% for column in columns %}
+                                            <th>{{ column }}</th>
+                                            {% endfor %}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for row in data %}
+                                        <tr>
+                                            {% for column in columns %}
+                                            <td>{{ row|get_item:column }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="text-muted">Hiển thị {{ data|length }} / {{ filtered_records }} bản ghi {% if search_query %}phù hợp với tìm kiếm "{{ search_query }}"{% endif %}</p>
+                            {% else %}
+                            <div class="alert alert-info">Không tìm thấy bản ghi nào phù hợp với tìm kiếm "{{ search_query }}".</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-primary">Vui lòng chọn một bảng từ danh sách bên trái để xem dữ liệu.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4 shadow">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Thông tin bổ sung</h5>
+        </div>
+        <div class="card-body">
+            <h5>Cấu trúc cơ sở dữ liệu</h5>
+            <p>Cơ sở dữ liệu SQLite3 này chứa các bảng chính sau:</p>
+            <ul>
+                <li><strong>auth_user</strong>: Bảng người dùng của Django (username, email, password...)</li>
+                <li><strong>recognition_cameraconfig</strong>: Cấu hình camera (name, source, ROI...)</li>
+                <li><strong>recognition_attendancerecord</strong>: Bản ghi chấm công (user, date, check_in, check_out...)</li>
+            </ul>
+            <p>Các bảng khác là các bảng hệ thống của Django.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+    // Thêm chức năng xem chi tiết nếu cần
+</script>
+{% endblock %} 
