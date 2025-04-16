@@ -1,0 +1,92 @@
+{% extends 'recognition/base.html' %}
+{% load static %}
+
+{% block title %}Log Chấm Công{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Log Chấm Công</h1>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Bộ lọc</h5>
+        </div>
+        <div class="card-body">
+            <form method="get" id="log-filter-form-page" class="form-inline"> {# ID khác để tránh xung đột JS nếu có #}
+                 <div class="form-group mr-2 mb-2">
+                     <label for="start_date_page" class="sr-only">Từ ngày</label>
+                     <input type="date" class="form-control form-control-sm" id="start_date_page" name="start_date" title="Từ ngày" value="{{ start_date|default:'' }}">
+                 </div>
+                 <div class="form-group mr-2 mb-2">
+                     <label for="end_date_page" class="sr-only">Đến ngày</label>
+                     <input type="date" class="form-control form-control-sm" id="end_date_page" name="end_date" title="Đến ngày" value="{{ end_date|default:'' }}">
+                 </div>
+                 <div class="form-group mr-2 mb-2">
+                     <label for="search_page" class="sr-only">Tìm tên</label>
+                     <input type="text" class="form-control form-control-sm" id="search_page" name="search" placeholder="Tìm tên..." value="{{ search_query|default:'' }}">
+                 </div>
+                 <button type="submit" class="btn btn-primary btn-sm mb-2 mr-1">Lọc</button>
+                 <button type="button" id="reload-log-btn-page" class="btn btn-secondary btn-sm mb-2" title="Tải lại"><i class="fas fa-sync-alt"></i></button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white py-2">
+            <h5 class="mb-0">Kết quả</h5>
+        </div>
+        <div class="card-body p-0" id="attendance-log-table-container-page"> {# ID khác #}
+            {% include 'recognition/partials/attendance_log_table.html' with attendance_records=attendance_records %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extrajs %}
+<script>
+$(document).ready(function() {
+    var logTableContainer = $('#attendance-log-table-container-page');
+    var filterForm = $('#log-filter-form-page');
+    var reloadButton = $('#reload-log-btn-page');
+
+    // Function to reload log via AJAX
+    function reloadAttendanceLog(filterData) {
+        console.log("[Log Page] Reloading log with filters:", filterData);
+        logTableContainer.html('<div class="text-center p-5"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">Đang tải...</p></div>'); // Show loading
+
+        $.ajax({
+            url: "{% url 'attendance-log' %}", // URL của view log mới
+            type: "GET",
+            data: filterData,
+            dataType: "html",
+            success: function(responseHtml) {
+                // Since the view returns only the partial for AJAX, directly insert it
+                logTableContainer.html(responseHtml);
+                console.log("[Log Page] Log reloaded successfully.");
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                console.error("[Log Page] AJAX Error:", textStatus, jqXHR.status, errorThrown);
+                logTableContainer.html(`<div class="alert alert-danger m-3">Lỗi khi tải dữ liệu log: ${textStatus} (${jqXHR.status}). Vui lòng thử lại.</div>`);
+            }
+        });
+    }
+
+    // Handle filter form submission via AJAX
+    filterForm.submit(function(e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+        reloadAttendanceLog(formData);
+    });
+
+    // Handle reload button click
+    reloadButton.click(function() {
+        var formData = filterForm.serialize();
+        reloadAttendanceLog(formData);
+    });
+
+    // Initial load if needed (or rely on initial render from Django)
+    // reloadAttendanceLog(filterForm.serialize()); // Optional: uncomment if you want AJAX load on first page visit
+});
+</script>
+{% endblock %} 

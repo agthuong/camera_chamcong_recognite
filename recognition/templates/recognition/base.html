@@ -13,6 +13,7 @@
     <link rel="stylesheet" type="text/css" href="{% static 'recognition/main.css' %}"> 
 
     <title>{% block title %}Hệ thống Điểm danh{% endblock title %}</title>
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
     <header class="site-header">
@@ -24,13 +25,11 @@
           </button>
           <div class="collapse navbar-collapse" id="navbarToggle">
             <div class="navbar-nav mr-auto">
-              <a class="nav-item nav-link" href="{% url 'home' %}">Trang chủ</a>
               <!-- Thêm các link khác nếu cần -->
                {% if user.is_authenticated and user.is_superuser %}
-                 <a class="nav-item nav-link" href="{% url 'process-video-roi' %}">Xử lý Video</a>
-                 <a class="nav-item nav-link" href="{% url 'supervisor-worker' %}">Supervisor-Worker</a>
-                 <a class="nav-item nav-link" href="{% url 'database-manager' %}">Quản lý DB</a>
-                 <a class="nav-item nav-link" href="{% url 'admin:index' %}">Admin</a>
+                 <a class="nav-item nav-link" href="{% url 'home' %}">Thu thập dữ liệu</a>
+                 <a class="nav-item nav-link" href="{% url 'attendance-log' %}">Bảng Chấm công</a>
+                 <a class="nav-item nav-link" href="{% url 'supervisor-worker' %}">Quản lý</a>
                {% endif %}
             </div>
             <!-- Navbar Right Side -->

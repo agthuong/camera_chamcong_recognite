@@ -93,7 +93,7 @@ class VideoRoiForm(forms.Form):
         label='Nhà thầu',
         max_length=100,
         required=False, # Sẽ validate trong clean() chỉ cho worker
-        widget=forms.TextInput(attrs={'placeholder': 'Nhập tên nhà thầu (bắt buộc cho Worker)', 'class': 'form-control'})
+        widget=forms.HiddenInput()
     )
     
     # --- Thêm trường lĩnh vực (Field) ---
@@ -101,7 +101,7 @@ class VideoRoiForm(forms.Form):
         label='Lĩnh vực',
         max_length=100,
         required=False, # Sẽ validate trong clean() chỉ cho worker
-        widget=forms.TextInput(attrs={'placeholder': 'Nhập lĩnh vực công việc (bắt buộc cho Worker)', 'class': 'form-control'})
+        widget=forms.HiddenInput()
     )
     
     # --- Bỏ trường employee_id --- 

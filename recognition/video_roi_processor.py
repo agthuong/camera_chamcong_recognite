@@ -411,10 +411,10 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
         print("[PROCESS ERROR] Cần cung cấp username cho chế độ 'collect'")
         output_handler.stop_stream()
         return 0
-    if roi is None and mode != 'stream':
-         print("[PROCESS ERROR] Cần có ROI cho chế độ 'collect' hoặc 'recognize'")
+    if roi is None and mode == 'collect':
+         print("[PROCESS ERROR] Cần có ROI cho chế độ 'collect'")
          output_handler.stop_stream()
-         return 0 if mode == 'collect' else {}
+         return 0
     elif roi is not None and len(roi) != 4:
          print("[PROCESS ERROR] ROI không hợp lệ")
          output_handler.stop_stream()
@@ -481,7 +481,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 'current': 0, 
                 'total': max_samples, 
                 'active': True,
-                # 'sanitized': username # Chỗ này bị sai ở lần sửa trước, nên là sanitized_username
+                'completed': False,
                 'sanitized': sanitized_username 
             }
             print(f"[Tracker INIT] Progress for {username}: {collect_progress_tracker[username]}")
@@ -581,15 +581,21 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 else:
                     roi_frame_for_processing = None
 
-            if mode in ['collect', 'recognize'] and roi_frame_for_processing is not None:
+            elif mode == 'recognize': 
+                roi_frame_for_processing = frame.copy() # Xử lý toàn bộ frame
+                orig_rx, orig_ry = 0, 0 # Đặt tọa độ gốc để vẽ bounding box đúng
+
+            if roi_frame_for_processing is not None and mode in ['collect', 'recognize']:
                 frame_index += 1
-                if frame_index % settings.RECOGNITION_FRAME_SKIP != 0:
+                if mode == 'recognize' and frame_index % settings.RECOGNIZE_FRAME_SKIP != 0:
                     output_handler.set_frame(frame_to_display)
                     continue
+                if mode == 'collect' and frame_index % settings.COLLECT_FRAME_SKIP != 0:
+                     output_handler.set_frame(frame_to_display)
+                     continue
 
                 try:
-                    roi_frame_resized = roi_frame_for_processing
-                    roi_gray = cv2.cvtColor(roi_frame_resized, cv2.COLOR_BGR2GRAY)
+                    roi_gray = cv2.cvtColor(roi_frame_for_processing, cv2.COLOR_BGR2GRAY)
                     faces = detector(roi_gray, 0)
                 except Exception as detect_err:
                     print(f"[PROCESS ERROR] Lỗi trong quá trình phát hiện khuôn mặt: {detect_err}")
@@ -599,36 +605,27 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 if faces:
                     for face in faces:
                         (fx, fy, fw, fh) = face_utils.rect_to_bb(face)
-                        draw_x = orig_rx + int(fx * (orig_rw / roi_frame_resized.shape[1]))
-                        draw_y = orig_ry + int(fy * (orig_rh / roi_frame_resized.shape[0]))
-                        draw_w = int(fw * (orig_rw / roi_frame_resized.shape[1]))
-                        draw_h = int(fh * (orig_rh / roi_frame_resized.shape[0]))
+                        if roi:
+                            draw_x = orig_rx + int(fx * (orig_rw / roi_frame_for_processing.shape[1]))
+                            draw_y = orig_ry + int(fy * (orig_rh / roi_frame_for_processing.shape[0]))
+                            draw_w = int(fw * (orig_rw / roi_frame_for_processing.shape[1]))
+                            draw_h = int(fh * (orig_rh / roi_frame_for_processing.shape[0]))
+                        else:
+                            draw_x, draw_y, draw_w, draw_h = fx, fy, fw, fh
 
                         try:
-                            face_aligned = fa.align(roi_frame_resized, roi_gray, face)
+                            face_aligned = fa.align(roi_frame_for_processing, roi_gray, face)
                         except Exception as align_err:
                             print(f"[PROCESS ERROR] Lỗi căn chỉnh mặt: {align_err}")
                             continue
 
                         if mode == 'collect':
                             sample_count += 1
-                            # Sử dụng sanitized_username
-                            # img_path = os.path.join(output_dir, f"{sanitized_username}_{sample_count}.jpg")
-                            # --- Sử dụng username gốc trực tiếp --- 
-                            # img_path = os.path.join(output_dir, f"{username}_{sample_count}.jpg")
-                            # --- Kết thúc sử dụng username gốc ---
-                            # --- Hoàn nguyên sử dụng sanitized_username --- 
                             img_path = os.path.join(output_dir, f"{sanitized_username}_{sample_count}.jpg")
-                            # --- Kết thúc hoàn nguyên ---
                             cv2.imwrite(img_path, face_aligned)
 
-                            # Cập nhật tiến trình cho sanitized_username
-                            # if sanitized_username in collect_progress_tracker:
-                            #    collect_progress_tracker[sanitized_username]['current'] = sample_count
-                            # --- Cập nhật tiến trình cho username gốc --- 
                             if username in collect_progress_tracker:
                                 collect_progress_tracker[username]['current'] = sample_count
-                            # --- Kết thúc thay đổi ---
 
                             cv2.rectangle(frame_to_display, (draw_x, draw_y), (draw_x + draw_w, draw_y + draw_h), (0, 255, 0), 1)
                             cv2.putText(frame_to_display, f"Sample: {sample_count}", (draw_x, draw_y - 5),
@@ -660,9 +657,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         print(f"[RECOGNIZED] {person_name}")
                                         recognized_persons[person_name] = True
                                     try:
-                                        # --- Chuẩn hóa tên chỉ cho filename --- 
                                         sanitized_person_name_for_file = sanitize_filename(person_name)
-                                        # --- Kết thúc chuẩn hóa ---
                                         try:
                                             user = User.objects.get(username=person_name)
                                         except User.DoesNotExist:
@@ -687,7 +682,6 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                             }
                                         )
 
-                                        # Cập nhật thông tin dự án và công ty nếu có
                                         if project and not record.project:
                                             record.project = project
                                         if company and not record.company:
@@ -696,26 +690,19 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                             record.employee_id = employee_id
 
                                         if created:
-                                            # --- Check-in: Vẫn dùng ngưỡng mặc định (recognition_threshold đã lấy từ settings) ---
                                             face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}.jpg'
-                                            # --- Sử dụng settings cho đường dẫn ảnh check-in ---
-                                            # face_path = os.path.join(settings.MEDIA_ROOT, 'attendance_faces', 'check_in', face_filename)
-                                            # relative_face_path = os.path.join('attendance_faces', 'check_in', face_filename)
                                             face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
                                             relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
-                                            # --- Kết thúc sử dụng settings ---
                                             os.makedirs(os.path.dirname(face_path), exist_ok=True)
-                                            # --- Thêm kiểm tra lưu ảnh --- 
                                             saved_img_in = cv2.imwrite(face_path, face_aligned)
                                             if not saved_img_in:
                                                 print(f"[PROCESS ERROR] Không thể lưu ảnh check-in tại: {face_path}")
                                             else:
-                                                record.check_in_image_url = relative_face_path # Lưu đường dẫn tương đối đã chuẩn hóa
-                                                record.save() # Lưu record chỉ khi ảnh lưu thành công (hoặc di chuyển save ra ngoài if này nếu ảnh không bắt buộc)
-                                                last_save_time[person_name] = now # Cập nhật thời gian chỉ khi save thành công
+                                                record.check_in_image_url = relative_face_path
+                                                record.save()
+                                                last_save_time[person_name] = now
                                                 print(f"[PROCESS INFO] Đã lưu check-in cho '{person_name}'")
                                                 
-                                                # Đẩy dữ liệu lên Firebase sau khi check-in
                                                 try:
                                                     success = push_attendance_to_firebase(record, camera_name)
                                                     if success:
@@ -725,11 +712,8 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                                 except Exception as firebase_err:
                                                     print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-in lên Firebase: {firebase_err}")
                                         else:
-                                            # Người dùng đã check-in trước đó, cập nhật thành check-out
-                                            # Lưu thời gian nhận diện gần nhất làm check-out time
                                             record.check_out = now
                                             
-                                            # Lưu ảnh check-out
                                             face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}_out.jpg'
                                             face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
                                                                     settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
@@ -743,14 +727,13 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                                 print(f"[PROCESS ERROR] Không thể lưu ảnh check-out tại: {face_path}")
                                             else:
                                                 record.check_out_image_url = relative_face_path
-                                                record.save()  # Lưu record với thông tin check-out mới
+                                                record.save()
                                                 last_save_time[person_name] = now
                                                 
                                                 check_in_time_str = record.check_in.strftime('%H:%M:%S') if record.check_in else "không rõ"
                                                 check_out_time_str = record.check_out.strftime('%H:%M:%S')
                                                 print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (check-in: {check_in_time_str}, check-out: {check_out_time_str})")
                                                 
-                                                # Đẩy dữ liệu lên Firebase sau khi check-out
                                                 try:
                                                     success = push_attendance_to_firebase(record, camera_name)
                                                     if success:
@@ -803,26 +786,30 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
         output_handler.stop_stream()
 
     # Đánh dấu tiến trình là không hoạt động khi kết thúc (hoặc bị dừng)
-    # Sử dụng sanitized_username
-    # if mode == 'collect' and sanitized_username and sanitized_username in collect_progress_tracker:
-    #    collect_progress_tracker[sanitized_username]['active'] = False
-    #    print(f"[Tracker END] Progress for {sanitized_username}: {collect_progress_tracker[sanitized_username]}")
-    # --- Sử dụng username gốc --- 
     if mode == 'collect' and username and username in collect_progress_tracker:
-        collect_progress_tracker[username]['active'] = False
-        print(f"[Tracker END] Progress for {username}: {collect_progress_tracker[username]}")
-    # --- Kết thúc thay đổi ---
+        if sample_count >= max_samples:
+            # Chỉ đặt active=False nếu đã thu thập đủ mẫu
+            collect_progress_tracker[username]['active'] = False
+            collect_progress_tracker[username]['completed'] = True
+            print(f"[Tracker END] Thu thập hoàn thành cho {username}: {collect_progress_tracker[username]}")
+        else:
+            # Nếu bị dừng giữa chừng, giữ active=True thêm một thời gian để frontend hiển thị
+            collect_progress_tracker[username]['completed'] = False
+            print(f"[Tracker END] Thu thập bị dừng giữa chừng cho {username}: {collect_progress_tracker[username]}")
+            # Đặt một timer để đặt active=False sau một khoảng thời gian
+            def delay_deactivate():
+                time.sleep(10) # Đợi 10 giây để frontend hiển thị
+                if username in collect_progress_tracker:
+                    collect_progress_tracker[username]['active'] = False
+                    print(f"[Tracker DELAYED] Đã đặt active=False sau khi hiển thị: {collect_progress_tracker[username]}")
+            
+            # Tạo một thread riêng để xử lý việc delay deactivate
+            deactivate_thread = threading.Thread(target=delay_deactivate, daemon=True)
+            deactivate_thread.start()
 
     print("[PROCESS END] Kết thúc hàm process_video_with_roi")
     if mode == 'collect':
-        # Sử dụng sanitized_username để thông báo
-        # print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho {sanitized_username}.")
-        # --- Sử dụng username gốc --- 
-        # print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho {username}.")
-        # --- Kết thúc sử dụng username gốc ---
-        # --- Hoàn nguyên sử dụng username gốc và sanitized --- 
         print(f"[PROCESS INFO] Đã lưu tổng cộng {sample_count} mẫu cho '{username}' vào thư mục '{sanitized_username}'.")
-        # --- Kết thúc hoàn nguyên ---
         return sample_count
     elif mode == 'recognize':
         print("--- Kết quả Nhận diện Cuối cùng (khi dừng) ---")

@@ -1,32 +1,25 @@
+{% extends 'recognition/base.html' %}
 {% load static %}
 {% load crispy_forms_tags %}
 
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Xử lý Video ROI</title>
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+{% block title %}Xử lý Video và Chấm công{% endblock %}
+
+{% block extra_head %}
+    <!-- Thêm các link CSS hoặc script cần trong head vào đây -->
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css" rel="stylesheet" />
     <!-- Cropper.js CSS (Local) -->
     <link rel="stylesheet" href="{% static 'recognition/vendor/cropperjs/cropper.min.css' %}">
+    <!-- Toastify CSS (Thêm nếu dùng thông báo nhỏ) -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <style>
-        body {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            background-color: #f8f9fa; /* Light gray background */
-        }
+        /* Giữ lại các style đặc trưng cho trang này */
         .card {
-            margin-bottom: 1.5rem; /* Thêm margin bottom */
+            margin-bottom: 1.5rem;
         }
         .video-card .card-body {
-            padding: 0.5rem; /* Giảm padding cho card video */
+            padding: 0.5rem;
         }
         .roi-status {
             margin-bottom: 1rem;
@@ -46,39 +39,33 @@
         }
         .camera-section .form-group {
             display: flex;
-            align-items: flex-start; /* Align items to the top */
-            gap: 10px; /* Add some space between elements */
+            align-items: flex-start;
+            gap: 10px;
         }
-        /* Allow crispy form group for camera to take up space */
         .camera-section .form-group > div {
              flex-grow: 1;
         }
-        /* Adjust button size/margin if needed */
         .camera-section .btn-sm {
-             margin-top: 5px; /* Add margin if needed */
+             margin-top: 5px;
         }
         .table-responsive {
-            margin-top: 2rem;
-        }
-        .img-thumbnail {
-            max-width: 100px;
-            max-height: 100px;
+            margin-top: 1rem; /* Giảm margin top bảng log */
         }
         .video-container {
             position: relative;
             width: 100%;
-            background-color: #222; /* Darker background */
+            background-color: #222;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            border-radius: .25rem; /* Bo góc nhẹ */
+            border-radius: .25rem;
         }
         .video-container img {
-            height: auto; /* Giữ tỷ lệ */
+            height: auto;
             display: block;
-            max-width: 100%; /* Giới hạn chiều rộng tối đa */
-            max-height: 75vh; /* Giới hạn chiều cao theo viewport */
+            max-width: 100%;
+            max-height: 75vh;
             margin: 0 auto;
         }
         .video-placeholder-text {
@@ -88,110 +75,114 @@
             font-size: 1.2rem;
             padding: 2rem;
         }
-        /* Hide placeholder text when the image source is the video feed */
         .video-container img[src*="video-feed"] + .video-placeholder-text {
             display: none;
         }
-        /* Hide placeholder image when video feed is active (can use JS too) */
-        /* Optional: Add class via JS when processing starts */
         .is-streaming .video-placeholder-text {
              display: none;
         }
-
-        /* Ensure username field group is initially hidden if not collect */
         #username-field-group:not(.mode-collect) {
             display: none;
         }
-
         .control-buttons button {
             margin-right: 5px;
         }
-        /* Style cho div username khi được di chuyển (tùy chọn) */
         #div_id_username.moved-username-field {
             margin-left: 25px; 
-            margin-top: 5px; /* Tăng khoảng cách trên */
+            margin-top: 5px;
             margin-bottom: 15px; 
             border-left: 2px solid #eee; 
             padding-left: 15px;
-            padding-top: 5px; /* Thêm padding trên nếu cần */
+            padding-top: 5px;
         }
         .attendance-table img {
-            max-width: 50px; /* Giảm kích thước ảnh nhỏ hơn */
+            max-width: 50px;
             max-height: 50px;
             border-radius: 4px;
         }
         .attendance-table th, .attendance-table td {
              vertical-align: middle;
              text-align: center;
-             padding: 0.5rem; /* Giảm padding bảng */
+             padding: 0.5rem;
         }
          .attendance-table th:nth-child(2), .attendance-table td:nth-child(2) { 
              text-align: left;
         }
-        /* Style cho Cropper.js modal */
         #roi-editor-modal .modal-lg {
-            max-width: 95%; /* Cho modal rộng hơn nữa */
+            max-width: 95%;
         }
         #roi-image-container {
-            max-height: 70vh; /* Giới hạn chiều cao container ảnh */
+            max-height: 70vh;
             overflow: hidden;
         }
         #roi-image {
-             max-width: 100%; /* Đảm bảo ảnh không tràn container */
+             max-width: 100%;
         }
-        /* Ẩn vùng chọn mặc định của cropper ban đầu */
         .cropper-view-box, .cropper-face {
              border-radius: .25rem;
         }
         #collect-progress-label {
-            font-size: 0.9rem; /* Hơi nhỏ hơn mặc định một chút */
+            font-size: 0.9rem;
             font-weight: 500;
-            display: block; /* Đảm bảo nó chiếm 1 dòng */
+            display: block;
             margin-bottom: 0.3rem;
         }
-
         #training-loading-indicator span {
-            font-size: 0.95rem; /* Tăng kích thước chữ loading */
+            font-size: 0.95rem;
         }
-
-        /* Tăng chiều cao cho bảng log */
-        #attendance-log-container .table-responsive {
-            max-height: 65vh; /* Chiều cao lớn hơn */
+        #attendance-log-table-container .table-responsive {
+            max-height: 75vh;
         }
-
-        /* Cải thiện hiển thị nhà thầu đã chọn */
-        .selected-contractor-display {
-            min-height: 38px;
-            display: flex;
-            align-items: center;
-            background-color: #f8f9fa;
-        }
-        
-        /* Hiển thị lĩnh vực đã chọn */
+        /* CSS cho contractor/field display */
+        .selected-contractor-display,
         .selected-field-display {
-            min-height: 38px;
+            min-height: 38px; /* Bằng chiều cao input mặc định */
             display: flex;
             align-items: center;
-            background-color: #f8f9fa;
-            border-left: 3px solid #17a2b8;
-            padding-left: 10px;
+            background-color: #f8f9fa; /* Màu nền nhẹ */
+            padding: .375rem .75rem;
+            border: 1px solid #ced4da; /* Viền giống input */
+            border-radius: .25rem;
+            margin-bottom: 0.5rem; /* Khoảng cách với nút chọn */
         }
-        
-        /* Làm nổi bật nút chọn nhà thầu */
-        .select-contractor-btn {
-            margin-right: 3px;
+        .selected-field-display {
+             border-left: 3px solid #17a2b8; /* Thêm viền màu */
+             padding-left: 10px;
+             margin-bottom: 0; /* Không cần margin bottom cho field */
+        }
+        /* Nút chọn nhà thầu */
+        .choose-contractor-btn {
+             width: 100%;
+             margin-bottom: 1rem;
+        }
+        /* Thêm style cho hàng action mới */
+        .global-actions button {
+            margin: 0 10px; /* Thêm khoảng cách ngang giữa các nút */
         }
     </style>
-</head>
-<body data-is-processing="{% if is_processing %}true{% else %}false{% endif %}">
+{% endblock %}
 
-<div class="container-fluid mt-4"> 
+{% block content %}
+<!-- Hàng mới cho các nút actions toàn cục -->
+<div class="row mb-4">
+    <div class="col-12 text-center global-actions">
+        <button type="button" id="ajax-train-button" class="btn btn-info btn-lg">
+            <i class="fas fa-brain mr-2"></i>Huấn luyện Model
+        </button>
+        <button type="button" id="view-dataset-btn" class="btn btn-secondary btn-lg">
+            <i class="fas fa-images mr-2"></i>Xem Dataset
+        </button>
+    </div>
+</div>
+<!-- Kết thúc hàng mới -->
+
+<div class="container-fluid mt-4" data-is-processing="{% if is_processing %}true{% else %}false{% endif %}"> 
     <div class="row">
-        <!-- Cột Video Stream (Rộng hơn) -->
-        <div class="col-lg-9 mb-4"> 
+        <!-- Cột Video Stream -->
+        <div class="col-lg-8 mb-4">
             <div class="card shadow-sm video-card"> 
-                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2"> <!-- Giảm padding header -->
-                    <h5 class="mb-0 mr-auto">Video Stream</h5> <!-- Giảm cỡ chữ, thêm margin right -->
+                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-2">
+                    <h5 class="mb-0 mr-auto">Video Stream</h5>
                      <button id="refresh-stream-btn" class="btn btn-light btn-sm mr-2" title="Làm mới Stream" {% if not is_processing %}disabled{% endif %}><i class="fas fa-sync-alt fa-xs"></i></button>
                      <form method="POST" style="display: inline;" id="stop-form">
                          {% csrf_token %}
@@ -216,8 +207,8 @@
              </div>
         </div>
 
-        <!-- Cột Cấu hình & Log (Hẹp hơn) -->
-        <div class="col-lg-3"> 
+        <!-- Cột Cấu hình -->
+        <div class="col-lg-4">
             <!-- Card Cấu hình -->
             <div class="card shadow-sm mb-4">
                  <div class="card-header bg-primary text-white py-2">
@@ -298,18 +289,11 @@
                              
                              <!-- Thêm trường Company -->
                              {{ form.company|as_crispy_field }}
-                             
-                             <!-- Di chuyển nút Huấn luyện vào đây -->
-                             <div class="mt-2 text-center">
-                                 <button type="button" id="ajax-train-button" class="btn btn-info btn-sm">Huấn luyện Model</button>
-                                 <!-- Thêm nút Xem Dataset vào đây -->
-                                 <button type="button" id="view-dataset-btn" class="btn btn-secondary btn-sm ml-2"><i class="fas fa-images"></i> Xem Dataset</button>
-                        </div>
                         </div>
                          <hr>
                          <!-- Nút Bắt đầu / Train -->
                          <div class="text-center control-buttons">
-                             <button class="btn btn-primary" type="submit" {% if is_processing %}disabled{% endif %}>
+                             <button class="btn btn-primary" type="button" id="start-process-button" {% if is_processing %}disabled{% endif %}>
                                   <i class="fas fa-play"></i> Bắt đầu
                               </button>
                  </div>
@@ -325,26 +309,6 @@
                               <span class="text-muted"><i class="fas fa-spinner fa-spin"></i> Đang huấn luyện...</span>
                 </div>
                       </form>
-            </div>
-        </div>
-
-        <!-- Hàng mới cho Log Chấm công -->
-        <div class="row mt-3"> 
-            <div class="col-12"> 
-            <div class="card shadow-sm">
-                    <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Log Chấm công</h5>
-                         <form method="get" id="log-filter-form" class="form-inline my-0">
-                             <input type="date" class="form-control form-control-sm mr-1" name="start_date" title="Từ ngày" value="{{ start_date|default:'' }}" style="width: auto;">
-                             <input type="date" class="form-control form-control-sm mr-1" name="end_date" title="Đến ngày" value="{{ end_date|default:'' }}" style="width: auto;">
-                             <input type="text" class="form-control form-control-sm mr-1" style="width: 90px;" name="search" placeholder="Tìm tên..." value="{{ search_query|default:'' }}">
-                             <button type="button" id="reload-log-btn" class="btn btn-light btn-sm" title="Tải lại"><i class="fas fa-sync-alt fa-xs"></i></button>
-                         </form>
-                </div>
-                    <div class="card-body p-0" id="attendance-log-table-container"> 
-                    {% include 'recognition/partials/attendance_log_table.html' %}
-                </div>
-                </div>
             </div>
         </div>
     </div>
@@ -426,7 +390,7 @@
             </div>
             <div class="modal-body">
                 <div class="alert alert-info">
-                    <p>Chức năng này cho phép bạn quản lý danh sách nhà thầu và lĩnh vực công việc. Nhấn vào <b>Chọn</b> để sử dụng thông tin.</p>
+                    <p class="mb-0">Chức năng này cho phép bạn quản lý danh sách nhà thầu và lĩnh vực công việc. Nhấn vào <i class="fas fa-check"></i> <b>Chọn</b> để sử dụng thông tin.</p>
                 </div>
                 
                 <!-- Form thêm mới nhà thầu và lĩnh vực -->
@@ -481,1017 +445,1063 @@
     </div>
 </div>
 
-<!-- JavaScript -->
-<!-- Replace slim jQuery with full version -->
-<script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-<!-- Cropper.js JS (Local) -->
-<script src="{% static 'recognition/vendor/cropperjs/cropper.min.js' %}"></script>
-<!-- Select2 JS -->
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% endblock %}
 
-<script>
-    $(document).ready(function() {
-        // --- Selectors --- 
-        var cameraSelect = $('#id_camera');
-        // var modeSelect = $('#id_mode'); // Vẫn cần để lấy giá trị ban đầu nếu dùng crispy tag
-        var usernameFieldGroup = $('#div_id_username');
-        var emailFieldGroup = $('#email-field-group'); // Thêm selector cho nhóm email
-        var supervisorFieldGroup = $('#supervisor-field-group'); // Thêm selector cho nhóm supervisor
-        var contractorFieldGroup = $('#contractor-field-group'); // Selector cho nhóm nhà thầu
-        var chooseContractorBtn = $('#choose_contractor_btn'); // Nút chọn nhà thầu
-        var manageContractorsBtn = $('#manage_contractors_btn'); // Nút quản lý danh sách nhà thầu
-        var contractorInput = $('#id_contractor'); // Input field cho nhà thầu
-        var fieldInput = $('#id_field'); // Input field cho lĩnh vực
-        var selectedContractorDisplay = $('.selected-contractor-display'); // Phần hiển thị nhà thầu đã chọn
-        var selectedFieldDisplay = $('.selected-field-display'); // Phần hiển thị lĩnh vực đã chọn
-        var processForm = $("#process-form");
-        var startButton = processForm.find("button[type='submit']");
-        var stopButton = $("#stop-button"); // Cập nhật selector
-        var stopForm = $("#stop-form"); // Thêm selector cho form dừng
-        var videoStreamImg = $("#video-stream");
-        var videoContainer = $(".video-container");
-        var placeholderText = $(".video-placeholder-text");
-        var placeholderSrc = "{% static 'recognition/img/placeholder.png' %}";
-        var videoFeedUrl = "{% url 'video-feed' %}";
-        var collectRadioButtonLabel;
-        // ROI Modal elements
-        var roiModal = $('#roi-editor-modal');
-        var roiImage = $('#roi-image');
-        var saveRoiButton = $('#save-roi-btn');
-        var cancelRoiButton = $('#cancel-roi-btn');
-        var cropper = null; // Cropper instance
-        var refreshStreamBtn = $('#refresh-stream-btn'); // Nút refresh mới
-        var currentCameraIdForRoi = null;
-        var trainButton = $('#ajax-train-button'); // Selector cho nút train mới
-        var getNewFrameButton = $('#get-new-frame-btn');
-        var roiLoadingIndicator = $('#roi-loading-indicator');
-        var roiErrorMessage = $('#roi-error-message');
-        // Log elements
-        var logFilterForm = $('#log-filter-form');
-        var reloadLogButton = $('#reload-log-btn');
-        var logTableContainer = $('#attendance-log-table-container');
-        // Progress/Loading elements
-        var collectProgressContainer = $('#collect-progress-container');
-        var collectProgressBar = $('#collect-progress-bar');
-        var collectProgressLabel = $('#collect-progress-label');
-        var trainingLoadingIndicator = $('#training-loading-indicator');
-        var progressInterval = null; // Interval ID for progress update
-        // Dataset Viewer Modal elements
-        var viewDatasetBtn = $('#view-dataset-btn');
-        var datasetModal = $('#dataset-viewer-modal');
-        var usernameSelect = $('#dataset-username-select');
-        var imageContainer = $('#dataset-image-container');
-        var datasetPlaceholder = imageContainer.find('.dataset-placeholder');
-        var datasetLoading = imageContainer.find('.dataset-loading');
+{% block extrajs %}
+    <!-- ... Các script JS cần thiết giữ nguyên (jQuery, Popper, Bootstrap, Select2, Cropper, SweetAlert2, Toastify) ... -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js" integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="{% static 'recognition/vendor/cropperjs/cropper.min.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 
-        // --- Move Username Field --- 
-        try {
-            // Tìm label của radio 'collect' bên trong div_id_mode do crispy tạo
-             collectRadioButtonLabel = $('#div_id_mode input[name="mode"][value="collect"]').closest('.form-check').find('label.form-check-label');
-             if (collectRadioButtonLabel.length > 0 && usernameFieldGroup.length > 0) {
-                 usernameFieldGroup.insertAfter(collectRadioButtonLabel).addClass('moved-username-field'); 
-                 // Ẩn label mặc định của crispy cho username
-                 usernameFieldGroup.find('label.col-form-label').hide(); 
-                 console.log("Moved username field.");
-             } else { console.warn("Cannot find elements to move username field."); }
-        } catch (e) { console.error("Error moving username field:", e); }
+    <script>
+        $(document).ready(function() {
+            // --- Các Selectors cần giữ lại ---
+            var cameraSelect = $('#id_camera');
+            var usernameFieldGroup = $('#div_id_username'); // Div chứa các trường collect
+            var emailFieldGroup = $('#email-field-group'); // Div con cho email
+            var supervisorFieldGroup = $('#supervisor-field-group'); // Div con cho supervisor select
+            var contractorFieldGroup = $('#contractor-field-group'); // Div con cho contractor/field
+            var usernameInput = $('#id_username'); // Input username
+            var roleRadios = $('input[name="role"]'); // Radio buttons cho Role
+            var modeRadios = $('input[name="mode"]'); // Radio buttons cho Mode
+            var companyInputGroup = $('#div_id_company'); // Group cho trường Company (Cần đảm bảo ID này tồn tại hoặc điều chỉnh selector)
+            var chooseContractorBtn = $('#choose_contractor_btn');
+            var contractorInput = $('#id_contractor'); // Input ẩn contractor
+            var fieldInput = $('#id_field'); // Input ẩn field
+            var selectedContractorDisplay = $('.selected-contractor-display');
+            var selectedFieldDisplay = $('.selected-field-display');
+            var processForm = $("#process-form");
+            var startButton = $("#start-process-button");
+            var stopButton = $("#stop-button");
+            var stopForm = $("#stop-form");
+            var videoStreamImg = $("#video-stream");
+            var videoContainer = $(".video-container");
+            var placeholderText = $(".video-placeholder-text");
+            var placeholderSrc = "{% static 'recognition/img/placeholder.png' %}";
+            var videoFeedUrl = "{% url 'video-feed' %}";
+            var roiModal = $('#roi-editor-modal');
+            var roiImage = $('#roi-image');
+            var saveRoiButton = $('#save-roi-btn');
+            var cancelRoiButton = $('#cancel-roi-btn');
+            var cropper = null;
+            var refreshStreamBtn = $('#refresh-stream-btn');
+            var currentCameraIdForRoi = null;
+            var trainButton = $('#ajax-train-button');
+            var getNewFrameButton = $('#get-new-frame-btn');
+            var roiLoadingIndicator = $('#roi-loading-indicator');
+            var roiErrorMessage = $('#roi-error-message');
+            var collectProgressContainer = $('#collect-progress-container');
+            var collectProgressBar = $('#collect-progress-bar');
+            var collectProgressLabel = $('#collect-progress-label');
+            var trainingLoadingIndicator = $('#training-loading-indicator');
+            var progressInterval = null;
+            var viewDatasetBtn = $('#view-dataset-btn');
+            var usernameSelect = $('#dataset-username-select');
+            var imageContainer = $('#dataset-image-container');
+            var datasetPlaceholder = imageContainer.find('.dataset-placeholder');
+            var datasetLoading = imageContainer.find('.dataset-loading');
+            var contractorManagerModal = $('#contractors-manager-modal');
+            var configureRoiLink = $('#configure-roi-link'); // Selector cho nút ROI
 
-        // --- Khởi tạo UI cho trường Contractor và Field ---
-        // Ẩn input field của contractor và field
-        contractorInput.closest('.form-group').find('label').hide();
-        contractorInput.hide();
-        fieldInput.closest('.form-group').find('label').hide();
-        fieldInput.hide();
+            // *** KHÔI PHỤC: Hàm hiển thị/ẩn các trường theo mode và role ***
+            function toggleConditionalFields() {
 
-        // Xử lý sự kiện khi nhấn nút chọn nhà thầu
-        chooseContractorBtn.click(function() {
-            // Hiển thị modal chọn nhà thầu
-            $('#contractors-manager-modal').modal('show');
+                var selectedMode = $('input[name="mode"]:checked').val();
+                var selectedRole = $('input[name="role"]:checked').val();
+
+
+                // Tìm div chứa Company bằng cách khác nếu #div_id_company không đúng
+                // Ví dụ: Tìm div cha của input #id_company
+                var companyFieldParentDiv = $('#id_company').closest('.form-group');
+                if (!companyFieldParentDiv.length) { // Nếu không tìm thấy, thử cách khác nếu cần
+
+                   companyFieldParentDiv = $('#div_id_company'); // Quay lại dùng ID nếu có
+                }
+
+                if (selectedMode === 'collect') {
+                    usernameFieldGroup.removeClass('d-none').addClass('mode-collect'); // Hiển thị group chính
+                    companyFieldParentDiv.show(); // Luôn hiển thị Company khi collect
+
+                    // Hiển thị/ẩn các trường con dựa trên Role
+                    emailFieldGroup.toggle(selectedRole === 'supervisor');
+                    supervisorFieldGroup.toggle(selectedRole === 'worker');
+                    contractorFieldGroup.toggle(selectedRole === 'worker');
+                    // Luôn hiển thị Role radio buttons khi collect
+                    $('#div_id_role').show();
+
+                    // Di chuyển field Username nếu chưa được di chuyển (kiểm tra class)
+                    if (!usernameFieldGroup.hasClass('moved-username-field')) {
+
+                         try {
+                             // Di chuyển #div_id_username vào trong #div_id_mode
+                             var targetElement = $('#div_id_mode .form-check').last().parent();
+
+                             usernameFieldGroup.insertAfter(targetElement);
+                             usernameFieldGroup.addClass('moved-username-field');
+
+                         } catch (e) {
+                             console.error(e);
+                         }
+                     }
+
+                } else { // Mode là recognize hoặc stream
+
+                    usernameFieldGroup.addClass('d-none').removeClass('mode-collect'); // Ẩn group chính
+                    companyFieldParentDiv.hide(); // Ẩn Company
+                    emailFieldGroup.hide(); // Ẩn Email
+                    supervisorFieldGroup.hide(); // Ẩn Supervisor
+                    contractorFieldGroup.hide(); // Ẩn Contractor/Field
+                    // Ẩn luôn cả Role radio buttons khi không phải collect
+                    $('#div_id_role').hide();
+                    console.log(`[Debug] Hiding fields complete. usernameFieldGroup classes: ${usernameFieldGroup.attr('class')}`); // Thêm log
+                }
+            }
+
+            // *** KHÔI PHỤC: Gọi hàm lần đầu khi trang tải ***
+
+            toggleConditionalFields();
+
+            // *** KHÔI PHỤC: Gắn sự kiện change cho Mode và Role radios ***
+
+            modeRadios.change(toggleConditionalFields);
+            roleRadios.change(toggleConditionalFields);
+
+            // --- Các hàm và logic xử lý form, video, train, dataset, contractor giữ nguyên ---
+            // ... (Ví dụ: contractorInput.closest..., chooseContractorBtn.click, etc.) ...
+            // --- Hàm xử lý nút Dừng (stopButton.click) ---
+            stopButton.click(function() {
+
+                 var button = $(this);
+                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Dừng...');
+                 // Gửi yêu cầu dừng qua AJAX (sử dụng form stop-form)
+                 $.ajax({
+                     url: "{% url 'home' %}", // Gửi đến cùng view xử lý
+                     type: "POST",
+                     data: stopForm.serialize(), // Dữ liệu từ form Dừng (action=stop)
+                     dataType: "json",
+                     success: function(response) {
+
+                         if (response.status === 'success') {
+                             // Reset giao diện về trạng thái ban đầu
+                             // button.prop('disabled', true); // Không disable lại nút dừng khi thành công
+                             startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); // Enable nút Start
+                             refreshStreamBtn.prop('disabled', true);
+                             videoStreamImg.attr("src", placeholderSrc);
+                             videoContainer.removeClass('is-streaming');
+                             placeholderText.show();
+                             $("body").data("is-processing", false);
+                             collectProgressContainer.hide(); // Ẩn progress bar
+                             trainingLoadingIndicator.hide(); // Ẩn loading train
+                             if (progressInterval) clearInterval(progressInterval); // Dừng cập nhật progress
+
+                         } else {
+                             alert("Lỗi khi dừng xử lý: " + response.message);
+                             // button.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng'); // Sẽ được xử lý ở complete
+                         }
+                     },
+                     error: function(jqXHR, textStatus, errorThrown) {
+                         console.error("[Stop AJAX Error] Status:", textStatus, "Error:", errorThrown);
+
+                         // button.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng'); // Sẽ được xử lý ở complete
+                     },
+                     complete: function() {
+                         // Luôn đảm bảo nút Dừng được kích hoạt lại và reset text sau khi request hoàn tất
+                         // Chỉ disable nếu *đang không* trong trạng thái processing
+                         var isProcessing = $("body").data("is-processing");
+                         button.prop('disabled', !isProcessing).html('<i class="fas fa-stop"></i> Dừng');
+                     }
+                 });
+             });
+
+            // --- Hàm xử lý nút Huấn luyện (trainButton.click) ---
+            trainButton.click(function() {
+
+                 var button = $(this);
+
+                 // Hiển thị hộp thoại xác nhận
+                 Swal.fire({
+                     title: 'Xác nhận huấn luyện?',
+                     text: "Quá trình này có thể mất vài phút.",
+                     icon: 'question',
+                     showCancelButton: true,
+                     confirmButtonColor: '#3085d6',
+                     cancelButtonColor: '#d33',
+                     confirmButtonText: 'Đồng ý',
+                     cancelButtonText: 'Hủy bỏ'
+                 }).then((result) => {
+                     if (result.isConfirmed) {
+                         // Vô hiệu hóa các nút
+                         button.prop('disabled', true);
+                         viewDatasetBtn.prop('disabled', true);
+                         // trainingLoadingIndicator.show(); // Bỏ loading cũ
+
+                         // Hiển thị SweetAlert loading
+                         Swal.fire({
+                             title: 'Đang huấn luyện...',
+                             text: 'Vui lòng chờ.',
+                             allowOutsideClick: false,
+                             allowEscapeKey: false,
+                             didOpen: () => {
+                                 Swal.showLoading();
+                             }
+                         });
+
+                         $.ajax({
+                             url: "{% url 'ajax-train' %}", // URL cho AJAX training
+                             type: "POST",
+                             data: { 'csrfmiddlewaretoken': '{{ csrf_token }}' }, // Gửi CSRF token
+                             dataType: "json",
+                             success: function(response) {
+                                 Swal.close(); // Đóng loading alert
+                                 if (response.status === 'success') {
+                                     Swal.fire('Thành công!', response.message, 'success');
+                                 } else {
+                                     Swal.fire('Lỗi!', response.message || 'Không xác định', 'error');
+                                 }
+                             },
+                             error: function(jqXHR, textStatus, errorThrown) {
+                                 Swal.close(); // Đóng loading alert
+                                 console.error("Training AJAX Error:", textStatus, errorThrown);
+                                 // Chi tiết hơn về lỗi
+                                 var errorMessage = "Không thể gửi yêu cầu huấn luyện.";
+                                 if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                                     errorMessage = jqXHR.responseJSON.message;
+                                 } else if (jqXHR.responseText) {
+                                     try {
+                                         var errData = JSON.parse(jqXHR.responseText);
+                                         if (errData && errData.message) errorMessage = errData.message;
+                                     } catch(e) { /* Bỏ qua nếu không phải JSON */ }
+                                 }
+                                 Swal.fire('Lỗi Kết Nối!', errorMessage, 'error');
+                             },
+                             complete: function() {
+                                 // Kích hoạt lại các nút dù thành công hay lỗi
+                                 button.prop('disabled', false);
+                                 viewDatasetBtn.prop('disabled', false);
+                                 // trainingLoadingIndicator.hide(); // Bỏ loading cũ
+                             }
+                         });
+                     }
+                 });
+             });
+
+             // *** KHÔI PHỤC: Hàm lấy frame tĩnh cho ROI ***
+             function fetchAndDisplayRoiFrame(cameraId) {
+                 currentCameraIdForRoi = cameraId;
+                 roiLoadingIndicator.show();
+                 roiImage.hide();
+                 roiErrorMessage.hide();
+                 if (cropper) { cropper.destroy(); cropper = null; } // Hủy cropper cũ
+
+                 $.ajax({
+                     url: `/get_static_frame/${cameraId}/`, // Sử dụng URL đã định nghĩa
+                     type: 'GET',
+                     dataType: 'json', // Mong đợi JSON
+                     timeout: 15000, // Thêm timeout 15 giây phòng trường hợp camera chậm
+                     success: function(response) {
+                         // *** THÊM LOG CHI TIẾT TRONG SUCCESS ***
+
+                         roiLoadingIndicator.hide();
+                         // *** THAY ĐỔI: Kiểm tra và sử dụng frame_base64 ***
+                         if (response && response.status === 'success' && response.frame_base64) {
+
+                             // Đặt src trực tiếp bằng Data URL
+                             roiImage.attr('src', response.frame_base64);
+                             roiImage.show();
+                             // Có thể cần chút delay để trình duyệt render ảnh base64 lớn
+                             setTimeout(initializeCropper, 150); // Đợi ảnh tải rồi khởi tạo Cropper
+                         } else {
+                             // Xử lý lỗi nếu không có base64 hoặc status không thành công
+                             var errorMsg = (response && response.message) ? response.message : 'Phản hồi không hợp lệ hoặc không có dữ liệu ảnh Base64.';
+                             console.error('[ROI Fetch Success] Error in response structure:', errorMsg, response);
+                             roiErrorMessage.text(errorMsg).show();
+                         }
+                         // *** KẾT THÚC THAY ĐỔI ***
+                     },
+                     error: function(jqXHR, textStatus, errorThrown) {
+                         // *** THÊM LOG CHI TIẾT TRONG ERROR ***
+                         roiLoadingIndicator.hide();
+                         console.error(`[ROI Fetch Error] Status: ${textStatus}, Error: ${errorThrown}`);
+                         console.error('[ROI Fetch Error] jqXHR Object:', jqXHR);
+                         var errorMsg = 'Lỗi kết nối khi lấy frame tĩnh.';
+                         if (textStatus === 'timeout') {
+                             errorMsg = 'Yêu cầu lấy frame tĩnh bị timeout.';
+                         } else if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                             errorMsg = jqXHR.responseJSON.message; // Lấy lỗi từ backend nếu có
+                         } else if (jqXHR.responseText) {
+                            // Cố gắng hiển thị một phần response text nếu không phải JSON
+                            console.error('[ROI Fetch Error] Response Text:', jqXHR.responseText.substring(0, 200)); 
+                         }
+                         roiErrorMessage.text(errorMsg).show();
+                     }
+                 });
+             }
+
+            // *** KHÔI PHỤC: Hàm khởi tạo Cropper.js ***
+            function initializeCropper() {
+                 if (cropper) { cropper.destroy(); } // Hủy instance cũ nếu có
+                 var imageElement = document.getElementById('roi-image');
+                 if (!imageElement || !imageElement.complete || imageElement.naturalWidth === 0) {
+                      console.warn("Ảnh ROI chưa sẵn sàng, thử lại sau giây lát...");
+                      setTimeout(initializeCropper, 200); // Thử lại sau 200ms
+                      return;
+                  }
+                 cropper = new Cropper(imageElement, {
+                     aspectRatio: NaN, // Cho phép tỷ lệ tự do
+                     viewMode: 1, // Hạn chế vùng crop trong ảnh
+                     dragMode: 'crop',
+                     autoCropArea: 0.6, // Kích thước vùng crop ban đầu
+                     movable: true,
+                     zoomable: false, // Tắt zoom ảnh gốc
+                     scalable: false, // Tắt scale ảnh gốc
+                     cropBoxResizable: true,
+                     toggleDragModeOnDblclick: false,
+                 });
+             }
+
+            // *** KHÔI PHỤC: Sự kiện click cho nút Cấu hình ROI ***
+            configureRoiLink.click(function(e) {
+                 e.preventDefault();
+                 var selectedCameraId = cameraSelect.val();
+                 if (!selectedCameraId) {
+                     alert('Vui lòng chọn camera trước.');
+                     return;
+                 }
+                 roiModal.modal('show');
+                 fetchAndDisplayRoiFrame(selectedCameraId);
+             });
+
+            // *** KHÔI PHỤC: Sự kiện click cho nút Lấy Frame Khác (trong modal ROI) ***
+            getNewFrameButton.click(function() {
+                 if (currentCameraIdForRoi) {
+                     fetchAndDisplayRoiFrame(currentCameraIdForRoi);
+                 }
+             });
+
+            // *** KHÔI PHỤC: Sự kiện click cho nút Lưu ROI ***
+            saveRoiButton.click(function() {
+                 if (!cropper || !currentCameraIdForRoi) return;
+
+                 var roiData = cropper.getData(true); // Lấy dữ liệu ROI đã làm tròn
+                 var naturalSize = cropper.getImageData(); // Lấy kích thước ảnh gốc mà Cropper đang dùng
+                 var button = $(this);
+                 button.prop('disabled', true).text('Đang lưu...');
+
+                 // *** THAY ĐỔI: Gửi dữ liệu dạng JSON ***
+                 var postData = {
+                     'roi_x': roiData.x,
+                     'roi_y': roiData.y,
+                     'roi_width': roiData.width,
+                     'roi_height': roiData.height,
+                     // Gửi thêm kích thước ảnh gốc để backend tính toán tỉ lệ
+                     'natural_width': naturalSize.naturalWidth,
+                     'natural_height': naturalSize.naturalHeight
+                 };
+
+                 $.ajax({
+                     url: `/save_roi/${currentCameraIdForRoi}/`, // URL để lưu ROI
+                     type: 'POST',
+                     // Đặt kiểu nội dung là JSON
+                     contentType: 'application/json; charset=utf-8',
+                     // Chuyển đổi object thành chuỗi JSON
+                     data: JSON.stringify(postData),
+                     // Gửi CSRF token qua header
+                     headers: {
+                         "X-CSRFToken": "{{ csrf_token }}"
+                     },
+                     dataType: 'json', // Mong đợi phản hồi JSON
+                     success: function(response) {
+                         button.prop('disabled', false).text('Lưu ROI');
+                         if (response.status === 'success') {
+                             roiModal.modal('hide');
+                             Toastify({ text: "Đã lưu ROI thành công!", duration: 3000, gravity: "top", position: "right", backgroundColor: "#28a745" }).showToast();
+
+                         } else {
+                             alert('Lỗi khi lưu ROI: ' + response.message);
+                             console.error(response.message);
+                         }
+                     },
+                     error: function(jqXHR, textStatus, errorThrown) {
+                         // *** THÊM LOG CHI TIẾT HƠN CHO LỖI LƯU ROI ***
+                         button.prop('disabled', false).text('Lưu ROI');
+                         console.error(`[Save ROI AJAX Error] Status: ${textStatus}, Error: ${errorThrown}`);
+                         console.error('[Save ROI AJAX Error] jqXHR:', jqXHR);
+                         var errorMsg = 'Lỗi kết nối khi lưu ROI.';
+                         if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                             errorMsg = jqXHR.responseJSON.message;
+                         } else if (jqXHR.responseText) {
+                              try {
+                                   var errData = JSON.parse(jqXHR.responseText);
+                                   if (errData && errData.message) errorMsg = errData.message;
+                              } catch(e) { /* Bỏ qua nếu không phải JSON */ }
+                         }
+                         alert(errorMsg);
+                         // *** KẾT THÚC THÊM LOG ***
+                     }
+                 });
+                 // *** KẾT THÚC THAY ĐỔI GỬI JSON ***
+             });
+
+            // --- Hàm cập nhật tiến trình Thu thập dữ liệu ---
+            function updateCollectProgress() {
+                console.log("[Progress] Đang kiểm tra tiến trình..."); // Mở log debug
+                
+                // Đếm số lần kiểm tra chưa tìm thấy tiến trình
+                if (!window.progressCheckCounter) window.progressCheckCounter = 0;
+                
+                $.ajax({
+                    url: "{% url 'get-collect-progress' %}", // URL để lấy tiến trình
+                    type: "GET",
+                    dataType: "json",
+                    success: function(response) {
+                        console.log("[Progress Response]", response); // Mở log debug
+                        var isActive = false;
+                        
+                        // Kiểm tra xem response có đúng định dạng không
+                        if (response && response.status === 'success') {
+                            var progressData = response.progress || {};
+                            var hasAnyProgressData = !$.isEmptyObject(progressData);
+                            
+                            // Lấy username hiện tại
+                            var currentUsername = $('#id_username').val();
+                            console.log("[Progress] Current username:", currentUsername);
+                            
+                            // Kiểm tra nếu có bất kỳ dữ liệu nào
+                            if (hasAnyProgressData) {
+                                // Đặt lại bộ đếm kiểm tra vì đã có dữ liệu
+                                window.progressCheckCounter = 0;
+                                
+                                // Kiểm tra nếu có dữ liệu cho username hiện tại
+                                if (currentUsername && progressData[currentUsername]) {
+                                    var data = progressData[currentUsername];
+                                    console.log("[Progress] Found data for current user:", data);
+                                    
+                                    // Hiển thị progress bar ngay cả khi chưa active
+                                    collectProgressContainer.show();
+                                    collectProgressLabel.text(`Đang thu thập cho: ${currentUsername}`);
+                                    var percentage = (data.current / data.total) * 100;
+                                    console.log(`[Progress] ${currentUsername}: ${data.current}/${data.total} (${percentage.toFixed(1)}%)`);
+                                    collectProgressBar.css('width', percentage + '%').attr('aria-valuenow', percentage).text(Math.round(percentage) + '%');
+                                    
+                                    // Kiểm tra trạng thái active và completed
+                                    if (data.active) {
+                                        isActive = true;
+                                        if (data.current >= data.total) {
+                                            console.log(`[Progress] Thu thập có thể đã hoàn thành cho ${currentUsername}. Tiến trình đã đạt ${data.current}/${data.total}.`);
+                                            collectProgressLabel.text(`Đã xong cho: ${currentUsername}`);
+                                            // Vẫn giữ isActive = true để hiển thị thanh tiến trình thêm một lúc
+                                        } 
+                                    } else if (data.completed) {
+                                        // Nếu đã hoàn thành, hiển thị message hoàn thành
+                                        console.log(`[Progress] Tiến trình đã hoàn thành cho ${currentUsername}.`);
+                                        collectProgressLabel.text(`Hoàn thành: ${currentUsername} (${data.current}/${data.total})`);
+                                        
+                                        // Hiển thị thêm một khoảng thời gian rồi ẩn đi
+                                        if (!window.completedTimeout) {
+                                            window.completedTimeout = setTimeout(function() {
+                                                console.log("[Progress] Ẩn progress bar sau khi hiển thị hoàn thành.");
+                                                collectProgressContainer.fadeOut();
+                                                window.completedTimeout = null;
+                                                
+                                                clearInterval(progressInterval);
+                                                progressInterval = null;
+                                            }, 5000);
+                                        }
+                                        
+                                        // Không đặt isActive = false để giữ hiển thị
+                                        isActive = true;
+                                        return;
+                                    } else {
+                                        // Nếu không active nhưng có tiến độ, vẫn hiển thị trong một thời gian
+                                        if (data.current > 0) {
+                                            console.log(`[Progress] Tiến trình không còn active cho ${currentUsername} nhưng đã có ${data.current}/${data.total} mẫu.`);
+                                            collectProgressLabel.text(`Đã dừng: ${currentUsername} (${data.current}/${data.total})`);
+                                        }
+                                        if (!window.completedTimeout) {
+                                            window.completedTimeout = setTimeout(function() {
+                                                console.log("[Progress] Ẩn progress bar sau khi hiển thị tiến trình.");
+                                                collectProgressContainer.fadeOut();
+                                                window.completedTimeout = null;
+                                                
+                                                clearInterval(progressInterval);
+                                                progressInterval = null;
+                                            }, 5000);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error("[Progress AJAX Error] Status:", textStatus, "Error:", errorThrown);
+                        collectProgressContainer.hide();
+                        trainingLoadingIndicator.hide();
+                        collectProgressLabel.text("Không thể lấy tiến trình.");
+                        collectProgressBar.css('width', '0%').attr('aria-valuenow', 0).text('0%');
+                    }
+                });
+            }
+
+            // --- Hàm xử lý click cho nút Bắt đầu ---
+            startButton.click(function() {
+                console.log("[Click] Nút Bắt đầu được click");
+                var button = $(this);
+                
+                // Kiểm tra xem đã có tiến trình đang chạy chưa
+                var isProcessing = $("body").data("is-processing");
+                
+                // --- Phần Validation ---
+                if (!cameraSelect.val()) { alert("Vui lòng chọn camera."); return false; }
+                var selectedMode = $('input[name="mode"]:checked').val();
+                var username = $("#id_username").val();
+                if (selectedMode === 'collect' && !username) { alert("Vui lòng nhập Username cho chế độ Thu thập."); return false; }
+                var selectedRole = $('input[name="role"]:checked').val(); 
+                if (selectedMode === 'collect' && !selectedRole) { alert("Vui lòng chọn Vai trò."); return false; } 
+                if (selectedMode === 'collect' && selectedRole === 'worker') {
+                    var selectedSupervisor = $('#id_supervisor').val(); 
+                    if (!selectedSupervisor) { alert("Vui lòng chọn Supervisor cho Worker."); return false; }
+                    var contractorValue = contractorInput.val(); // Lấy từ input ẩn
+                    var fieldValue = fieldInput.val(); // Lấy từ input ẩn
+                    if (!contractorValue) { alert("Vui lòng chọn Nhà thầu cho Worker."); return false; }
+                    if (!fieldValue) { alert("Vui lòng nhập Lĩnh vực công việc cho Worker."); return false; }
+                }
+                if (selectedMode === 'collect' && selectedRole === 'supervisor') {
+                    var emailValue = $('#id_email').val(); 
+                    if (!emailValue) { alert("Vui lòng nhập Email cho Supervisor."); return false; }
+                }
+                // --- Kết thúc Validation ---
+
+                button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Bắt đầu...');
+                
+                // Nếu đã có tiến trình đang chạy, dừng tiến trình đó trước
+                if (isProcessing) {
+                    console.log("[Process] Có tiến trình đang chạy, dừng tiến trình hiện tại trước khi bắt đầu mới");
+                    
+                    Swal.fire({
+                        title: 'Đang dừng tiến trình hiện tại...',
+                        text: 'Vui lòng chờ trong giây lát.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        willOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Gửi yêu cầu dừng tiến trình hiện tại
+                    $.ajax({
+                        url: "{% url 'home' %}",
+                        type: "POST",
+                        data: stopForm.serialize(), // Dữ liệu từ form Dừng (action=stop)
+                        dataType: "json",
+                        success: function(stopResponse) {
+                            console.log("[Stop Response]", stopResponse);
+                            
+                            if (stopResponse.status === 'success') {
+                                // Sau khi dừng thành công, bắt đầu tiến trình mới
+                                Swal.close();
+                                startProcess(button);
+                            } else {
+                                // Nếu không dừng được tiến trình
+                                Swal.fire({
+                                    title: 'Lỗi',
+                                    text: 'Không thể dừng tiến trình hiện tại: ' + (stopResponse.message || 'Không xác định'),
+                                    icon: 'error',
+                                    confirmButtonText: 'Đóng'
+                                });
+                                button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown) {
+                            console.error("[Stop AJAX Error]", textStatus, errorThrown);
+                            Swal.fire({
+                                title: 'Lỗi',
+                                text: 'Không thể dừng tiến trình hiện tại do lỗi kết nối.',
+                                icon: 'error',
+                                confirmButtonText: 'Đóng'
+                            });
+                            button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                        }
+                    });
+                } else {
+                    // Nếu không có tiến trình đang chạy, bắt đầu tiến trình mới ngay
+                    startProcess(button);
+                }
+            });
             
-            // Tải danh sách nhà thầu từ localStorage nếu có
-            loadContractorsFromLocalStorage();
-        });
-        
-        // Hàm lưu danh sách nhà thầu vào localStorage
-        function saveContractorsToLocalStorage() {
-            var contractors = [];
-            $('#contractors-table tbody tr').each(function() {
-                contractors.push({
-                    name: $(this).data('contractor'),
-                    field: $(this).data('field')
+            // Hàm xử lý bắt đầu tiến trình mới
+            function startProcess(button) {
+                var formData = processForm.serialize(); 
+                if (formData.indexOf('action=start') === -1) {
+                    formData += '&action=start'; 
+                }
+
+                console.log("[Start AJAX] Sending form data:", formData);
+
+                $.ajax({
+                    url: "{% url 'home' %}", 
+                    type: "POST",
+                    data: formData,
+                    dataType: "json",
+                    success: function(response) {
+                        console.log("[Start AJAX Success] Response:", response);
+                        if (response.status === 'success') {
+                            stopButton.prop('disabled', false);
+                            refreshStreamBtn.prop('disabled', false);
+                            placeholderText.hide();
+                            videoContainer.addClass('is-streaming');
+                            videoStreamImg.attr("src", videoFeedUrl + "?ts=" + new Date().getTime());
+                            $("body").data("is-processing", true);
+                            if ($('input[name="mode"]:checked').val() === 'collect') {
+                                console.log("[Progress] Bắt đầu cập nhật tiến trình sau khi start thành công.");
+                                
+                                // Dừng interval cũ nếu có
+                                if (progressInterval) {
+                                    console.log("[Progress] Dừng interval cũ và tạo interval mới.");
+                                    clearInterval(progressInterval);
+                                    progressInterval = null;
+                                }
+                                
+                                // Reset progress bar ngay lúc này
+                                collectProgressBar.css('width', '0%').attr('aria-valuenow', 0).text('0%');
+                                collectProgressContainer.show();
+                                
+                                // Hiển thị username
+                                var collectionUsername = $('#id_username').val();
+                                collectProgressLabel.text('Đang thu thập cho: ' + collectionUsername);
+                                console.log("[Progress] Hiển thị progress bar cho: " + collectionUsername);
+                                
+                                // Bắt đầu interval mới sau một khoảng thời gian ngắn để cho backend có thời gian khởi tạo
+                                setTimeout(function() {
+                                    console.log("[Progress] Bắt đầu interval cập nhật tiến trình.");
+                                    // Gọi ngay lần đầu
+                                    updateCollectProgress();
+                                    // Sau đó thiết lập interval
+                                    progressInterval = setInterval(updateCollectProgress, 1000);
+                                }, 1000);
+                            }
+                            if(response.message) { console.log("Backend message:", response.message); }
+                            // Không disable nút start nữa nếu thành công, để user có thể bấm lại nếu muốn (ví dụ đổi camera)
+                            button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                        } else {
+                            // Trường hợp status không phải 'success'
+                            Swal.fire({
+                                title: 'Lỗi',
+                                text: response.message || 'Không xác định',
+                                icon: 'error',
+                                confirmButtonText: 'Đóng'
+                            });
+                            button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error("[Start AJAX Error] Status:", textStatus, "Error:", errorThrown, jqXHR.responseText);
+                        
+                        // Giải mã response JSON nếu có
+                        var errorMessage = "Lỗi kết nối hoặc lỗi server khi gửi yêu cầu bắt đầu.";
+                        try {
+                            if (jqXHR.responseText) {
+                                var responseObj = JSON.parse(jqXHR.responseText);
+                                if (responseObj && responseObj.message) {
+                                    errorMessage = responseObj.message;
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error parsing response:", e);
+                        }
+                        
+                        // Sử dụng SweetAlert2 thay vì alert thông thường
+                        Swal.fire({
+                            title: 'Lỗi',
+                            text: errorMessage,
+                            icon: 'error',
+                            confirmButtonText: 'Đóng'
+                        });
+                        
+                        button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                    }
+                });
+            }
+
+            // --- Các hàm xử lý Dataset Viewer và Contractor Manager giữ nguyên ---
+            // ... (viewDatasetBtn.click, usernameSelect.change, contractor manager functions, etc.) ...
+            // *** THÊM LẠI CODE CHO DATASET VIEWER ***
+            var datasetModal = $('#dataset-viewer-modal'); // Thêm selector
+
+            // Mở modal xem dataset
+            viewDatasetBtn.click(function() {
+                // Reset select và container ảnh
+                usernameSelect.empty().append('<option value="">-- Đang tải... --</option>');
+                imageContainer.html('<p class="text-muted dataset-placeholder">Vui lòng chọn username để xem ảnh.</p>');
+                datasetLoading.hide();
+                datasetPlaceholder.show();
+                datasetModal.modal('show');
+
+                // Lấy danh sách username
+                $.ajax({
+                    url: "{% url 'get-dataset-usernames' %}",
+                    type: "GET",
+                    dataType: "json",
+                    success: function(response) {
+                        usernameSelect.empty().append('<option value="">-- Chọn Username --</option>');
+                        if (response.status === 'success' && response.usernames.length > 0) {
+                            response.usernames.forEach(function(username) {
+                                usernameSelect.append(`<option value="${escapeHtml(username)}">${escapeHtml(username)}</option>`);
+                            });
+                        } else {
+                            usernameSelect.append('<option value="" disabled>Không có dataset</option>');
+                        }
+                    },
+                    error: function() {
+                        usernameSelect.empty().append('<option value="" disabled>Lỗi tải danh sách</option>');
+                        Swal.fire('Lỗi', 'Không thể tải danh sách username.', 'error');
+                    }
                 });
             });
-            localStorage.setItem('contractors_list', JSON.stringify(contractors));
-            
-            // Đồng bộ danh sách nhà thầu lên Firebase
-            saveContractorsToFirebase(contractors);
-        }
-        
-        // Hàm đồng bộ danh sách nhà thầu lên Firebase
-        function saveContractorsToFirebase(contractors) {
-            // Lấy CSRF token
-            var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-            
-            $.ajax({
-                url: "{% url 'save-contractor-to-firebase' %}",
-                type: "POST",
-                data: JSON.stringify({ contractors: contractors }),
-                contentType: "application/json",
-                headers: {
-                    "X-CSRFToken": csrfToken
-                },
-                success: function(response) {
-                    console.log("[Firebase] Đồng bộ nhà thầu thành công:", response);
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.error("[Firebase] Lỗi khi đồng bộ nhà thầu:", textStatus, errorThrown);
-                    console.error("[Firebase] Lỗi chi tiết:", jqXHR.responseText);
-                }
-            });
-        }
-        
-        // Hàm tải danh sách nhà thầu từ localStorage
-        function loadContractorsFromLocalStorage() {
-            var contractorsJson = localStorage.getItem('contractors_list');
-            if (contractorsJson) {
-                try {
-                    var contractors = JSON.parse(contractorsJson);
-                    $('#contractors-table tbody').empty();
-                    contractors.forEach(function(contractor) {
-                        var newRow = `
-                            <tr data-contractor="${contractor.name}" data-field="${contractor.field || ''}">
-                                <td>${contractor.name}</td>
-                                <td>${contractor.field || '<em class="text-muted">Chưa có</em>'}</td>
-                                <td class="text-center">
-                                    <button class="btn btn-sm btn-primary select-contractor-btn" title="Chọn nhà thầu này">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-secondary edit-contractor-btn" title="Sửa thông tin">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-danger delete-contractor-btn" title="Xóa nhà thầu">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                        $('#contractors-table tbody').append(newRow);
-                    });
-                } catch (e) {
-                    console.error("Lỗi khi tải danh sách nhà thầu:", e);
-                }
-            }
-        }
-        
-        // Xử lý sự kiện chọn nhà thầu từ modal
-        $(document).on('click', '.select-contractor-btn', function() {
-            var row = $(this).closest('tr');
-            var contractorName = row.data('contractor');
-            var fieldValue = row.data('field');
-            
-            // Cập nhật giá trị vào input
-            contractorInput.val(contractorName);
-            fieldInput.val(fieldValue);
-            
-            // Cập nhật hiển thị
-            selectedContractorDisplay.html(`<strong>${contractorName}</strong>`);
-            
-            // Hiển thị lĩnh vực nếu có
-            if (selectedFieldDisplay.length > 0) {
-                if (fieldValue) {
-                    selectedFieldDisplay.html(`<strong>${fieldValue}</strong>`);
-                } else {
-                    selectedFieldDisplay.html('<em class="text-muted">Chưa có lĩnh vực</em>');
-                }
-            }
-            
-            // Đóng modal
-            $('#contractors-manager-modal').modal('hide');
-        });
-        
-        // Tìm kiếm nhà thầu trong bảng
-        $('#contractor-search').on('keyup', function() {
-            var value = $(this).val().toLowerCase();
-            $('#contractors-table tbody tr').filter(function() {
-                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
-            });
-        });
 
-        // Thêm nhà thầu mới vào bảng
-        $('#add-contractor-btn').click(function() {
-            var contractorName = $('#new-contractor-name').val().trim();
-            var fieldValue = $('#new-contractor-field').val().trim();
-            
-            if (!contractorName) {
-                alert('Vui lòng nhập tên nhà thầu!');
-                return;
-            }
-            
-            // Kiểm tra trùng lặp
-            var isDuplicate = false;
-            $('#contractors-table tbody tr').each(function() {
-                if ($(this).data('contractor') === contractorName) {
-                    isDuplicate = true;
-                    return false;
+            // Thay đổi username trong select
+            usernameSelect.change(function() {
+                var selectedUsername = $(this).val();
+                imageContainer.empty(); // Xóa ảnh cũ
+                if (!selectedUsername) {
+                    datasetPlaceholder.show();
+                    datasetLoading.hide();
+                    return;
                 }
+
+                datasetPlaceholder.hide();
+                datasetLoading.show();
+
+                // Lấy ảnh ngẫu nhiên
+                $.ajax({
+                    url: `/get_random_images/${selectedUsername}/`,
+                    type: "GET",
+                    dataType: "json",
+                    success: function(response) {
+                        datasetLoading.hide();
+                        // *** THAY ĐỔI: Kiểm tra key 'images' và thêm tiền tố Data URL ***
+                        if (response.status === 'success' && Array.isArray(response.images) && response.images.length > 0) {
+                            response.images.forEach(function(base64Image) {
+                                // Thêm tiền tố để tạo Data URL hợp lệ (giả sử là JPEG)
+                                var dataUrl = `data:image/jpeg;base64,${base64Image}`;
+                                imageContainer.append(`
+                                    <img src="${dataUrl}" alt="${escapeHtml(selectedUsername)}" class="img-thumbnail m-1" style="max-width: 120px; max-height: 120px; object-fit: cover;">
+                                `);
+                            });
+                        } else {
+                            // Xử lý khi không có ảnh hoặc lỗi
+                            imageContainer.html('<p class="text-danger">Không tìm thấy ảnh hoặc có lỗi.</p>');
+                        }
+                    },
+                    error: function() {
+                        datasetLoading.hide();
+                        imageContainer.html('<p class="text-danger">Lỗi khi tải ảnh.</p>');
+                    }
+                });
             });
-            
-            if (isDuplicate) {
-                alert('Nhà thầu này đã tồn tại!');
-                return;
+             // *** KẾT THÚC THÊM CODE DATASET VIEWER ***
+
+            // --- Xử lý lỗi tải ảnh video stream ---
+            videoStreamImg.on('error', function() {
+                 console.warn("Lỗi tải video stream. Đặt lại thành placeholder.");
+                 $(this).attr('src', placeholderSrc);
+                 videoContainer.removeClass('is-streaming');
+                 placeholderText.show();
+                 $("body").data("is-processing", false); // Cập nhật trạng thái
+                 stopButton.prop('disabled', true); // Disable nút Dừng
+                 refreshStreamBtn.prop('disabled', true); // Disable nút Refresh
+                 startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); // Enable nút Start
+                 if (progressInterval) clearInterval(progressInterval); // Dừng progress nếu có
+                 collectProgressContainer.hide();
+            });
+
+            // --- Xử lý nút Refresh Stream ---
+             refreshStreamBtn.click(function() {
+                 if ($("body").data("is-processing")) {
+                     console.log("Refreshing video stream...");
+                     videoStreamImg.attr("src", videoFeedUrl + "?ts=" + new Date().getTime()); // Thêm timestamp để force reload
+                 }
+             });
+
+            // =========================================== //
+            // === JavaScript Quản lý Nhà thầu (Contractor) === //
+            // =========================================== //
+
+            function escapeHtml(unsafe) {
+                 if (typeof unsafe !== 'string') return unsafe;
+                 return unsafe
+                      .replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+             }
+
+            function saveContractorsToStorage() {
+                var contractors = [];
+                $('#contractors-table tbody tr').each(function() {
+                    if ($(this).find('.save-edit-btn').length === 0) {
+                        contractors.push({
+                            name: $(this).data('contractor'),
+                            field: $(this).data('field') || ''
+                        });
+                    }
+                });
+                localStorage.setItem('contractors_list', JSON.stringify(contractors));
+                // Không cần gọi saveContractorsToFirebase ở đây nếu không muốn đồng bộ mỗi lần lưu
             }
-            
-            // Thêm hàng mới
-            var newRow = `
-                <tr data-contractor="${contractorName}" data-field="${fieldValue}">
-                    <td>${contractorName}</td>
-                    <td>${fieldValue || '<em class="text-muted">Chưa có</em>'}</td>
-                    <td class="text-center">
-                        <button class="btn btn-sm btn-primary select-contractor-btn" title="Chọn nhà thầu này">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="btn btn-sm btn-secondary edit-contractor-btn" title="Sửa thông tin">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger delete-contractor-btn" title="Xóa nhà thầu">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
-            
-            $('#contractors-table tbody').append(newRow);
-            
-            // Xóa giá trị nhập
-            $('#new-contractor-name').val('');
-            $('#new-contractor-field').val('');
-            
-            // Lưu danh sách nhà thầu vào localStorage
-            saveContractorsToLocalStorage();
-        });
-        
-        // Xử lý sự kiện sửa nhà thầu
-        $(document).on('click', '.edit-contractor-btn', function() {
-            var row = $(this).closest('tr');
-            var contractorName = row.data('contractor');
-            var fieldValue = row.data('field') || '';
-            
-            // Hiển thị form sửa trực tiếp trong hàng
-            row.html(`
-                <td>
-                    <input type="text" class="form-control edit-contractor-name" value="${contractorName}">
-                </td>
-                <td>
-                    <input type="text" class="form-control edit-contractor-field" value="${fieldValue}">
-                </td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-success save-edit-btn">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger cancel-edit-btn">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </td>
-            `);
-        });
-        
-        // Lưu chỉnh sửa nhà thầu
-        $(document).on('click', '.save-edit-btn', function() {
-            var row = $(this).closest('tr');
-            var oldName = row.data('contractor');
-            var newName = row.find('.edit-contractor-name').val().trim();
-            var newField = row.find('.edit-contractor-field').val().trim();
-            
-            if (!newName) {
-                alert('Tên nhà thầu không được để trống!');
-                return;
+
+            // // Hàm đồng bộ lên Firebase (TÙY CHỌN - có thể bỏ nếu không cần ở trang này)
+            // function saveContractorsToFirebase(contractors) {
+            //     const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+            //     $.ajax({
+            //         url: "{% url 'save-contractor-to-firebase' %}",
+            //         type: "POST",
+            //         data: JSON.stringify({ contractors: contractors }),
+            //         contentType: "application/json",
+            //         headers: { "X-CSRFToken": csrfToken },
+            //         success: function(response) {
+            //             console.log("[Firebase] Đồng bộ nhà thầu thành công:", response);
+            //         },
+            //         error: function(jqXHR, textStatus, errorThrown) {
+            //             console.error("[Firebase] Lỗi khi đồng bộ nhà thầu:", textStatus, errorThrown);
+            //         }
+            //     });
+            // }
+
+            function loadContractorsFromLocalStorage() {
+                var contractorsJson = localStorage.getItem('contractors_list');
+                var tableBody = $('#contractors-table tbody');
+                tableBody.empty();
+                if (contractorsJson) {
+                    try {
+                        var contractors = JSON.parse(contractorsJson);
+                        contractors.forEach(function(contractor) {
+                            addContractorRow(tableBody, contractor.name, contractor.field);
+                        });
+                    } catch (e) {
+                        console.error("Lỗi khi tải danh sách nhà thầu:", e);
+                        localStorage.removeItem('contractors_list');
+                    }
+                }
             }
-            
-            // Kiểm tra trùng lặp nếu tên thay đổi
-            if (oldName !== newName) {
+
+            function addContractorRow(tableBody, name, field) {
+                var fieldDisplay = field ? field : '<em class="text-muted">Chưa có</em>';
+                var newRow = `
+                    <tr data-contractor="${escapeHtml(name)}" data-field="${escapeHtml(field || '')}">
+                        <td class="contractor-name-cell">${escapeHtml(name)}</td>
+                        <td class="contractor-field-cell">${fieldDisplay}</td>
+                        <td class="text-center action-buttons">
+                            <button class="btn btn-sm btn-primary select-contractor-btn" title="Chọn nhà thầu này">
+                                <i class="fas fa-check"></i> Chọn
+                            </button>
+                            <button class="btn btn-sm btn-secondary edit-contractor-btn" title="Sửa thông tin">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-contractor-btn" title="Xóa nhà thầu">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tableBody.append(newRow);
+            }
+
+            // Mở modal quản lý nhà thầu
+            chooseContractorBtn.click(function() {
+                loadContractorsFromLocalStorage(); // Tải danh sách nhà thầu vào bảng modal
+                contractorManagerModal.modal('show');
+            });
+
+            // Tìm kiếm nhà thầu trong bảng
+            $('#contractor-search').on('keyup', function() {
+                var value = $(this).val().toLowerCase();
+                $('#contractors-table tbody tr').filter(function() {
+                    if ($(this).find('input').length > 0) {
+                        return true;
+                    }
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+
+            // Thêm nhà thầu mới vào bảng
+            $('#add-contractor-btn').click(function() {
+                var contractorNameInput = $('#new-contractor-name');
+                var fieldValueInput = $('#new-contractor-field');
+                var contractorName = contractorNameInput.val().trim();
+                var fieldValue = fieldValueInput.val().trim();
+
+                if (!contractorName) {
+                    Swal.fire('Thiếu thông tin', 'Vui lòng nhập tên nhà thầu!', 'warning');
+                    contractorNameInput.focus();
+                    return;
+                }
+
                 var isDuplicate = false;
-                $('#contractors-table tbody tr').not(row).each(function() {
-                    if ($(this).data('contractor') === newName) {
+                $('#contractors-table tbody tr').each(function() {
+                    if ($(this).data('contractor') === contractorName) {
                         isDuplicate = true;
                         return false;
                     }
                 });
-                
+
                 if (isDuplicate) {
-                    alert('Nhà thầu này đã tồn tại!');
+                     Swal.fire('Trùng lặp', 'Nhà thầu này đã tồn tại!', 'warning');
+                     return;
+                }
+
+                addContractorRow($('#contractors-table tbody'), contractorName, fieldValue);
+                contractorNameInput.val('');
+                fieldValueInput.val('');
+                saveContractorsToStorage();
+            });
+
+            // Chọn nhà thầu từ modal quản lý
+            $(document).on('click', '.select-contractor-btn', function() {
+                var row = $(this).closest('tr');
+                var contractorName = row.data('contractor');
+                var fieldValue = row.data('field') || ''; // Lấy field
+
+                // Cập nhật input ẩn trong form chính
+                contractorInput.val(contractorName);
+                fieldInput.val(fieldValue);
+
+                // Cập nhật hiển thị trên form chính
+                selectedContractorDisplay.html(`<strong>${escapeHtml(contractorName)}</strong>`);
+                selectedFieldDisplay.html(fieldValue ? `<strong>${escapeHtml(fieldValue)}</strong>` : '<em class="text-muted">Chưa có lĩnh vực</em>');
+
+                // Đóng modal quản lý
+                contractorManagerModal.modal('hide');
+            });
+
+            // Sửa nhà thầu
+            $(document).on('click', '.edit-contractor-btn', function() {
+                var row = $(this).closest('tr');
+                if (row.find('.save-edit-btn').length > 0) return;
+                var contractorName = row.data('contractor');
+                var fieldValue = row.data('field') || '';
+                row.data('original-html', row.html());
+                row.html(`
+                    <td><input type="text" class="form-control form-control-sm edit-contractor-name" value="${escapeHtml(contractorName)}"></td>
+                    <td><input type="text" class="form-control form-control-sm edit-contractor-field" value="${escapeHtml(fieldValue)}"></td>
+                    <td class="text-center action-buttons">
+                        <button class="btn btn-sm btn-success save-edit-btn" title="Lưu"><i class="fas fa-check"></i></button>
+                        <button class="btn btn-sm btn-secondary cancel-edit-btn" title="Hủy"><i class="fas fa-times"></i></button>
+                    </td>
+                `);
+                row.find('.edit-contractor-name').focus();
+            });
+
+            // Lưu chỉnh sửa nhà thầu
+            $(document).on('click', '.save-edit-btn', function() {
+                var row = $(this).closest('tr');
+                var oldName = row.data('contractor');
+                var newNameInput = row.find('.edit-contractor-name');
+                var newFieldInput = row.find('.edit-contractor-field');
+                var newName = newNameInput.val().trim();
+                var newField = newFieldInput.val().trim();
+
+                if (!newName) {
+                    Swal.fire('Thiếu thông tin', 'Tên nhà thầu không được để trống!', 'warning');
+                    newNameInput.focus();
                     return;
                 }
-            }
-            
-            // Cập nhật dữ liệu hàng
-            row.data('contractor', newName);
-            row.data('field', newField);
-            
-            // Cập nhật hiển thị hàng
-            row.html(`
-                <td>${newName}</td>
-                <td>${newField || '<em class="text-muted">Chưa có</em>'}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-primary select-contractor-btn" title="Chọn nhà thầu này">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-sm btn-secondary edit-contractor-btn" title="Sửa thông tin">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger delete-contractor-btn" title="Xóa nhà thầu">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `);
-            
-            // Cập nhật giá trị hiển thị nếu đang chọn nhà thầu này
-            if (contractorInput.val() === oldName) {
-                contractorInput.val(newName);
-                fieldInput.val(newField);
-                selectedContractorDisplay.html(`<strong>${newName}</strong>`);
-                
-                if (selectedFieldDisplay.length > 0) {
-                    if (newField) {
-                        selectedFieldDisplay.html(`<strong>${newField}</strong>`);
-                    } else {
-                        selectedFieldDisplay.html('<em class="text-muted">Chưa có lĩnh vực</em>');
+
+                if (oldName !== newName) {
+                    var isDuplicate = false;
+                    $('#contractors-table tbody tr').not(row).each(function() {
+                        if ($(this).data('contractor') === newName) {
+                            isDuplicate = true;
+                            return false;
+                        }
+                    });
+                    if (isDuplicate) {
+                        Swal.fire('Trùng lặp', 'Nhà thầu này đã tồn tại!', 'warning');
+                        return;
                     }
                 }
-            }
-            
-            // Lưu danh sách nhà thầu vào localStorage
-            saveContractorsToLocalStorage();
-        });
-        
-        // Hủy chỉnh sửa
-        $(document).on('click', '.cancel-edit-btn', function() {
-            var row = $(this).closest('tr');
-            var contractorName = row.data('contractor');
-            var fieldValue = row.data('field') || '';
-            
-            // Phục hồi hiển thị hàng
-            row.html(`
-                <td>${contractorName}</td>
-                <td>${fieldValue || '<em class="text-muted">Chưa có</em>'}</td>
-                <td class="text-center">
-                    <button class="btn btn-sm btn-primary select-contractor-btn" title="Chọn nhà thầu này">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn btn-sm btn-secondary edit-contractor-btn" title="Sửa thông tin">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger delete-contractor-btn" title="Xóa nhà thầu">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            `);
-        });
-        
-        // Xóa nhà thầu
-        $(document).on('click', '.delete-contractor-btn', function() {
-            if (!confirm('Bạn có chắc muốn xóa nhà thầu này?')) {
-                return;
-            }
-            
-            var row = $(this).closest('tr');
-            var contractorName = row.data('contractor');
-            
-            // Xóa hàng
-            row.remove();
-            
-            // Cập nhật giá trị hiển thị nếu đang chọn nhà thầu này
-            if (contractorInput.val() === contractorName) {
-                contractorInput.val('');
-                fieldInput.val('');
-                selectedContractorDisplay.html('<em class="text-muted">Chưa chọn nhà thầu</em>');
-                
-                if (selectedFieldDisplay.length > 0) {
-                    selectedFieldDisplay.html('<em class="text-muted">Chưa có lĩnh vực</em>');
-                }
-            }
-            
-            // Lưu danh sách nhà thầu vào localStorage
-            saveContractorsToLocalStorage();
-        });
 
-        // --- Function to toggle Username field --- 
-        function toggleConditionalFields() { // Đổi tên hàm cho rõ ràng hơn
-            var selectedMode = $('input[name="mode"]:checked').val();
-            if (selectedMode === 'collect') {
-                usernameFieldGroup.removeClass('d-none');
-                // Xử lý hiển thị Email và Supervisor dựa trên Role
-                var selectedRole = $('input[name="role"]:checked').val(); // Lấy giá trị từ radio được chọn
-                if (selectedRole === 'worker') {
-                    supervisorFieldGroup.show();
-                    contractorFieldGroup.show(); // Hiển thị nhà thầu cho worker
-                    emailFieldGroup.hide(); // Ẩn email cho worker
-                } else if (selectedRole === 'supervisor') {
-                    supervisorFieldGroup.hide(); // Ẩn supervisor cho supervisor
-                    contractorFieldGroup.hide(); // Ẩn nhà thầu cho supervisor
-                    emailFieldGroup.show(); // Hiện email cho supervisor
+                row.data('contractor', newName);
+                row.data('field', newField);
+
+                var fieldDisplay = newField ? escapeHtml(newField) : '<em class="text-muted">Chưa có</em>';
+                row.html(`
+                    <td class="contractor-name-cell">${escapeHtml(newName)}</td>
+                    <td class="contractor-field-cell">${fieldDisplay}</td>
+                    <td class="text-center action-buttons">
+                        <button class="btn btn-sm btn-primary select-contractor-btn" title="Chọn"><i class="fas fa-check"></i> Chọn</button>
+                        <button class="btn btn-sm btn-secondary edit-contractor-btn" title="Sửa"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger delete-contractor-btn" title="Xóa"><i class="fas fa-trash"></i></button>
+                    </td>
+                `);
+
+                // Cập nhật lại form chính nếu nhà thầu đang được chọn bị sửa tên
+                if (contractorInput.val() === oldName) {
+                    contractorInput.val(newName);
+                    fieldInput.val(newField);
+                    selectedContractorDisplay.html(`<strong>${escapeHtml(newName)}</strong>`);
+                    selectedFieldDisplay.html(newField ? `<strong>${escapeHtml(newField)}</strong>` : '<em class="text-muted">Chưa có lĩnh vực</em>');
+                }
+                saveContractorsToStorage();
+            });
+
+            // Hủy chỉnh sửa nhà thầu
+            $(document).on('click', '.cancel-edit-btn', function() {
+                var row = $(this).closest('tr');
+                var originalHtml = row.data('original-html');
+                if (originalHtml) {
+                    row.html(originalHtml);
                 } else {
-                    supervisorFieldGroup.hide();
-                    contractorFieldGroup.hide(); // Ẩn nhà thầu khi chưa chọn vai trò
-                    emailFieldGroup.hide(); // Ẩn cả hai nếu chưa chọn role
-                }
-                    // Hiển thị nút huấn luyện nếu là mode collect
-                    $('#ajax-train-button').parent().removeClass('d-none'); 
-            } else {
-                usernameFieldGroup.addClass('d-none');
-                // Ẩn luôn nút huấn luyện khi không phải mode collect
-                $('#ajax-train-button').parent().addClass('d-none'); 
-                // Ẩn luôn field supervisor khi không phải mode collect
-                supervisorFieldGroup.hide(); 
-                // Ẩn luôn field email khi không phải mode collect
-                emailFieldGroup.hide(); 
-                // Ẩn luôn field contractor khi không phải mode collect
-                contractorFieldGroup.hide();
-            } 
-        }
-        // Chạy lần đầu để đảm bảo trạng thái đúng dựa trên giá trị initial của form
-        toggleConditionalFields(); 
-        // Gắn vào sự kiện change của radio buttons mode
-        $('input[name="mode"]').change(toggleConditionalFields); 
-        // Gắn vào sự kiện change của select role
-        $('input[name="role"]').change(toggleConditionalFields); // Gắn sự kiện cho tất cả radio trong nhóm 'role'
-
-        // --- Alert closing, Train Button, Configure ROI Link --- 
-        $('.alert .close').on('click', function(e) { $(this).parent().alert('close'); });
-        $("#ajax-train-button").click(function(e){
-            e.preventDefault(); // Ngăn hành vi mặc định của button
-
-            if (!confirm("Bắt đầu huấn luyện? Quá trình này có thể mất vài phút và không thể hủy ngang.")) { 
-                return;
-            } else {
-                trainingLoadingIndicator.show();
-                $(this).prop('disabled', true); // Vô hiệu hóa nút trong khi huấn luyện
-
-                var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-
-                $.ajax({
-                   url: "{% url 'ajax-train' %}", // URL mới cần tạo trong urls.py
-                   type: "POST",
-                   headers: { "X-CSRFToken": csrfToken },
-                   dataType: "json",
-                   success: function(response) {
-                       trainingLoadingIndicator.hide();
-                       trainButton.prop('disabled', false);
-                       if(response.status === 'success') {
-                           alert("Huấn luyện thành công!"); // Hoặc hiển thị message đẹp hơn
-                       } else {
-                           alert("Lỗi huấn luyện: " + response.message);
-                       }
-                   },
-                   error: function(jqXHR, textStatus, errorThrown) {
-                       trainingLoadingIndicator.hide();
-                       trainButton.prop('disabled', false);
-                       console.error("[Train AJAX Error] Status:", textStatus, "Error:", errorThrown, jqXHR.responseText);
-                       alert("Lỗi kết nối hoặc lỗi server khi huấn luyện. Vui lòng kiểm tra log server.");
-                   }
-                });
-            }
-        });
-        $("#configure-roi-link").click(function(e){
-            e.preventDefault();
-            currentCameraIdForRoi = cameraSelect.val();
-            if (!currentCameraIdForRoi) {
-                alert("Vui lòng chọn một camera trước khi cấu hình ROI.");
-                return;
-            }
-            // Hiển thị modal NGAY LẬP TỨC
-            roiModal.modal('show'); 
-            // Sau đó mới bắt đầu tải frame
-            fetchAndDisplayRoiFrame(currentCameraIdForRoi); 
-        });
-
-        // --- Function to fetch and display static frame for ROI --- 
-        function fetchAndDisplayRoiFrame(cameraId) {
-            console.log("[ROI] Fetching static frame for camera:", cameraId);
-            if (cropper) { // Hủy cropper cũ trước khi tải ảnh mới
-                cropper.destroy();
-                cropper = null;
-            }
-            roiImage.attr('src', '').hide(); // Xóa ảnh cũ và ẩn đi
-            roiErrorMessage.hide();
-            roiLoadingIndicator.show();
-            getNewFrameButton.prop('disabled', true);
-            saveRoiButton.prop('disabled', true);
-
-            var frameUrl = `/get_static_frame/${cameraId}/?t=${new Date().getTime()}`; // Thêm timestamp để tránh cache
-
-            // Sử dụng fetch để tải ảnh (cho phép kiểm tra status code)
-            fetch(frameUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Lỗi ${response.status}: ${response.statusText}`);
-                    }
-                    return response.blob(); // Lấy dữ liệu ảnh dạng blob
-                })
-                .then(blob => {
-                    var objectURL = URL.createObjectURL(blob);
-                    roiImage.attr('src', objectURL); // Đặt src là URL của blob
-                    roiLoadingIndicator.hide();
-                    roiImage.show(); // Hiển thị ảnh
-                    // Khởi tạo Cropper sau khi ảnh mới được hiển thị
-                    initializeCropper(); 
-                    getNewFrameButton.prop('disabled', false);
-                    saveRoiButton.prop('disabled', false);
-                })
-                .catch(error => {
-                    console.error("[ROI] Error fetching static frame:", error);
-                    roiLoadingIndicator.hide();
-                    roiErrorMessage.text(`Không thể tải frame từ camera. Lỗi: ${error.message}`).show();
-                    getNewFrameButton.prop('disabled', false);
-                    // Không bật nút save nếu không có ảnh
-                });
-        }
-        
-        // --- Function to initialize Cropper --- 
-        function initializeCropper() {
-             if (cropper) {
-                cropper.destroy();
-                console.log("[Cropper] Destroyed existing instance.");
-             }
-             if (typeof Cropper === 'undefined') {
-                 console.error("[Cropper Error] Thư viện Cropper.js chưa được tải hoặc định nghĩa.");
-                 roiErrorMessage.text("Lỗi: Không thể khởi tạo công cụ chọn ROI. Vui lòng tải lại trang.").show();
-                 saveRoiButton.prop('disabled', true);
-                 getNewFrameButton.prop('disabled', false); // Vẫn cho phép lấy frame khác
-                 return; // Dừng thực thi hàm này
-             }
-             
-             if (roiImage.attr('src')) {
-                 console.log("[Cropper] Initializing on image:", roiImage.attr('src'));
-                 cropper = new Cropper(roiImage[0], {
-                    aspectRatio: NaN,
-                    viewMode: 1,
-                    background: false,
-                    autoCropArea: 0.8, 
-                    movable: true,
-                    cropBoxResizable: true,
-                    ready: function () {
-                        console.log("[Cropper] Cropper is ready.");
-                        saveRoiButton.prop('disabled', false); // Bật nút Save khi cropper sẵn sàng
-                    }
-                 });
-              } else {
-                   console.warn("[Cropper] No image src to initialize Cropper on.");
-                    saveRoiButton.prop('disabled', true); // Tắt nút Save nếu không có ảnh
-              }
-        }
-
-        // --- Stop Button Click Handling (AJAX Version) --- 
-        stopButton.click(function(e) {
-            e.preventDefault(); // Ngăn hành vi mặc định
-
-            if (!confirm("Bạn có chắc muốn dừng tiến trình?")) {
-                return;
-            }
-
-            var csrfToken = stopForm.find('input[name="csrfmiddlewaretoken"]').val();
-            var stopUrl = "{% url 'process-video-roi' %}"; // Lấy URL từ Django
-
-            // Vô hiệu hóa nút Dừng và Refresh ngay lập tức để tránh nhấn nhiều lần
-            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Dừng...');
-            refreshStreamBtn.prop('disabled', true);
-
-            $.ajax({
-                url: stopUrl,
-                type: "POST",
-                data: { action: 'stop', csrfmiddlewaretoken: csrfToken },
-                dataType: "json",
-                success: function(response) {
-                    console.log("[Stop AJAX Success] Response:", response);
-                    // Cập nhật UI khi dừng thành công
-                    startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
-                    stopButton.prop('disabled', true).html('<i class="fas fa-stop"></i> Dừng'); // Reset text nút dừng
-                    refreshStreamBtn.prop('disabled', true);
-                    videoStreamImg.attr('src', placeholderSrc); // Hiện placeholder
-                    placeholderText.text("Đã dừng xử lý.").show();
-                    videoContainer.removeClass('is-streaming');
-                    $("body").data("is-processing", false);
-
-                    // Dừng cập nhật progress nếu đang chạy
-                    if (progressInterval) {
-                        clearInterval(progressInterval);
-                        progressInterval = null;
-                        collectProgressContainer.hide();
-                        console.log("[Progress] Stopped interval due to successful stop.");
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.error("[Stop AJAX Error] Status:", textStatus, "Error:", errorThrown, jqXHR.responseText);
-                    alert("Lỗi khi gửi yêu cầu dừng. Vui lòng thử lại.");
-                    // Kích hoạt lại nút Dừng nếu lỗi để người dùng thử lại
-                    stopButton.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng');
-                    // Giữ nút refresh disabled vì không chắc chắn trạng thái stream
+                    // Fallback
+                    var contractorName = row.data('contractor');
+                    var fieldValue = row.data('field') || '';
+                    var fieldDisplay = fieldValue ? escapeHtml(fieldValue) : '<em class="text-muted">Chưa có</em>';
+                    row.html(`
+                        <td class="contractor-name-cell">${escapeHtml(contractorName)}</td>
+                        <td class="contractor-field-cell">${fieldDisplay}</td>
+                         <td class="text-center action-buttons">
+                             <button class="btn btn-sm btn-primary select-contractor-btn" title="Chọn"><i class="fas fa-check"></i> Chọn</button>
+                             <button class="btn btn-sm btn-secondary edit-contractor-btn" title="Sửa"><i class="fas fa-edit"></i></button>
+                             <button class="btn btn-sm btn-danger delete-contractor-btn" title="Xóa"><i class="fas fa-trash"></i></button>
+                         </td>
+                    `);
                 }
             });
-        });
 
-        // --- Function to update Collection Progress Bar --- 
-        function updateCollectProgress() {
-            $.ajax({
-                url: "{% url 'get-collect-progress' %}", 
-                type: "GET",
-                dataType: "json",
-                success: function(progressData) {
-                    console.log("[Progress AJAX Success] Data received: ", JSON.stringify(progressData)); // Log dữ liệu nhận được
-                    // --- Lấy username gốc từ input field --- 
-                    var currentUsername = $("#id_username").val();
-                    var progressStatusText = "Không có tiến trình thu thập nào đang chạy."; // Default text
-                    var activeCollectionUser = null;
-                    var userProgress = null;
+            // Xóa nhà thầu
+            $(document).on('click', '.delete-contractor-btn', function() {
+                var row = $(this).closest('tr');
+                var contractorName = row.data('contractor');
 
-                    // Kiểm tra xem username hiện tại có trong progressData và đang active không
-                    if (currentUsername && progressData.hasOwnProperty(currentUsername) && progressData[currentUsername].active) {
-                        activeCollectionUser = currentUsername;
-                        userProgress = progressData[currentUsername];
-                    } else {
-                        // Nếu user hiện tại không active, thử tìm user khác đang active (ít khả năng xảy ra nhưng để phòng ngừa)
-                        for (var userKey in progressData) {
-                           if (progressData.hasOwnProperty(userKey) && progressData[userKey].active) {
-                               activeCollectionUser = userKey;
-                               userProgress = progressData[userKey];
-                               break;
-                           }
-                       }
-                    }
-                    // --- Kết thúc lấy username gốc và kiểm tra ---
-
-                    if (activeCollectionUser) {
-                        var current = userProgress.current || 0;
-                        var total = userProgress.total || 1; // Tránh chia cho 0
-                        var percentage = Math.round((current / total) * 100);
-                        progressStatusText = `Đang thu thập cho: ${activeCollectionUser} (${current}/${total})`;
-                        collectProgressLabel.text(progressStatusText);
-                        collectProgressBar.css('width', percentage + '%').attr('aria-valuenow', percentage).text(percentage + '%');
-                        collectProgressContainer.show();
-                        if (!progressInterval) { // Nếu interval chưa chạy, bắt đầu nó
-                            progressInterval = setInterval(updateCollectProgress, 1500); // Cập nhật mỗi 1.5 giây
-                            console.log("[Progress] Started interval.");
+                Swal.fire({
+                    title: 'Xác nhận xóa?',
+                    html: `Bạn có chắc muốn xóa nhà thầu <strong>${escapeHtml(contractorName)}</strong>?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Xóa',
+                    cancelButtonText: 'Hủy bỏ'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Cập nhật form chính nếu nhà thầu đang được chọn bị xóa
+                        if (contractorInput.val() === contractorName) {
+                            contractorInput.val('');
+                            fieldInput.val('');
+                            selectedContractorDisplay.html('<em class="text-muted">Chưa chọn nhà thầu</em>');
+                            selectedFieldDisplay.html('<em class="text-muted">Chưa có lĩnh vực</em>');
                         }
-                    } else {
-                        // Không có user nào đang active
-                        collectProgressLabel.text(progressStatusText); // Hiển thị trạng thái mặc định nếu không có gì chạy
-                        collectProgressContainer.hide();
-                        if (progressInterval) { // Nếu không có gì active, dừng interval
-                            clearInterval(progressInterval);
-                            progressInterval = null;
-                            console.log("[Progress] Stopped interval.");
-                        }
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) { // Thêm tham số lỗi
-                    console.error(`[Progress AJAX Error] Status: ${textStatus}, Error: ${errorThrown}`); // Log chi tiết lỗi
-                    console.warn("[Progress] Could not fetch progress data. Hiding bar and stopping interval.");
-                    // Optionally hide progress bar on error or keep last state
-                    collectProgressContainer.hide(); // Ẩn thanh tiến trình khi lỗi
-                    if (progressInterval) { // Dừng interval nếu lỗi
-                        clearInterval(progressInterval);
-                        progressInterval = null;
-                    }
-                }
-            });
-        }
-
-        // --- Save ROI Button Click --- 
-        saveRoiButton.click(function() {
-            if (!cropper || !currentCameraIdForRoi) {
-                console.error("Cropper chưa khởi tạo hoặc camera ID bị thiếu.");
-                alert("Đã có lỗi xảy ra. Vui lòng thử lại.");
-                return;
-            }
-
-            var cropData = cropper.getData({ rounded: true }); // Lấy tọa độ làm tròn
-            var imageData = cropper.getImageData(); // Lấy thông tin kích thước ảnh gốc
-
-            console.log("Crop Data:", cropData);
-            console.log("Image Data:", imageData);
-
-            // Chuẩn bị dữ liệu gửi đi
-            var postData = {
-                camera_id: currentCameraIdForRoi,
-                crop_data: cropData, // { x, y, width, height, rotate, scaleX, scaleY }
-                natural_width: imageData.naturalWidth,
-                natural_height: imageData.naturalHeight
-            };
-
-             // Lấy CSRF token
-             var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-
-            // Gửi AJAX request
-            $.ajax({
-                url: "/save_roi/" + currentCameraIdForRoi + "/", // URL cần tạo ở Django
-                type: "POST",
-                contentType: "application/json", // Gửi dạng JSON
-                data: JSON.stringify(postData), // Chuyển object thành JSON string
-                headers: { "X-CSRFToken": csrfToken }, // Thêm CSRF token vào header
-                dataType: "json", // Mong đợi nhận về JSON
-                success: function(response) {
-                    console.log("Save ROI Response:", response);
-                    if (response.status === 'success') {
-                        alert("Đã lưu ROI thành công!");
-                        roiModal.modal('hide'); // Đóng modal
-                    } else {
-                         alert("Lỗi khi lưu ROI: " + (response.message || "Unknown error"));
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.error("AJAX Error:", textStatus, errorThrown, jqXHR.responseText);
-                    alert("Lỗi kết nối hoặc lỗi server khi lưu ROI. Chi tiết: " + textStatus);
-                }
-            });
-        });
-
-        // --- Start Form Submission (AJAX Version) --- 
-        processForm.submit(function(e) {
-            e.preventDefault(); // Ngăn chặn gửi form truyền thống
-
-            // Basic Validation (Client-side)
-            if (!cameraSelect.val()) { alert("Vui lòng chọn camera."); return false; }
-            var selectedMode = $('input[name="mode"]:checked').val();
-            var username = $("#id_username").val();
-            if (selectedMode === 'collect' && !username) { alert("Vui lòng nhập Username cho chế độ Thu thập."); return false; }
-            
-            // Thêm validation cho Role và Supervisor nếu cần
-            var selectedRole = $('input[name="role"]:checked').val(); // Lấy giá trị role từ radio đã chọn
-            if (selectedMode === 'collect' && !selectedRole) { 
-                alert("Vui lòng chọn Vai trò."); 
-                return false; 
-            }
-            // Validation cho worker
-            if (selectedMode === 'collect' && selectedRole === 'worker') {
-                var selectedSupervisor = $('#id_supervisor').val(); // Lấy giá trị supervisor
-                if (!selectedSupervisor) { 
-                    alert("Vui lòng chọn Supervisor cho Worker."); 
-                    return false; 
-                }
-                
-                // Validation cho nhà thầu và lĩnh vực
-                var contractorValue = contractorInput.val();
-                var fieldValue = fieldInput.val();
-                
-                if (!contractorValue) {
-                    alert("Vui lòng chọn Nhà thầu cho Worker.");
-                    return false;
-                }
-                
-                if (!fieldValue) {
-                    alert("Vui lòng nhập Lĩnh vực công việc cho Worker.");
-                    return false;
-                }
-            }
-            // Validation cho supervisor
-            if (selectedMode === 'collect' && selectedRole === 'supervisor') {
-                var emailValue = $('#id_email').val(); // Lấy giá trị email
-                if (!emailValue) { 
-                    alert("Vui lòng nhập Email cho Supervisor."); 
-                    return false; 
-                }
-            }
-            
-            // Disable start button, enable stop button
-            startButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Bắt đầu...');
-
-            var formData = $(this).serialize(); // Lấy dữ liệu form: action=start&csrfmiddlewaretoken=...&camera=...&mode=...&username=...
-
-            console.log("[Start AJAX] Sending form data:", formData);
-
-            $.ajax({
-                url: $(this).attr('action'), // URL của form (/process_video_roi/)
-                type: "POST",
-                data: formData,
-                dataType: "json", // Mong đợi JSON response từ view
-                success: function(response) {
-                    console.log("[Start AJAX Success] Response:", response);
-                    if (response.status === 'success') {
-                        // Cập nhật UI khi thành công
-                        stopButton.prop('disabled', false);
-                        refreshStreamBtn.prop('disabled', false);
-                        placeholderText.hide();
-                        videoContainer.addClass('is-streaming');
-                        videoStreamImg.attr("src", videoFeedUrl + "?ts=" + new Date().getTime());
-                        $("body").data("is-processing", true); // Cập nhật trạng thái data attribute
-                        
-                        // Bắt đầu cập nhật progress bar chỉ khi backend báo thành công
-                        if ($('input[name="mode"]:checked').val() === 'collect') {
-                            console.log("[Progress] Starting progress updates after successful start.");
-                            if (progressInterval) clearInterval(progressInterval);
-                            setTimeout(updateCollectProgress, 150); // Chờ lâu hơn chút
-                        }
-                        // Hiển thị message thành công từ backend (nếu có)
-                        if(response.message) {
-                             console.log("Backend message:", response.message);
-                        }
-                        // --- Kích hoạt lại nút Start sau khi thành công --- 
-                        startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
-                    // --- THÊM XỬ LÝ CHO WARNING --- 
-                    } else if (response.status === 'warning') { 
-                        // Trường hợp camera đã chạy, chỉ hiển thị thông báo
-                        alert(response.message); 
-                        // Giữ nguyên trạng thái nút Start (vẫn disabled vì đang chạy?)
-                        // Cần kích hoạt lại nút start để người dùng có thể chọn camera khác
-                        startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); 
-                        // Không thay đổi trạng thái nút Stop/Refresh
-                    // --- KẾT THÚC THÊM ---
-                    } else { 
-                        // Xử lý lỗi từ backend (vd: form invalid)
-                        alert("Lỗi khi bắt đầu xử lý: " + response.message);
-                        // Reset nút Start về trạng thái ban đầu
-                        startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.error("[Start AJAX Error] Status:", textStatus, "Error:", errorThrown, jqXHR.responseText);
-                    alert("Lỗi kết nối hoặc lỗi server khi gửi yêu cầu bắt đầu.");
-                    // Reset nút Start về trạng thái ban đầu khi có lỗi kết nối/server
-                    startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
-                }
-            });
-
-        });
-
-         // --- Initial state based on is_processing --- 
-        if ($("body").data("is-processing")) {
-             startButton.prop('disabled', true);
-             stopButton.prop('disabled', false);
-             refreshStreamBtn.prop('disabled', false);
-             placeholderText.hide();
-             videoContainer.addClass('is-streaming');
-             if (videoStreamImg.attr('src') !== videoFeedUrl) {
-                 videoStreamImg.attr('src', videoFeedUrl + "?ts=" + new Date().getTime());
-             }
-        } else {
-             // Reset nút Start về trạng thái ban đầu
-             startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); 
-             stopButton.prop('disabled', true);
-             refreshStreamBtn.prop('disabled', true);
-             placeholderText.show();
-             videoContainer.removeClass('is-streaming');
-              // Đảm bảo hiển thị ảnh placeholder nếu không xử lý
-              if (videoStreamImg.attr('src') !== placeholderSrc) {
-                 videoStreamImg.attr('src', placeholderSrc);
-             }
-        }
-
-        // --- Error handling for video stream --- 
-        videoStreamImg.on('error', function() {
-            // Chỉ xử lý lỗi nếu đang ở trạng thái is-streaming
-            if (videoContainer.hasClass('is-streaming')) {
-                console.error("Video stream error/stopped.");
-                $(this).attr('src', placeholderSrc); // Hiển thị lại placeholder
-                placeholderText.text("Lỗi stream hoặc đã dừng.").show(); // Hiển thị thông báo lỗi
-                 // Reset trạng thái nút
-                 startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
-                 stopButton.prop('disabled', true);
-                 refreshStreamBtn.prop('disabled', true);
-                 videoContainer.removeClass('is-streaming'); // Xóa class streaming
-            }
-        });
-
-        // --- Get New Frame Button Click ---
-        getNewFrameButton.click(function(){
-            if(currentCameraIdForRoi){
-                fetchAndDisplayRoiFrame(currentCameraIdForRoi);
-            }
-        });
-
-        // --- Function to reload Attendance Log via AJAX --- 
-        function reloadAttendanceLog(filterData) {
-            console.log("[Log] Reloading log with filters:", filterData);
-            logTableContainer.html('<div class="text-center p-3"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>'); // Show loading
-
-            $.ajax({
-                url: "{% url 'process-video-roi' %}", // Gửi đến view chính
-                type: "GET",
-                data: filterData, // Dữ liệu filter (search, start_date, end_date)
-                dataType: "html", // Mong đợi nhận về HTML
-                success: function(responseHtml) {
-                    // Log phản hồi nhận được để debug
-                    console.log("[Log] AJAX Success. Received HTML:", responseHtml.substring(0, 200) + "..."); 
-                    
-                    // --- Đơn giản hóa: Trực tiếp chèn HTML nhận được --- 
-                    // Vì view đảm bảo chỉ trả về nội dung partial cho AJAX
-                    logTableContainer.html(responseHtml);
-                    console.log("[Log] Log reloaded successfully by direct insertion.");
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    // Log chi tiết lỗi
-                    console.error("[Log] AJAX Error:", textStatus, jqXHR.status, errorThrown, jqXHR.responseText);
-                    logTableContainer.html(`<div class="alert alert-danger m-2">Lỗi khi tải dữ liệu log: ${textStatus} (${jqXHR.status})</div>`);
-                }
-            });
-        }
-
-        // --- Log Filter Form Submission --- 
-        logFilterForm.submit(function(e) {
-            e.preventDefault(); // Ngăn form submit theo cách truyền thống
-            var formData = $(this).serialize(); // Lấy dữ liệu form (search, start_date, end_date)
-            reloadAttendanceLog(formData);
-        });
-
-        // --- Reload Log Button Click --- 
-        reloadLogButton.click(function() {
-            var formData = logFilterForm.serialize(); // Lấy filter hiện tại
-            reloadAttendanceLog(formData);
-        });
-
-        // --- Refresh Stream Button Click ---
-        refreshStreamBtn.click(function() {
-            if ($("body").data("is-processing")) { // Chỉ refresh nếu đang xử lý
-                console.log("[Stream] Refresh button clicked. is-processing: true");
-                var currentSrc = videoStreamImg.attr('src');
-                // Chỉ cập nhật nếu src hiện tại là video feed (tránh lỗi khi đang là placeholder)
-                if (currentSrc.includes(videoFeedUrl)) { 
-                    console.log("[Stream] Current src is video feed. Reloading...");
-                    videoStreamImg.attr("src", videoFeedUrl + "?ts=" + new Date().getTime());
-                } else {
-                    console.warn("[Stream] Cannot refresh, current src is not the video feed:", currentSrc);
-                }
-            } else {
-                console.log("[Stream] Refresh button clicked. is-processing: false. Not refreshing.");
-            }
-        });
-
-        // --- Dataset Viewer Logic ---
-        viewDatasetBtn.click(function(){
-            console.log("[Dataset Viewer] Button clicked");
-            usernameSelect.html('<option value="">Đang tải...</option>').prop('disabled', true); // Reset select
-            imageContainer.html('').append(datasetPlaceholder.show()); // Reset image container
-            datasetModal.modal('show');
-
-            // Fetch usernames from backend
-            $.ajax({
-                url: "{% url 'get-dataset-usernames' %}", // URL mới cần tạo
-                type: "GET",
-                dataType: "json",
-                success: function(response){
-                    console.log("[Dataset Viewer] Usernames received:", response);
-                    usernameSelect.html('<option value="">-- Chọn Username --</option>'); // Reset với placeholder
-                    if(response.usernames && response.usernames.length > 0){
-                        response.usernames.forEach(function(username){
-                            usernameSelect.append($('<option>', { 
-                                value: username,
-                                text : username 
-                            }));
-                        });
-                        usernameSelect.prop('disabled', false);
-                    } else {
-                         usernameSelect.html('<option value="">Không tìm thấy dataset nào</option>');
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown){
-                    console.error("[Dataset Viewer] Error fetching usernames:", textStatus, errorThrown);
-                    usernameSelect.html('<option value="">Lỗi khi tải</option>');
-                    alert("Lỗi khi tải danh sách username.");
-                }
-            });
-        });
-
-        // Handle username selection change
-        usernameSelect.change(function(){
-            var selectedUsername = $(this).val();
-            imageContainer.html(''); // Clear previous images/placeholders
-            datasetPlaceholder.hide();
-            if(selectedUsername){
-                console.log("[Dataset Viewer] Username selected:", selectedUsername);
-                datasetLoading.show(); // Show loading spinner
-
-                // Fetch random images for the selected username
-                $.ajax({
-                    url: `/get_random_images/${selectedUsername}/`, // URL mới cần tạo (sử dụng template literal cho username)
-                    type: "GET",
-                    dataType: "json",
-                    success: function(response){
-                        datasetLoading.hide();
-                        console.log("[Dataset Viewer] Images received:", response);
-                        if(response.images && response.images.length > 0){
-                            response.images.forEach(function(base64Image){
-                                // Append image with base64 source
-                                var imgTag = '<img src="data:image/jpeg;base64,' + base64Image + '" class="img-thumbnail m-1" style="max-width: 150px; max-height: 150px;" alt="Dataset Image">';
-                                imageContainer.append(imgTag);
-                            });
-                        } else {
-                            imageContainer.html('<p class="text-muted">Không tìm thấy ảnh hoặc thư mục trống.</p>');
-                        }
-                    },
-                    error: function(jqXHR, textStatus, errorThrown){
-                        datasetLoading.hide();
-                        console.error("[Dataset Viewer] Error fetching images:", textStatus, errorThrown);
-                        imageContainer.html('<p class="text-danger">Lỗi khi tải ảnh.</p>');
-                        alert("Lỗi khi tải ảnh cho username: " + selectedUsername);
+                        row.remove();
+                        saveContractorsToStorage();
+                        Swal.fire('Đã xóa!', `Nhà thầu ${escapeHtml(contractorName)} đã được xóa.`, 'success');
                     }
                 });
-            } else {
-                 imageContainer.append(datasetPlaceholder.show()); // Show placeholder if no username selected
-            }
-        });
-
-    });
-</script>
-
-</body>
-</html> 
+            });
+        }); // End $(document).ready()
+    </script>
+{% endblock extrajs %}

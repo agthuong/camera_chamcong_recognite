@@ -456,8 +456,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" id="save-supervisor-btn">Lưu</button>
+                 <button type="button" class="btn btn-primary" id="save-supervisor-btn">Lưu</button>
             </div>
         </div>
     </div>
@@ -513,8 +512,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" id="save-worker-btn">Lưu</button>
+                 <button type="button" class="btn btn-primary" id="save-worker-btn">Lưu</button>
             </div>
         </div>
     </div>
@@ -544,8 +542,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" id="save-assignment-btn">Phân công</button>
+                 <button type="button" class="btn btn-primary" id="save-assignment-btn">Phân công</button>
             </div>
         </div>
     </div>
@@ -601,8 +598,7 @@
                 </form>
             </div>
             <div class="modal-footer">
-                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" id="update-worker-btn">Cập nhật</button>
+                 <button type="button" class="btn btn-primary" id="update-worker-btn">Cập nhật</button>
             </div>
         </div>
     </div>
@@ -958,7 +954,7 @@
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
                 confirmButtonText: 'Đồng ý!',
-                cancelButtonText: 'Hủy'
+                cancelButtonText: 'Hủy',
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
@@ -1367,12 +1363,88 @@
             });
         });
 
-        // Tải danh sách nhà thầu lần đầu khi trang tải
-        // loadContractorsFromLocalStorage(); // Bỏ dòng này, chỉ tải khi mở modal
+        // === Xử lý nút Xóa Worker ===
+        $(document).on('click', '.delete-worker-btn', function() {
+            const workerId = $(this).data('id');
+            const workerName = $(this).data('name') || 'Worker này';
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
 
-        // =========================================== //
-        // === Kết thúc JavaScript Quản lý Nhà thầu === //
-        // =========================================== //
+            Swal.fire({
+                title: 'Xác nhận xóa Worker?',
+                html: `Bạn có chắc muốn xóa <strong>${escapeHtml(workerName)}</strong>? Hành động này không thể hoàn tác.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Đồng ý Xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '{% url "delete-worker" %}',
+                        type: 'POST',
+                        data: {
+                            'worker_id': workerId,
+                            'csrfmiddlewaretoken': csrfToken
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire('Đã xóa!', response.message || `${escapeHtml(workerName)} đã được xóa.`, 'success')
+                                .then(() => location.reload()); // Reload trang sau khi xóa thành công
+                            } else {
+                                Swal.fire('Lỗi!', response.message || 'Không thể xóa Worker.', 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Lỗi Kết Nối!', 'Đã xảy ra lỗi khi gửi yêu cầu xóa.', 'error');
+                        }
+                    });
+                }
+            });
+        });
+
+        // === Xử lý nút Xóa Supervisor ===
+        $(document).on('click', '.delete-supervisor-btn', function() {
+            const supervisorId = $(this).data('id');
+            const supervisorName = $(this).data('name') || 'Supervisor này';
+            const csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+
+            Swal.fire({
+                title: 'Xác nhận xóa Supervisor?',
+                html: `Bạn có chắc muốn xóa <strong>${escapeHtml(supervisorName)}</strong>? Hành động này sẽ thất bại nếu Supervisor còn quản lý Worker.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Đồng ý Xóa',
+                cancelButtonText: 'Hủy bỏ'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '{% url "delete-supervisor" %}',
+                        type: 'POST',
+                        data: {
+                            'supervisor_id': supervisorId,
+                            'csrfmiddlewaretoken': csrfToken
+                        },
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire('Đã xóa!', response.message || `${escapeHtml(supervisorName)} đã được xóa.`, 'success')
+                                .then(() => location.reload()); // Reload trang sau khi xóa thành công
+                            } else {
+                                // Hiển thị lỗi cụ thể nếu có (vd: còn worker)
+                                Swal.fire('Lỗi!', response.message || 'Không thể xóa Supervisor.', 'error');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Lỗi Kết Nối!', 'Đã xảy ra lỗi khi gửi yêu cầu xóa.', 'error');
+                        }
+                    });
+                }
+            });
+        });
 
     });
 </script>

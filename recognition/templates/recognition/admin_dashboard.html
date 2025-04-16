@@ -11,12 +11,32 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
    <style>
     body{
       background: url('{% static "recognition/img/bg_image.png"%}') no-repeat center center fixed;
       background-size: cover;
       
+    }
+    
+    .circle-icon {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background-color: #3498db;
+      color: white;
+      font-size: 120px;
+      transition: all 0.3s ease-in-out;
+    }
+    
+    .circle-icon:hover {
+      box-shadow: 2px 2px 21px 0px rgba(0, 3, 0, 0.91);
+      border: 2px solid #fff;
     }
    
    </style>
@@ -111,10 +131,17 @@ box-shadow:         2px 2px 15px 0px rgba(0, 3, 0, 0.7);">
        
         </div>
         <div class="col-md-3">
-          <a href="{% url 'process-video-roi' %}"><img src="{% static 'recognition/img/roi_process_placeholder.png' %}" class="img-responsive" style="width:300px;height:300px" alt="Xử lý Video ROI"/></a>
+          <a href="{% url 'home' %}"><img src="{% static 'recognition/img/roi_process_placeholder.png' %}" class="img-responsive" style="width:300px;height:300px" alt="Xử lý Video ROI"/></a>
         </div>
         <div class="col-md-3">
           <a href="{% url 'livestream' %}"><img src="{% static 'recognition/img/livestream_placeholder.png' %}" class="img-responsive" style="width:300px;height:300px" alt="Camera Livestream"/></a>
+        </div>
+        <div class="col-md-3">
+          <a href="{% url 'database-manager' %}">
+            <div class="circle-icon">
+              <i class="fas fa-database"></i>
+            </div>
+          </a>
         </div>
        
 
@@ -143,6 +170,9 @@ box-shadow:         2px 2px 15px 0px rgba(0, 3, 0, 0.7);">
         </div>
         <div class="col md-3">
              <h4 class="text-center lgn">Camera Livestream</h4>
+        </div>
+        <div class="col md-3">
+             <h4 class="text-center lgn">Quản lý Database</h4>
         </div>
      
 

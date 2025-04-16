@@ -1,0 +1,72 @@
+{% load tz %}
+
+<div class="table-responsive" style="max-height: 75vh;">
+    <table class="table table-sm table-striped table-bordered table-hover attendance-table">
+        <thead class="thead-light sticky-top">
+            <tr>
+                <th scope="col" style="width: 5%;"><i class="fas fa-hashtag"></i></th>
+                <th scope="col" style="width: 20%;"><i class="fas fa-user"></i> Người dùng</th>
+                <th scope="col" style="width: 20%;"><i class="fas fa-user-tie"></i> Supervisor</th>
+                <th scope="col" style="width: 15%;"><i class="fas fa-calendar-alt"></i> Ngày</th>
+                <th scope="col" style="width: 15%;"><i class="fas fa-sign-in-alt"></i> Check-in</th>
+                <th scope="col" style="width: 15%;"><i class="fas fa-sign-out-alt"></i> Check-out</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for record in attendance_records %}
+            {# Hàng dữ liệu chính #}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ record.user.username }}</td>
+                <td>{{ record.supervisor_name|default:"-" }}</td>
+                <td>{{ record.date|date:"d/m/Y" }}</td> {# DateField không cần localtime #}
+                <td>
+                    {% if record.check_in %}
+                        {{ record.check_in|localtime|date:"H:i:s" }}
+                    {% else %}
+                        <span class="text-muted">--:--:--</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if record.check_out %}
+                        {{ record.check_out|localtime|date:"H:i:s" }}
+                    {% else %}
+                        <span class="text-muted">--:--:--</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {# Hàng hiển thị ảnh (nếu có) #}
+            {% if record.check_in_image_url or record.check_out_image_url %}
+            <tr class="attendance-image-row">
+                <td colspan="6" class="p-2 text-center">
+                    <div class="d-flex justify-content-center align-items-center flex-wrap">
+                        {% if record.check_in_image_url %}
+                        <div class="m-2">
+                            <small class="d-block text-muted mb-1">Check-in</small>
+                            <a href="{{ record.check_in_image_url }}" target="_blank" title="Xem ảnh check-in lớn">
+                                <img src="{{ record.check_in_image_url }}" alt="Check-in {{ record.user.username }}" class="img-fluid rounded" loading="lazy" style="max-height: 150px; max-width: 150px;">
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% if record.check_out_image_url %}
+                         <div class="m-2">
+                            <small class="d-block text-muted mb-1">Check-out</small>
+                            <a href="{{ record.check_out_image_url }}" target="_blank" title="Xem ảnh check-out lớn">
+                                <img src="{{ record.check_out_image_url }}" alt="Check-out {{ record.user.username }}" class="img-fluid rounded" loading="lazy" style="max-height: 150px; max-width: 150px;">
+                            </a>
+                         </div>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted p-3">
+                    <i class="fas fa-info-circle"></i> Không có dữ liệu chấm công nào phù hợp với bộ lọc hiện tại.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div> 

@@ -23,8 +23,8 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', recog_views.home, name='home'),
-    path('process_video_roi/', recog_views.process_video_roi_view, name='process-video-roi'),
+    path('', recog_views.process_video_roi_view, name='home'),
+    path('attendance-log/', recog_views.attendance_log_view, name='attendance-log'),
     path('add_camera/', recog_views.add_camera_view, name='add-camera'),
     path('video_feed/', recog_views.video_feed, name='video-feed'),
     path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),

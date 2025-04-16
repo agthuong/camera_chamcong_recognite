@@ -119,7 +119,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = False
+USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -177,3 +177,8 @@ RECOGNITION_CHECK_IN_THRESHOLD = 3  # Ngưỡng cho check-in
 RECOGNITION_CHECK_OUT_THRESHOLD = 4 # Ngưỡng cho check-out
 
 
+# Số frame bỏ qua khi nhận diện (1 = xử lý mọi frame)
+RECOGNIZE_FRAME_SKIP = 1
+
+# Số frame bỏ qua khi thu thập dữ liệu (3 = xử lý frame thứ 3)
+COLLECT_FRAME_SKIP = 1

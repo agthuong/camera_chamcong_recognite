@@ -13,7 +13,8 @@ from django.db.models import Q, Count
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.conf import settings
-
+from face_recognition.face_recognition_cli import image_files_in_folder
+import face_recognition
 import threading
 import time
 import json
@@ -29,7 +30,59 @@ from django.utils.timezone import make_aware, now
 from pathlib import Path
 import re
 import traceback
-
+from django.shortcuts import render, redirect
+from .forms import usernameForm, DateForm, UsernameAndDateForm, DateForm_2, VideoRoiForm, AddCameraForm
+from django.contrib import messages
+from django.contrib.auth.models import User
+import cv2
+import dlib
+import imutils
+from imutils import face_utils
+from imutils.video import VideoStream
+from imutils.face_utils import FaceAligner
+import time
+from attendance_system_facial_recognition.settings import BASE_DIR
+import os
+import face_recognition
+from face_recognition.face_recognition_cli import image_files_in_folder
+import pickle
+from sklearn.preprocessing import LabelEncoder
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+import numpy as np
+from django.contrib.auth.decorators import login_required
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+import datetime
+from django_pandas.io import read_frame
+from users.models import Present, Time
+import seaborn as sns
+import pandas as pd
+from django.db.models import Count
+import matplotlib.pyplot as plt
+from pandas.plotting import register_matplotlib_converters
+from matplotlib import rcParams
+import math
+from .models import CameraConfig, AttendanceRecord
+from django.utils import timezone
+from django.db.models import Q
+from rest_framework import generics, filters, status
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAdminUser
+from .serializers import AttendanceRecordSerializer
+from django.utils.dateparse import parse_date
+from django.http import StreamingHttpResponse, JsonResponse
+import threading
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+import json
+import random
+import base64
+from .video_roi_processor import sanitize_filename
+from django.conf import settings
+from .firebase_util import push_attendance_to_firebase
 # REST API
 from rest_framework import status, generics, filters
 from rest_framework.response import Response
@@ -113,9 +166,15 @@ from users.models import Profile
 import matplotlib as mpl
 mpl.use('Agg') # Đảm bảo mpl.use('Agg') được gọi trước plt
 
-# Khởi tạo biến global ở cấp độ module
+# --- Các biến global và phần còn lại của file ---
 processing_thread = None
 stop_processing_event = threading.Event()
+processing_status = {
+    'is_processing': False,
+    'mode': None,
+    'camera_source': None,
+    'username': None, # Chỉ lưu username khi ở mode collect
+}
 # --- Thêm Lock và biến theo dõi camera hiện tại --- 
 processing_lock = threading.Lock()
 current_processing_camera_id = None 
@@ -788,242 +847,169 @@ def view_my_attendance_employee_login(request):
 
 @login_required
 def process_video_roi_view(request):
-    # --- Thêm current_processing_camera_id vào global --- 
-    global processing_thread, stop_processing_event, current_processing_camera_id
-    from .video_roi_processor import stream_output, process_video_with_roi
-
-    if not request.user.is_superuser:
-        return redirect('not-authorised')
-
+    global processing_thread, stop_processing_event, processing_status
+    
     if request.method == 'POST':
         action = request.POST.get('action')
-        
-        # Xử lý đặc biệt cho hành động dừng
-        if action == 'stop':
-            with processing_lock:
-                if processing_thread and processing_thread.is_alive():
-                    print("[View] Nhận lệnh dừng quá trình xử lý video.")
-                    stop_processing_event.set()
-                    # Không cần .join() ở đây vì có thể gây treo giao diện người dùng
-                    return JsonResponse({'status': 'success', 'message': 'Đã gửi lệnh dừng quá trình xử lý.'})
-                else:
-                    return JsonResponse({'status': 'info', 'message': 'Không có quá trình xử lý nào đang chạy.'})
-                    
-        # Các hành động khác như bắt đầu xử lý - cần xác thực form đầy đủ
-        form = VideoRoiForm(request.POST)
-        if form.is_valid():
-            form_data = form.cleaned_data
-            camera_id = form_data.get('camera').id
-            mode = form_data.get('mode')
-            username = form_data.get('username')
-            role = form_data.get('role')
-            supervisor = form_data.get('supervisor')
-            company = form_data.get('company') # Lấy company từ form
-            email = form_data.get('email') # Lấy email từ form nếu là supervisor
-            # Lấy thông tin nhà thầu và lĩnh vực
-            contractor = form_data.get('contractor')
-            field = form_data.get('field')
 
-            # --- Đảm bảo có giá trị company hợp lệ --- 
-            if not company:
-                company = 'DBplus' # Sử dụng giá trị mặc định nếu không được cung cấp
-                print(f"[View Info] Company không được cung cấp, sử dụng mặc định: {company}")
+        if action == 'stop':
+            print("[View] Nhận yêu cầu DỪNG xử lý.")
+            if processing_thread and processing_thread.is_alive():
+                stop_processing_event.set()
+                processing_thread.join(timeout=2.0) # Đợi tối đa 2 giây
+                if processing_thread.is_alive():
+                    print("[View Warning] Luồng xử lý không dừng kịp thời.")
+                else:
+                    print("[View] Luồng xử lý đã dừng.")
+            else:
+                print("[View] Không có luồng xử lý nào đang chạy để dừng.")
             
-            requested_camera = CameraConfig.objects.filter(id=camera_id).first()
-            if not requested_camera:
-                return JsonResponse({'status': 'error', 'message': 'Không tìm thấy camera được chọn.'}) 
-            
-            # --- Xử lý logic User & Profile chỉ khi mode='collect' --- 
-            if mode == 'collect':
-                if not username:
-                    return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Username khi chọn chế độ Thu thập dữ liệu.'})
+            processing_status['is_processing'] = False
+            processing_status['mode'] = None
+            processing_status['camera_source'] = None
+            processing_status['username'] = None
+            processing_thread = None
+            return JsonResponse({'status': 'success', 'message': 'Đã dừng xử lý.'})
+
+        elif action == 'start':
+            print("[View] Nhận yêu cầu BẮT ĐẦU xử lý.")
+            form = VideoRoiForm(request.POST)
+            if form.is_valid():
+                if processing_thread and processing_thread.is_alive():
+                    print("[View Warning] Đã có luồng xử lý chạy, bỏ qua yêu cầu start.")
+                    return JsonResponse({'status': 'warning', 'message': 'Đã có quá trình xử lý đang chạy.'}, status=400)
                 
-                # Validate role-specific inputs
-                if role == 'supervisor' and not email:
-                    return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Email cho Supervisor.'})
-                elif role == 'worker':
-                    if not supervisor:
-                        return JsonResponse({'status': 'error', 'message': 'Vui lòng chọn Supervisor cho Worker.'})
-                    if not contractor:
-                        return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Nhà thầu cho Worker.'})
-                    if not field:
-                        return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập Lĩnh vực công việc cho Worker.'})
-                
+                camera_config = form.cleaned_data['camera']
+                mode = form.cleaned_data['mode']
+                username = form.cleaned_data.get('username')
+                role = form.cleaned_data.get('role')
+                supervisor_user = form.cleaned_data.get('supervisor')
+                company = form.cleaned_data.get('company')
+                contractor = form.cleaned_data.get('contractor')
+                field = form.cleaned_data.get('field')
+                email = form.cleaned_data.get('email')
+
+                # *** BẮT ĐẦU: Lấy và xác thực ROI ***
+                roi = None
                 try:
-                    # Kiểm tra username và tạo User nếu chưa có
-                    user_obj, user_created = User.objects.get_or_create(
+                    roi_x = camera_config.roi_x
+                    roi_y = camera_config.roi_y
+                    roi_w = camera_config.roi_w
+                    roi_h = camera_config.roi_h
+                    
+                    print(f"[View] ROI gốc từ DB: x={roi_x}, y={roi_y}, w={roi_w}, h={roi_h}")
+
+                    if roi_w is not None and roi_h is not None and roi_w > 0 and roi_h > 0:
+                        if roi_x is not None and roi_y is not None:
+                            roi = (roi_x, roi_y, roi_w, roi_h)
+                            print(f"[View] ROI hợp lệ được sử dụng: {roi}")
+                        else:
+                            print("[View Warning] ROI không hợp lệ (x hoặc y là None), sẽ xử lý toàn bộ frame.")
+                            roi = None
+                    else:
+                        print("[View Warning] ROI không hợp lệ (w hoặc h <= 0 hoặc None), sẽ xử lý toàn bộ frame.")
+                        roi = None
+                    
+                    if mode == 'collect' and roi is None:
+                         print("[View Error] Chế độ 'Thu thập dữ liệu' yêu cầu ROI hợp lệ.")
+                         return JsonResponse({'status': 'error', 'message': 'Chế độ Thu thập dữ liệu yêu cầu phải cấu hình ROI hợp lệ trước.'}, status=400)
+
+                except AttributeError as attr_err:
+                    print(f"[View Error] Lỗi thuộc tính khi lấy ROI cho camera {camera_config.id}: {attr_err}")
+                    roi = None
+                    if mode == 'collect':
+                        return JsonResponse({'status': 'error', 'message': f'Lỗi cấu hình ROI cho camera đã chọn: {attr_err}'}, status=500)
+                except Exception as e:
+                    print(f"[View Error] Lỗi không xác định khi lấy ROI: {e}")
+                    roi = None
+                    if mode == 'collect':
+                        return JsonResponse({'status': 'error', 'message': f'Lỗi khi lấy ROI: {e}'}, status=500)
+                # *** KẾT THÚC: Lấy và xác thực ROI ***
+
+                # Xử lý tạo/cập nhật User và Profile nếu là mode 'collect'
+                if mode == 'collect':
+                    from users.models import Profile # Import Profile tại đây
+                    if not username:
+                        return JsonResponse({'status': 'error', 'message': 'Username là bắt buộc cho chế độ Thu thập.'}, status=400)
+                    
+                    user, created = User.objects.get_or_create(
                         username=username,
+                        defaults={'first_name': username}
+                    )
+                    if created: user.set_unusable_password(); user.save()
+                    
+                    if role == 'supervisor' and email:
+                        if user.email != email:
+                            if User.objects.filter(email=email).exclude(pk=user.pk).exists():
+                                return JsonResponse({'status': 'error', 'message': f'Email "{email}" đã được sử dụng bởi người dùng khác.'}, status=400)
+                            user.email = email
+                            user.save(update_fields=['email'])
+                        elif not user.email:
+                            if User.objects.filter(email=email).exclude(pk=user.pk).exists():
+                                return JsonResponse({'status': 'error', 'message': f'Email "{email}" đã được sử dụng bởi người dùng khác.'}, status=400)
+                            user.email = email
+                            user.save(update_fields=['email'])
+                             
+                    profile, profile_created = Profile.objects.update_or_create(
+                        user=user,
                         defaults={
-                            'first_name': username, 
-                            'is_active': True,
-                            'email': email if role == 'supervisor' else ''
+                            'role': role,
+                            'company': company,
+                            'contractor': contractor if role == 'worker' else None,
+                            'field': field if role == 'worker' else None,
+                            'supervisor': supervisor_user.profile if role == 'worker' and supervisor_user else None
                         }
                     )
-                    
-                    if user_created:
-                        user_obj.set_unusable_password() # Không cần đặt password thật
-                        user_obj.save()
-                        print(f"[View] Đã tạo người dùng mới: {username}")
-                    # Nếu user đã tồn tại và là supervisor, cập nhật email nếu cần
-                    elif role == 'supervisor' and email:
-                        # Kiểm tra xem email đã được sử dụng bởi người dùng khác chưa
-                        existing_user = User.objects.filter(email=email).exclude(username=username).first()
-                        if existing_user:
-                            return JsonResponse({'status': 'error', 'message': f'Email {email} đã được sử dụng bởi người dùng khác.'})
-                        
-                        # Cập nhật email nếu khác với email hiện tại
-                        if user_obj.email != email:
-                            user_obj.email = email
-                            user_obj.save()
-                            print(f"[View] Đã cập nhật email cho supervisor {username}: {email}")
-                    
-                    # Tạo hoặc cập nhật Profile
-                    profile_data = {
-                        'role': role,
-                        'company': company,
-                        'supervisor': Profile.objects.get(user=supervisor) if role == 'worker' and supervisor else None
-                    }
-                    
-                    # Thêm thông tin nhà thầu và lĩnh vực cho worker
-                    if role == 'worker':
-                        profile_data['contractor'] = contractor
-                        profile_data['field'] = field
-                    
-                    # Sử dụng get_or_create hoặc update_or_create
-                    profile, created = Profile.objects.get_or_create(
-                        user=user_obj,
-                        defaults=profile_data
-                    )
-                    
-                    if not created:
-                        # Nếu profile đã tồn tại, cập nhật các trường
-                        for key, value in profile_data.items():
-                            setattr(profile, key, value)
-                        profile.save()
-                        print(f"[View] Đã cập nhật Profile cho: {username} - Role: {role}")
+                    if profile_created:
+                        print(f"[View] Đã tạo Profile cho {username}")
                     else:
-                        print(f"[View] Đã tạo Profile mới cho: {username} - Role: {role}")
-                    
-                except Exception as e:
-                    print(f"[View Error] Lỗi khi tạo/cập nhật người dùng và profile: {str(e)}")
-                    import traceback
-                    traceback.print_exc()
-                    return JsonResponse({'status': 'error', 'message': f'Lỗi khi lưu thông tin người dùng: {str(e)}'})
-            # --- Kết thúc logic User & Profile --- 
+                        print(f"[View] Đã cập nhật Profile cho {username}")
 
-            # --- Logic bắt đầu thread --- 
-            requested_roi = requested_camera.get_roi_tuple()
-            if mode in ['collect', 'recognize'] and not requested_roi:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': f'Camera "{requested_camera.name}" chưa có ROI. Vui lòng cấu hình ROI.',
-                    'action_required': 'configure_roi',
-                    'camera_id': requested_camera.id
-                })
-            
-            with processing_lock:
-                is_thread_alive = processing_thread is not None and processing_thread.is_alive()
-                if is_thread_alive:
-                    if current_processing_camera_id == requested_camera.id:
-                        print(f"[View] Camera {requested_camera.id} đã đang chạy, nhưng tiếp tục mà không thông báo.")
-                        return JsonResponse({'status': 'success', 'message': f'Đang tiếp tục xử lý camera "{requested_camera.name}" chế độ {mode}.'})
-                    else:
-                        print(f"[View] Dừng camera {current_processing_camera_id} để chuyển sang {requested_camera.id}.")
-                        stop_processing_event.set()
-                        try: 
-                            processing_thread.join(timeout=5.0)
-                        except RuntimeError: 
-                            pass
-                        if processing_thread.is_alive(): 
-                            print("[View] Cảnh báo: Thread cũ không dừng kịp.")
-                        else: 
-                            print("[View] Thread cũ đã dừng.")
-                        processing_thread = None
-                        current_processing_camera_id = None
-                        stream_output.stop_stream()
-                        time.sleep(0.5)
-
-                print(f"[View] Bắt đầu thread (Mode: {mode}, Camera: {requested_camera.name}, ROI: {requested_roi}, Username: {username})")
-                stop_processing_event.clear()
-                stream_output.start_stream()
+                # Khởi tạo và bắt đầu luồng xử lý video
+                stop_processing_event = threading.Event()
+                video_source = camera_config.source
+                camera_name = camera_config.name
                 
-                # Lấy các tham số khác cần truyền cho thread
-                thread_kwargs = {
-                    'company': company, # Đã lấy và xử lý ở trên
-                    'project': None, # Tạm thời để None vì đã bỏ trường này
-                    'camera_name': requested_camera.name, # Thêm tên camera vào kwargs
-                    'contractor': contractor if role == 'worker' else None, # Thêm nhà thầu
-                    'field': field if role == 'worker' else None # Thêm lĩnh vực
-                }
-
                 processing_thread = threading.Thread(
                     target=process_video_with_roi,
-                    args=(
-                        requested_camera.source,
-                        mode, 
-                        requested_roi,
-                        stop_processing_event,
-                        stream_output,
-                        username, 
-                    ),
-                    kwargs=thread_kwargs,
+                    args=(video_source, mode, roi, stop_processing_event, stream_output),
+                    kwargs={
+                        'username': username,
+                        'max_samples': settings.RECOGNITION_DEFAULT_MAX_SAMPLES,
+                        'recognition_threshold': settings.RECOGNITION_CHECK_IN_THRESHOLD, 
+                        'company': company,
+                        'contractor': contractor if mode == 'collect' and role == 'worker' else None,
+                        'field': field if mode == 'collect' and role == 'worker' else None,
+                        'camera_name': camera_name
+                    },
                     daemon=True
                 )
                 processing_thread.start()
-                current_processing_camera_id = requested_camera.id
-                request.session['last_camera_id'] = requested_camera.id
-                request.session['last_mode'] = mode
+                
+                processing_status['is_processing'] = True
+                processing_status['mode'] = mode
+                processing_status['camera_source'] = video_source
+                processing_status['username'] = username if mode == 'collect' else None
 
-                return JsonResponse({'status': 'success', 'message': f'Đã bắt đầu xử lý camera "{requested_camera.name}" chế độ {mode}.'})
-        else:
-            # Form không hợp lệ, trả về lỗi
-            print(f"[View] Form không hợp lệ: {form.errors}")
-            return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors.as_json()})
+                print(f"[View] Đã bắt đầu luồng xử lý: Mode={mode}, Source={video_source}, ROI={roi}, User={username}")
+                return JsonResponse({'status': 'success', 'message': 'Bắt đầu xử lý.'})
+            else:
+                print("[View Error] Form không hợp lệ:", form.errors.as_json())
+                first_error_key = next(iter(form.errors), None)
+                error_message = f"Dữ liệu không hợp lệ: {form.errors[first_error_key][0]}" if first_error_key else "Dữ liệu không hợp lệ."
+                return JsonResponse({'status': 'error', 'message': error_message, 'errors': form.errors}, status=400)
+        # Chỗ này cần else hoặc bỏ hẳn để không lỗi cú pháp
+        # else: 
+        #     return JsonResponse({'status': 'error', 'message': 'Hành động không hợp lệ.'}, status=400)
 
-    else:
-        last_camera_id = request.session.get('last_camera_id')
-        last_mode = request.session.get('last_mode', 'recognize') # Đổi default thành 'recognize'
-        
-        initial_data = {'mode': last_mode}
-        if last_camera_id:
-            try:
-                initial_data['camera'] = CameraConfig.objects.get(pk=last_camera_id)
-            except CameraConfig.DoesNotExist:
-                 request.session.pop('last_camera_id', None)
-
-        form = VideoRoiForm(initial=initial_data)
-        with processing_lock:
-             is_processing = processing_thread is not None and processing_thread.is_alive()
-
-        records_qs = AttendanceRecord.objects.select_related('user').all().order_by('-date', '-check_in')
-        
-        start_date = request.GET.get('start_date')
-        end_date = request.GET.get('end_date')
-        search_query = request.GET.get('search')
-        
-        if start_date:
-            records_qs = records_qs.filter(date__gte=start_date)
-        if end_date:
-            records_qs = records_qs.filter(date__lte=end_date)
-        if search_query:
-            records_qs = records_qs.filter(
-                Q(user__username__icontains=search_query) |
-                Q(user__first_name__icontains=search_query) |
-                Q(user__last_name__icontains=search_query)
-            )
-        
-        records = records_qs[:30]
-
+    # GET Request
+    else: 
+        form = VideoRoiForm()
+        is_processing = processing_status.get('is_processing', False)
         context = {
             'form': form,
             'is_processing': is_processing,
-            'records': records,
-            'start_date': start_date,
-            'end_date': end_date,
-            'search_query': search_query
         }
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-             return render(request, 'recognition/partials/attendance_log_table.html', context)
         return render(request, 'recognition/process_video_roi.html', context)
 
 @login_required
@@ -1035,7 +1021,7 @@ def select_roi_view(request, camera_id):
         camera_config = CameraConfig.objects.get(pk=camera_id)
     except CameraConfig.DoesNotExist:
         messages.error(request, "Không tìm thấy cấu hình camera được yêu cầu.")
-        return redirect('process-video-roi')
+        return redirect('home')
 
     video_source = camera_config.source
     print(f"[View] Bắt đầu chọn ROI cho Camera: {camera_config.name} (ID: {camera_id}), Nguồn: {video_source}")
@@ -1056,7 +1042,7 @@ def select_roi_view(request, camera_id):
     else:
         messages.warning(request, f"Đã hủy chọn ROI hoặc không thể mở video cho camera '{camera_config.name}'. ROI hiện tại không thay đổi.")
 
-    return redirect('process-video-roi')
+    return redirect('home')
 
 @login_required
 def add_camera_view(request):
@@ -1069,7 +1055,7 @@ def add_camera_view(request):
             try:
                 form.save()
                 messages.success(request, f"Đã thêm camera '{form.cleaned_data['name']}' thành công.")
-                return redirect('process-video-roi') 
+                return redirect('home')
             except Exception as e:
                 error_message = f"Lỗi khi thêm camera: {e}. Tên hoặc Nguồn có thể đã tồn tại."
                 print(f"[Add Camera View] {error_message}")
@@ -1224,36 +1210,70 @@ def save_roi_view(request, camera_id):
         return JsonResponse({'status': 'error', 'message': 'Không tìm thấy camera.'}, status=404)
 
     try:
-        data = json.loads(request.body)
-        crop_data = data.get('crop_data')
+        # *** THAY ĐỔI: Đọc dữ liệu từ JSON body ***
+        # data = request.POST -> Thay bằng đọc từ request.body
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+             print("[Save ROI View] Lỗi: Dữ liệu gửi lên không phải JSON hợp lệ.")
+             return JsonResponse({'status': 'error', 'message': 'Dữ liệu yêu cầu không hợp lệ (không phải JSON).'}, status=400)
+
+        # Lấy dữ liệu từ JSON object
+        crop_x = data.get('roi_x')
+        crop_y = data.get('roi_y')
+        crop_width = data.get('roi_width')
+        crop_height = data.get('roi_height')
         natural_width = data.get('natural_width')
         natural_height = data.get('natural_height')
+        # *** KẾT THÚC THAY ĐỔI ĐỌC JSON ***
 
-        if not all([crop_data, natural_width, natural_height]):
-            raise ValueError("Dữ liệu crop hoặc kích thước ảnh gốc bị thiếu.")
-        
-        crop_x = crop_data.get('x')
-        crop_y = crop_data.get('y')
-        crop_width = crop_data.get('width')
-        crop_height = crop_data.get('height')
+        # Kiểm tra dữ liệu nhận được
+        if None in [crop_x, crop_y, crop_width, crop_height, natural_width, natural_height]:
+             missing = [k for k, v in data.items() if v is None and k in ['roi_x', 'roi_y', 'roi_width', 'roi_height', 'natural_width', 'natural_height']]
+             print(f"[Save ROI View] Lỗi: Thiếu dữ liệu bắt buộc: {missing}")
+             return JsonResponse({'status': 'error', 'message': f'Thiếu dữ liệu bắt buộc: {", ".join(missing)}'}, status=400)
 
-        if None in [crop_x, crop_y, crop_width, crop_height]:
-             raise ValueError("Dữ liệu tọa độ crop không đầy đủ.")
+        print(f"[Save ROI View] Nhận dữ liệu JSON: CamID={camera_id}, Crop=({crop_x},{crop_y},{crop_width},{crop_height}), NaturalSize={natural_width}x{natural_height}")
 
-        print(f"[Save ROI View] Nhận dữ liệu: CamID={camera_id}, Crop={crop_data}, NaturalSize={natural_width}x{natural_height}")
+        # *** THAY ĐỔI: Tính toán lại tọa độ ROI ***
+        try:
+            # Chuyển đổi sang số float trước khi tính toán
+            crop_x = float(crop_x)
+            crop_y = float(crop_y)
+            crop_width = float(crop_width)
+            crop_height = float(crop_height)
+            natural_width = float(natural_width)
+            natural_height = float(natural_height)
 
-        scale_factor = settings.RECOGNITION_FRAME_WIDTH / natural_width
-        roi_x = int(crop_x * scale_factor)
-        roi_y = int(crop_y * scale_factor)
-        roi_w = int(crop_width * scale_factor)
-        roi_h = int(crop_height * scale_factor)
+            # Kiểm tra natural_width để tránh chia cho 0
+            if natural_width <= 0:
+                raise ValueError("Kích thước ảnh gốc (natural_width) không hợp lệ.")
 
-        standard_height = int(natural_height * scale_factor)
-        roi_x = max(0, roi_x)
-        roi_y = max(0, roi_y)
-        roi_w = min(roi_w, settings.RECOGNITION_FRAME_WIDTH - roi_x)
-        roi_h = min(roi_h, standard_height - roi_y)
+            # Tính tỉ lệ scale dựa trên chiều rộng chuẩn trong settings
+            scale_factor = settings.RECOGNITION_FRAME_WIDTH / natural_width
+            # Tính toán chiều cao chuẩn sau khi scale theo chiều rộng
+            standard_height = natural_height * scale_factor
 
+            # Tính toán tọa độ ROI đã scale và làm tròn thành số nguyên
+            roi_x = int(round(crop_x * scale_factor))
+            roi_y = int(round(crop_y * scale_factor))
+            roi_w = int(round(crop_width * scale_factor))
+            roi_h = int(round(crop_height * scale_factor))
+
+            # Đảm bảo tọa độ và kích thước nằm trong giới hạn của frame đã scale
+            roi_x = max(0, roi_x)
+            roi_y = max(0, roi_y)
+            # Chiều rộng không vượt quá chiều rộng chuẩn trừ đi vị trí x
+            roi_w = max(1, min(roi_w, settings.RECOGNITION_FRAME_WIDTH - roi_x)) # Đảm bảo w tối thiểu là 1
+            # Chiều cao không vượt quá chiều cao chuẩn trừ đi vị trí y
+            roi_h = max(1, min(roi_h, int(round(standard_height)) - roi_y)) # Đảm bảo h tối thiểu là 1
+
+        except (ValueError, TypeError) as calc_err:
+             print(f"[Save ROI View] Lỗi tính toán tọa độ: {calc_err}")
+             return JsonResponse({'status': 'error', 'message': f'Lỗi dữ liệu tọa độ hoặc kích thước: {calc_err}'}, status=400)
+        # *** KẾT THÚC THAY ĐỔI TÍNH TOÁN ***
+
+        # Lưu vào database
         camera_config.roi_x = roi_x
         camera_config.roi_y = roi_y
         camera_config.roi_w = roi_w
@@ -1262,31 +1282,28 @@ def save_roi_view(request, camera_id):
 
         print(f"[Save ROI View] Đã lưu ROI đã tính toán: x={roi_x}, y={roi_y}, w={roi_w}, h={roi_h}")
 
-        return JsonResponse({'status': 'success', 'message': 'Đã lưu ROI thành công.', 'saved_roi': [roi_x, roi_y, roi_w, roi_h]})
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Đã lưu ROI thành công.',
+            'saved_roi': [roi_x, roi_y, roi_w, roi_h]
+        })
 
-    except json.JSONDecodeError:
-        return JsonResponse({'status': 'error', 'message': 'Dữ liệu JSON không hợp lệ.'}, status=400)
-    except ValueError as ve:
-         print(f"[Save ROI View] Lỗi giá trị: {ve}")
-         return JsonResponse({'status': 'error', 'message': str(ve)}, status=400)
     except Exception as e:
         print(f"[Save ROI View] Lỗi không xác định: {e}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': 'Lỗi server nội bộ khi lưu ROI.'}, status=500)
 
-from django.http import HttpResponse
-
 @login_required
 def get_static_frame_view(request, camera_id):
     if not request.user.is_superuser:
-        return HttpResponse("Forbidden", status=403)
+        return JsonResponse({'status': 'error', 'message': 'Forbidden'}, status=403)
 
     try:
         camera_config = CameraConfig.objects.get(pk=camera_id)
         video_source = camera_config.source
         print(f"[Get Frame] Lấy frame tĩnh từ camera ID: {camera_id}, nguồn: {video_source}")
-        
+
         cap = None
         try:
             try:
@@ -1297,7 +1314,7 @@ def get_static_frame_view(request, camera_id):
 
             if not cap or not cap.isOpened():
                 print(f"[Get Frame] Lỗi: Không thể mở nguồn video: {video_source}")
-                return HttpResponse("Không thể mở nguồn video", status=500)
+                return JsonResponse({'status': 'error', 'message': 'Không thể mở nguồn video'}, status=500)
 
             ret, frame = False, None
             for _ in range(5):
@@ -1308,7 +1325,7 @@ def get_static_frame_view(request, camera_id):
 
             if not ret or frame is None:
                 print(f"[Get Frame] Lỗi: Không thể đọc frame từ nguồn: {video_source}")
-                return HttpResponse("Không thể đọc frame từ camera", status=500)
+                return JsonResponse({'status': 'error', 'message': 'Không thể đọc frame từ camera'}, status=500)
 
             frame_resized = imutils.resize(frame, width=settings.RECOGNITION_FRAME_WIDTH)
             print(f"[Get Frame] Đã resize frame về width={settings.RECOGNITION_FRAME_WIDTH}")
@@ -1316,14 +1333,23 @@ def get_static_frame_view(request, camera_id):
             ret, buffer = cv2.imencode('.jpg', frame_resized, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             if not ret:
                  print("[Get Frame] Lỗi: Không thể encode frame thành JPEG")
-                 return HttpResponse("Lỗi xử lý ảnh", status=500)
+                 return JsonResponse({'status': 'error', 'message': 'Lỗi xử lý ảnh'}, status=500)
 
-            response = HttpResponse(buffer.tobytes(), content_type='image/jpeg')
-            response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response['Pragma'] = 'no-cache'
-            response['Expires'] = '0'
-            print(f"[Get Frame] Đã gửi frame tĩnh thành công.")
-            return response
+            # *** THAY ĐỔI: Encode sang Base64 và trả về JSON ***
+            # Chuyển buffer thành chuỗi bytes base64
+            jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+            # Tạo Data URL
+            frame_base64_data_url = f"data:image/jpeg;base64,{jpg_as_text}"
+            
+            print(f"[Get Frame] Đã encode frame thành Base64 Data URL (độ dài: {len(frame_base64_data_url)}).")
+
+            # Trả về JsonResponse chứa Data URL
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Lấy frame thành công.',
+                'frame_base64': frame_base64_data_url # Trả về base64 thay vì URL
+            })
+            # *** KẾT THÚC THAY ĐỔI ***
 
         finally:
              if cap and cap.isOpened():
@@ -1331,19 +1357,24 @@ def get_static_frame_view(request, camera_id):
                  print(f"[Get Frame] Đã giải phóng camera.")
 
     except CameraConfig.DoesNotExist:
-        return HttpResponse("Không tìm thấy camera", status=404)
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy camera'}, status=404)
     except Exception as e:
         print(f"[Get Frame] Lỗi không xác định: {e}")
         import traceback
         traceback.print_exc()
-        return HttpResponse("Lỗi server nội bộ", status=500)
+        return JsonResponse({'status': 'error', 'message': 'Lỗi server nội bộ'}, status=500)
 
 @login_required
 def get_collect_progress_view(request):
     from .video_roi_processor import collect_progress_tracker
     if not request.user.is_superuser:
          return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập.'}, status=403)
-    return JsonResponse(collect_progress_tracker)
+    
+    # Đóng gói dữ liệu theo định dạng chuẩn
+    return JsonResponse({
+        'status': 'success',
+        'progress': collect_progress_tracker
+    })
 
 from django.core.exceptions import PermissionDenied
 
@@ -2228,3 +2259,68 @@ def save_contractor_to_firebase(request):
         import traceback
         traceback.print_exc()
         return Response({'status': 'error', 'message': f'Lỗi: {str(e)}'}, status=500)
+
+@login_required
+def attendance_log_view(request):
+    """
+    View để hiển thị và lọc log chấm công trên một trang riêng.
+    """
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    search_query = request.GET.get('search', '').strip()
+
+    # Mặc định là ngày hôm nay nếu không có ngày bắt đầu/kết thúc
+    today = timezone.localdate()
+    start_date = parse_date(start_date_str) if start_date_str else today
+    end_date = parse_date(end_date_str) if end_date_str else today
+
+    attendance_records = AttendanceRecord.objects.select_related('user', 'user__profile', 'user__profile__supervisor__user') \
+                                              .order_by('-date', 'user__username', '-check_in')
+
+    # Lọc theo ngày
+    if start_date and end_date:
+        if start_date > end_date:
+             messages.warning(request, "Ngày bắt đầu không thể lớn hơn ngày kết thúc.")
+             # Hoặc set end_date = start_date
+             end_date = start_date
+        # Chuyển đổi date thành datetime để so sánh bao gồm cả ngày kết thúc
+        start_datetime = timezone.make_aware(datetime.datetime.combine(start_date, datetime.time.min))
+        end_datetime = timezone.make_aware(datetime.datetime.combine(end_date, datetime.time.max))
+        attendance_records = attendance_records.filter(date__gte=start_date, date__lte=end_date)
+        print(f"[Log View] Filtering date between: {start_date} and {end_date}")
+
+    # Lọc theo tên username (tìm kiếm gần đúng)
+    if search_query:
+        attendance_records = attendance_records.filter(
+            Q(user__username__icontains=search_query) |
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query)
+        )
+        print(f"[Log View] Filtering by search query: {search_query}")
+
+    # Gắn thêm tên supervisor vào từng record (Tối ưu hóa)
+    for record in attendance_records:
+        supervisor_name = "-"
+        try:
+            if record.user.profile and record.user.profile.supervisor:
+                supervisor_name = record.user.profile.supervisor.user.username
+        except ObjectDoesNotExist:
+            pass # Bỏ qua nếu profile hoặc supervisor không tồn tại
+        record.supervisor_name = supervisor_name # Gán thuộc tính tạm thời
+
+    context = {
+        'attendance_records': attendance_records,
+        'start_date': start_date_str if start_date_str else today.strftime('%Y-%m-%d'),
+        'end_date': end_date_str if end_date_str else today.strftime('%Y-%m-%d'),
+        'search_query': search_query,
+    }
+
+    # Nếu là request AJAX (từ filter), chỉ trả về partial
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        print("[Log View] AJAX request detected, returning partial.")
+        # Đảm bảo trả về đúng partial template
+        return render(request, 'recognition/partials/attendance_log_table.html', context)
+    else:
+        print("[Log View] Standard request detected, returning full page.")
+        # Trả về template đầy đủ cho trang log
+        return render(request, 'recognition/attendance_log_page.html', context)
