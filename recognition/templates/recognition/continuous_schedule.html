@@ -81,6 +81,81 @@
         .check-out-card {
             border-left: 4px solid #0d6efd;
         }
+
+        /* Thiết kế mới cho nút toggle có 2 trạng thái */
+        .toggle-status-btn {
+            position: relative;
+            display: inline-block;
+            width: 55px;
+            height: 26px;
+            border-radius: 13px;
+            margin: 0 5px;
+            background-color: #e9ecef;
+            cursor: pointer;
+            padding: 0 !important;
+            overflow: hidden;
+            vertical-align: middle;
+            border: none !important;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+        }
+        .toggle-status-btn::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 11px;
+            background-color: white;
+            left: 2px;
+            top: 2px;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+        }
+        .toggle-status-btn::after {
+            content: 'OFF';
+            position: absolute;
+            right: 7px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 1;
+            transition: all 0.3s ease;
+        }
+        .toggle-status-btn.active {
+            background-color: #28a745 !important;
+        }
+        .toggle-status-btn.active::before {
+            left: 31px;
+        }
+        .toggle-status-btn.active::after {
+            content: 'ON';
+            left: 7px;
+            right: auto;
+            color: white;
+        }
+        .toggle-status-btn:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+        }
+        /* Loại bỏ border và box-shadow bootstrap */
+        .toggle-status-btn:hover, .toggle-status-btn:active {
+            border: none !important;
+            box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        /* Điều chỉnh layout cho các nút */
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 1rem;
+        }
+        .card-actions > * {
+            margin-left: 0.5rem;
+        }
     </style>
 {% endblock %}
 
@@ -196,7 +271,11 @@
                                         </span>
                                     {% endif %}
                                     <span class="schedule-status status-{{ schedule.status }}">
-                                        {{ schedule.get_status_display }}
+                                        {% if schedule.status == 'active' %}
+                                            Đang hoạt động
+                                        {% else %}
+                                            Tạm dừng
+                                        {% endif %}
                                     </span>
                                 </div>
                             </div>
@@ -229,16 +308,15 @@
                                     </div>
                                 </div>
                                 
-                                <div class="mt-3 text-right">
+                                <div class="mt-3 card-actions">
                                     <a href="{% url 'edit-continuous-schedule' schedule.id %}" class="btn btn-sm btn-secondary">
                                         <i class="fas fa-edit"></i> Sửa
                                     </a>
-                                    <button class="btn btn-sm btn-{{ schedule.status|yesno:'warning,success' }} toggle-status-btn" 
+                                    <button class="toggle-status-btn {{ schedule.status|yesno:'active,' }}" 
                                             data-id="{{ schedule.id }}" 
                                             data-status="{{ schedule.status }}"
-                                            data-csrf="{{ csrf_token }}">
-                                        <i class="fas fa-{{ schedule.status|yesno:'pause,play' }}"></i> 
-                                        {{ schedule.status|yesno:'Tạm dừng,Kích hoạt' }}
+                                            data-csrf="{{ csrf_token }}"
+                                            aria-label="{{ schedule.status|yesno:'Đang hoạt động,Đã tạm dừng' }}">
                                     </button>
                                     <button class="btn btn-sm btn-danger delete-schedule-btn" 
                                             data-id="{{ schedule.id }}"
@@ -333,9 +411,10 @@
         
         // Xử lý toggle trạng thái
         $('.toggle-status-btn').click(function() {
-            const scheduleId = $(this).data('id');
-            const currentStatus = $(this).data('status');
-            const csrfToken = $(this).data('csrf');
+            const button = $(this);
+            const scheduleId = button.data('id');
+            const currentStatus = button.data('status');
+            const csrfToken = button.data('csrf');
             const newStatus = currentStatus === 'active' ? 'paused' : 'active';
             const actionText = currentStatus === 'active' ? 'tạm dừng' : 'kích hoạt';
             
@@ -350,6 +429,9 @@
                 cancelButtonText: 'Hủy bỏ'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Trước khi gửi AJAX, cập nhật giao diện tạm thời
+                    button.prop('disabled', true);
+                    
                     // Gửi AJAX request để thay đổi trạng thái
                     $.ajax({
                         url: "{% url 'toggle-continuous-schedule-status' %}",
@@ -361,23 +443,47 @@
                         },
                         success: function(response) {
                             if (response.status === 'success') {
+                                // Cập nhật trạng thái nút và thuộc tính data
+                                button.data('status', newStatus);
+                                
+                                // Cập nhật lớp CSS
+                                if (newStatus === 'active') {
+                                    button.removeClass('paused').addClass('active');
+                                } else {
+                                    button.removeClass('active');
+                                }
+                                
+                                // Thông báo thành công
                                 Toastify({
                                     text: `Đã ${actionText} lịch trình thành công!`,
                                     duration: 3000,
-                                    gravity: "top",
+                                    gravity: "top", 
                                     position: "right",
                                     backgroundColor: "#28a745"
                                 }).showToast();
                                 
-                                // Reload để cập nhật giao diện
-                                setTimeout(function() {
-                                    location.reload();
-                                }, 1000);
+                                // Cập nhật status badge
+                                const statusBadge = button.closest('.card').find('.schedule-status:not(.running-badge)');
+                                if (statusBadge.length) {
+                                    statusBadge.removeClass('status-active status-paused')
+                                             .addClass(`status-${newStatus}`)
+                                             .text(newStatus === 'active' ? 'Đang hoạt động' : 'Tạm dừng');
+                                }
+                                
+                                // Cập nhật aria-label
+                                button.attr('aria-label', newStatus === 'active' ? 'Đang hoạt động' : 'Đã tạm dừng');
+                                
+                                // Bỏ vô hiệu hóa nút
+                                button.prop('disabled', false);
                             } else {
+                                // Khôi phục trạng thái nút
+                                button.prop('disabled', false);
                                 Swal.fire('Lỗi!', response.message, 'error');
                             }
                         },
                         error: function() {
+                            // Khôi phục trạng thái nút
+                            button.prop('disabled', false);
                             Swal.fire('Lỗi!', 'Đã xảy ra lỗi khi xử lý yêu cầu.', 'error');
                         }
                     });

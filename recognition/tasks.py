@@ -317,6 +317,9 @@ class VideoProcessor:
         """
         Xử lý luồng video từ camera
         """
+        # Import ngay từ đầu để tránh import trong vòng lặp
+        from recognition.models import ContinuousAttendanceSchedule
+        
         # Có thể bật/tắt ROI để kiểm tra
         use_roi = True  # Đặt thành False để bỏ qua ROI
         
@@ -328,6 +331,7 @@ class VideoProcessor:
         
         self.frame_count = 0
         self.consecutive_errors = 0  # Khởi tạo bộ đếm lỗi
+        last_schedule_check_time = time.time()  # Thêm biến theo dõi thời điểm kiểm tra lịch trình cuối cùng
         
         logger.info(f"Bắt đầu xử lý luồng video từ camera {self.camera_source}")
         if use_roi and self.roi:
@@ -338,6 +342,19 @@ class VideoProcessor:
         # Vòng lặp xử lý video
         while self.is_running:
             try:
+                # Kiểm tra lịch trình mỗi 5 giây để đảm bảo dừng khi cần
+                current_time = time.time()
+                if self.schedule_id and current_time - last_schedule_check_time > 5:
+                    try:
+                        schedule = ContinuousAttendanceSchedule.objects.get(id=self.schedule_id)
+                        if not schedule.is_running:
+                            logger.info(f"Phát hiện lịch trình {self.schedule_id} đã được đánh dấu dừng trong DB, dừng processor...")
+                            self.is_running = False
+                            break
+                    except Exception as schedule_check_err:
+                        logger.error(f"Lỗi khi kiểm tra trạng thái lịch trình: {schedule_check_err}")
+                    last_schedule_check_time = current_time
+
                 # Đọc frame từ ThreadedVideoCapture
                 frame = self.capture.read()
                 
@@ -604,7 +621,9 @@ class VideoProcessor:
         Xử lý chấm công cho người dùng đã được nhận diện
         """
         try:
-            logger.info(f"===== BẮT ĐẦU XỬ LÝ CHẤM CÔNG CHO {username} =====")
+            if not self.is_running:
+                logger.warning(f"Processor đã dừng, bỏ qua chấm công cho {username}")
+                return None
             
             # Tìm user trong hệ thống
             try:
@@ -766,7 +785,8 @@ class VideoProcessor:
                         
                         check_in_time_str = record.check_in.strftime('%H:%M:%S') if record.check_in else "chưa có"
                         check_out_time_str = now.strftime('%H:%M:%S')
-                        message = f"Đã nhận diện và chấm công RA cho {username} (check-in: {check_in_time_str}, check-out: {check_out_time_str})"
+                        time_check_out = datetime.now()
+                        message = f"Đã nhận diện và chấm công RA cho {username} check-out: {time_check_out})"
                     except AttendanceRecord.DoesNotExist:
                         # Chưa có bản ghi nào, tạo mới với check-out
                         record = AttendanceRecord.objects.create(
@@ -938,7 +958,7 @@ class VideoProcessor:
         
         logger.info("Dừng VideoProcessor...")
         self.is_running = False
-        
+        time.sleep(0.5)
         # Gọi release cho threaded video capture
         if self.capture:
             self.capture.release()
@@ -953,6 +973,13 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
     """
     Task Celery để bắt đầu nhận diện liên tục cho một lịch trình
     """
+    if schedule_id in active_processors:
+        logger.warning(f"Processor đã tồn tại cho lịch trình {schedule_id}, dừng processor cũ trước khi tạo mới")
+        old_processor = active_processors[schedule_id]
+        old_processor.stop()
+        time.sleep(1)  # Chờ processor dừng
+        del active_processors[schedule_id]
+        
     prefix = "$$$ TEST:" if is_test_run else "@@@"
     logger.info(f"{prefix} TASK start_continuous_recognition BẮT ĐẦU cho schedule_id: {schedule_id}, Worker Task ID: {self.request.id}, is_test_run={is_test_run}")
     
@@ -1125,6 +1152,8 @@ def stop_continuous_recognition(schedule_id):
     Task Celery để dừng nhận diện liên tục cho một lịch trình
     """
     logger.info(f"Dừng nhận diện liên tục cho lịch trình {schedule_id}")
+    max_attempts = 3
+    success = False
     
     try:
         # Lấy thông tin lịch trình để biết camera_source
@@ -1136,18 +1165,39 @@ def stop_continuous_recognition(schedule_id):
         
         # Nếu có processor đang chạy, dừng lại
         if processor:
+            logger.info(f"Tìm thấy processor cho lịch trình {schedule_id}, đang tiến hành dừng...")
             processor.stop()
-            del active_processors[schedule_id]
+            
+            # Kiểm tra lặp lại để đảm bảo processor đã dừng hoàn toàn
+            for attempt in range(max_attempts):
+                time.sleep(1)  # Đợi 1 giây
+                if not processor.is_running:
+                    logger.info(f"Processor đã dừng thành công sau {attempt+1} lần kiểm tra")
+                    success = True
+                    break
+                else:
+                    logger.warning(f"Processor vẫn đang chạy sau lần thử {attempt+1}, thử lại...")
+                    # Gọi stop() lần nữa
+                    processor.stop()
+            
+            # Sau khi kiểm tra, xóa processor khỏi dictionary
+            if schedule_id in active_processors:
+                logger.info(f"Xóa processor khỏi active_processors")
+                del active_processors[schedule_id]
             
             # Giải phóng khóa camera
             if camera_source in camera_locks and camera_locks[camera_source] == schedule_id:
                 logger.info(f"Giải phóng khóa camera {camera_source} khi dừng lịch trình {schedule_id}")
                 del camera_locks[camera_source]
+        else:
+            logger.warning(f"Không tìm thấy processor cho lịch trình {schedule_id} trong active_processors")
+            success = True  # Coi như thành công vì không cần dừng
         
-        # Cập nhật trạng thái lịch trình ngay cả khi không tìm thấy processor
+        # Cập nhật trạng thái lịch trình
         schedule.is_running = False
         schedule.worker_id = None
         schedule.save(update_fields=['is_running', 'worker_id'])
+        logger.info(f"Đã cập nhật is_running=False và worker_id=None cho lịch trình {schedule_id}")
         
         # Ghi log
         ContinuousAttendanceLog.objects.create(
@@ -1155,6 +1205,12 @@ def stop_continuous_recognition(schedule_id):
             event_type='stop',
             message=f"Đã dừng nhận diện liên tục theo lịch trình"
         )
+        logger.info(f"Đã ghi log dừng cho lịch trình {schedule_id}")
+        
+        # Kiểm tra lại một lần nữa sau khi đã cập nhật DB để đảm bảo
+        if not success and schedule_id in active_processors:
+            logger.warning(f"Processor vẫn còn trong active_processors sau tất cả các nỗ lực, buộc xóa")
+            del active_processors[schedule_id]
         
         return True
     
@@ -1170,53 +1226,110 @@ def stop_continuous_recognition(schedule_id):
 @shared_task
 def schedule_continuous_recognition():
     """
-    Task Celery chạy định kỳ để kiểm tra và khởi động/dừng các lịch trình
-    (Đã loại bỏ bớt logging)
+    Task Celery chạy định kỳ để kiểm tra và khởi động/dừng các lịch trình.
     """
-    # logger.info("===== BẮT ĐẦU KIỂM TRA LỊCH TRÌNH CHẤM CÔNG LIÊN TỤC =====")
+    print("===== [Scheduler] BẮT ĐẦU KIỂM TRA LỊCH TRÌNH =====")
+    logger.info("===== [Scheduler] BẮT ĐẦU KIỂM TRA LỊCH TRÌNH =====")
     
     try:
-        # Lấy thời gian hiện tại
-        now = django_timezone.now()
-        current_time = now.time()
-        current_day = str(now.isoweekday())  # 1-7 (1 là thứ Hai)
-        # logger.info(f"Thời gian hiện tại: {now.strftime('%Y-%m-%d %H:%M:%S')}, Ngày trong tuần: {current_day}")
+        # Lấy thời gian hiện tại với múi giờ chính xác
+        now_utc = django_timezone.now()  # Lấy thời gian hiện tại theo UTC
+        now_local = django_timezone.localtime(now_utc)  # Chuyển sang múi giờ địa phương (settings.TIME_ZONE)
         
-        # Lấy tất cả lịch trình đang hoạt động
+        # Sử dụng thời gian địa phương để so sánh với thời gian lịch trình
+        current_time = now_local.time()  # Đây là thời gian sẽ dùng để so sánh
+        current_day = str(now_local.isoweekday())  # 1-7 (1 là thứ Hai)
+        
+        # Log rõ ràng cả hai múi giờ để dễ debug
+        print(f"[Scheduler] Thời gian UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        print(f"[Scheduler] Thời gian địa phương: {now_local.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        print(f"[Scheduler] Thời gian so sánh: {current_time}, Ngày: {current_day}")
+        
+        logger.info(f"[Scheduler] Thời gian UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        logger.info(f"[Scheduler] Thời gian địa phương: {now_local.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        logger.info(f"[Scheduler] Thời gian so sánh: {current_time}, Ngày: {current_day}")
+        
+        # Lấy lịch trình active
         schedules = ContinuousAttendanceSchedule.objects.filter(status='active')
-        # logger.info(f"Tìm thấy {schedules.count()} lịch trình đang hoạt động")
+        print(f"[Scheduler] Tìm thấy {schedules.count()} lịch trình active")
+        logger.info(f"[Scheduler] Tìm thấy {schedules.count()} lịch trình active")
         
         for schedule in schedules:
+            # QUAN TRỌNG: In ra log chi tiết cho phân tích
+            print(f"[Scheduler] Lịch ID {schedule.id}: {schedule.name}")
+            print(f"[Scheduler] - Thời gian: {schedule.start_time} đến {schedule.end_time}")
+            print(f"[Scheduler] - Current time (địa phương): {current_time}")
+            print(f"[Scheduler] - Current day: {current_day} in active days: {schedule.active_days}")
+            print(f"[Scheduler] - Điều kiện ngày: {current_day in schedule.active_days.split(',')}")
+            
+            # Kiểm tra điều kiện thời gian từng phần
+            is_after_start = current_time >= schedule.start_time
+            is_before_end = current_time <= schedule.end_time
+            
+            # Xử lý trường hợp lịch qua đêm (end_time < start_time)
+            if schedule.end_time < schedule.start_time:
+                # Nếu end < start, thì có 2 khoảng thời gian hợp lệ:
+                # 1. Từ start_time đến cuối ngày (23:59:59)
+                # 2. Từ đầu ngày (00:00:00) đến end_time
+                is_after_start = current_time >= schedule.start_time or current_time <= schedule.end_time
+                is_before_end = current_time >= schedule.start_time or current_time <= schedule.end_time
+                
+                # Log giải thích thêm cho trường hợp đặc biệt này
+                print(f"[Scheduler] - Lịch qua đêm được phát hiện (end < start)")
+                logger.info(f"[Scheduler] - Lịch qua đêm được phát hiện (end < start)")
+            
+            in_time_range = is_after_start and is_before_end
+            print(f"[Scheduler] - Kiểm tra thời gian: After start: {is_after_start}, Before end: {is_before_end}")
+            print(f"[Scheduler] - In time range: {in_time_range}, Running: {schedule.is_running}")
+            
+            # Log tương tự đến file
+            logger.info(f"[Scheduler] Lịch ID {schedule.id}: {schedule.name}")
+            logger.info(f"[Scheduler] - Thời gian: {schedule.start_time} đến {schedule.end_time}")
+            logger.info(f"[Scheduler] - Current time (địa phương): {current_time}")
+            logger.info(f"[Scheduler] - Current day: {current_day} in active days: {schedule.active_days}")
+            logger.info(f"[Scheduler] - Điều kiện ngày: {current_day in schedule.active_days.split(',')}")
+            logger.info(f"[Scheduler] - After start: {is_after_start}, Before end: {is_before_end}")
+            logger.info(f"[Scheduler] - In time range: {in_time_range}, Running: {schedule.is_running}")
+            
             # Kiểm tra ngày trong tuần
-            if current_day not in schedule.active_days.split(','):
-                # logger.info(f"Lịch trình {schedule.id} - {schedule.name}: Không hoạt động vào ngày này")
-                continue
-            
-            # Kiểm tra thời gian bắt đầu
-            if schedule.start_time <= current_time <= schedule.end_time and not schedule.is_running:
-                # Bắt đầu nhận diện
-                logger.info(f"[Scheduler] BẮT ĐẦU lịch trình {schedule.id} - {schedule.name}") # Giữ lại log quan trọng
-                start_continuous_recognition.delay(schedule.id)
-            
-            # Kiểm tra thời gian kết thúc
-            elif (current_time > schedule.end_time or current_time < schedule.start_time) and schedule.is_running:
-                # Dừng nhận diện
-                logger.info(f"[Scheduler] DỪNG lịch trình {schedule.id} - {schedule.name}") # Giữ lại log quan trọng
-                stop_continuous_recognition.delay(schedule.id)
-            # else: # Bỏ log trạng thái chờ/chạy
-                # status = "đang chạy" if schedule.is_running else "đang chờ"
-                # logger.info(f"Lịch trình {schedule.id} - {schedule.name}: {status}")
+            if current_day in schedule.active_days.split(','):
+                # SỬA ĐỔI LOGIC: Sử dụng in_time_range đã tính ở trên
+                if in_time_range and not schedule.is_running:
+                    # Bắt đầu nhận diện
+                    print(f"[Scheduler] >>> BẮT ĐẦU lịch trình {schedule.id} - {schedule.name}")
+                    logger.info(f"[Scheduler] >>> BẮT ĐẦU lịch trình {schedule.id} - {schedule.name}")
+                    start_continuous_recognition.delay(schedule.id)
+                
+                # PHẦN QUAN TRỌNG NHẤT - Kiểm tra điều kiện dừng
+                # Nếu không trong time range và đang chạy -> dừng
+                elif not in_time_range and schedule.is_running:
+                    # Dừng nhận diện
+                    print(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Ngoài giờ)")
+                    logger.info(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Ngoài giờ)")
+                    stop_continuous_recognition.delay(schedule.id)
+                else:
+                    status = "đang chạy đúng" if schedule.is_running and in_time_range else \
+                             "đang dừng đúng" if not schedule.is_running and not in_time_range else \
+                             "cần START" if not schedule.is_running and in_time_range else \
+                             "cần STOP" if schedule.is_running and not in_time_range else "không xác định"
+                    print(f"[Scheduler] --- Lịch trình {schedule.id}: {status}")
+                    logger.info(f"[Scheduler] --- Lịch trình {schedule.id}: {status}")
+            else:
+                if schedule.is_running:
+                    print(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Không hoạt động ngày này)")
+                    logger.info(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Không hoạt động ngày này)")
+                    stop_continuous_recognition.delay(schedule.id)
         
-        # logger.info("===== KẾT THÚC KIỂM TRA LỊCH TRÌNH CHẤM CÔNG LIÊN TỤC =====")
+        print("===== [Scheduler] KẾT THÚC KIỂM TRA LỊCH TRÌNH =====")
+        logger.info("===== [Scheduler] KẾT THÚC KIỂM TRA LỊCH TRÌNH =====")
         return True
-    
     except Exception as e:
-        # Giữ lại log lỗi
-        logger.error(f"[Scheduler] LỖI khi kiểm tra lịch trình: {str(e)}")
+        print(f"[Scheduler] !!! LỖI: {str(e)}")
+        print(traceback.format_exc())
+        logger.error(f"[Scheduler] !!! LỖI: {str(e)}")
         logger.error(traceback.format_exc())
         return False
-
-
+    
 @shared_task(bind=True)
 def test_continuous_recognition(self, schedule_id):
     """
