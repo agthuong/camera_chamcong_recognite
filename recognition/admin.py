@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CameraConfig, AttendanceRecord # Import model mới
+from .models import CameraConfig, AttendanceRecord, UserRole, ScheduledCameraRecognition, ScheduledRecognitionLog, ContinuousAttendanceSchedule, ContinuousAttendanceLog # Import model mới
 
 # Tùy chỉnh hiển thị trong Admin (tùy chọn)
 @admin.register(CameraConfig)
@@ -57,6 +57,102 @@ class AttendanceRecordAdmin(admin.ModelAdmin):
     def get_check_out_time(self, obj):
         return obj.check_out.strftime("%H:%M:%S") if obj.check_out else "Chưa có"
     get_check_out_time.short_description = "Giờ check-out"
+
+@admin.register(UserRole)
+class UserRoleAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'get_supervisor_name', 'updated_at')
+    list_filter = ('role',)
+    search_fields = ('user__username', 'supervisor__username', 'custom_supervisor')
+    
+    fieldsets = (
+        ('Thông tin người dùng', {
+            'fields': ('user', 'role')
+        }),
+        ('Thông tin giám sát', {
+            'fields': ('supervisor', 'custom_supervisor'),
+            'description': 'Chỉ áp dụng cho worker. Có thể chọn supervisor từ hệ thống hoặc nhập tên nếu không có.'
+        }),
+        ('Thông tin thêm', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    readonly_fields = ('created_at', 'updated_at')
+    
+    def get_supervisor_name(self, obj):
+        if obj.role == 'supervisor':
+            return "-"
+        return obj.supervisor.username if obj.supervisor else obj.custom_supervisor or "Chưa xác định"
+    get_supervisor_name.short_description = "Giám sát trưởng"
+
+# Đăng ký model lên lịch nhận diện
+@admin.register(ScheduledCameraRecognition)
+class ScheduledCameraRecognitionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'camera', 'start_time', 'end_time', 'interval_minutes', 'status', 'last_run', 'next_run')
+    list_filter = ('status', 'camera')
+    search_fields = ('name', 'camera__name')
+    readonly_fields = ('last_run', 'next_run', 'created_at', 'updated_at')
+    fieldsets = (
+        ('Thông tin cơ bản', {
+            'fields': ('name', 'camera', 'status')
+        }),
+        ('Thời gian', {
+            'fields': ('start_time', 'end_time', 'interval_minutes', 'active_days')
+        }),
+        ('Thông tin hệ thống', {
+            'fields': ('last_run', 'next_run', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(ScheduledRecognitionLog)
+class ScheduledRecognitionLogAdmin(admin.ModelAdmin):
+    list_display = ('schedule', 'timestamp', 'success', 'message_short')
+    list_filter = ('success', 'schedule')
+    search_fields = ('message', 'recognized_users', 'schedule__name')
+    readonly_fields = ('schedule', 'timestamp', 'success', 'message', 'recognized_users', 'attendance_records')
+    
+    def message_short(self, obj):
+        if len(obj.message) > 50:
+            return f"{obj.message[:50]}..."
+        return obj.message
+    
+    message_short.short_description = "Thông báo"
+
+@admin.register(ContinuousAttendanceSchedule)
+class ContinuousAttendanceScheduleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'camera', 'schedule_type', 'start_time', 'end_time', 'status', 'is_running')
+    list_filter = ('status', 'schedule_type', 'camera', 'is_running')
+    search_fields = ('name', 'camera__name')
+    readonly_fields = ('is_running', 'worker_id', 'created_at', 'updated_at')
+    fieldsets = (
+        ('Thông tin cơ bản', {
+            'fields': ('name', 'camera', 'schedule_type', 'status')
+        }),
+        ('Thời gian', {
+            'fields': ('start_time', 'end_time', 'active_days')
+        }),
+        ('Thông tin hệ thống', {
+            'fields': ('is_running', 'worker_id', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(ContinuousAttendanceLog)
+class ContinuousAttendanceLogAdmin(admin.ModelAdmin):
+    list_display = ('schedule', 'timestamp', 'event_type', 'message_short', 'recognized_user')
+    list_filter = ('event_type', 'schedule', 'recognized_user')
+    search_fields = ('message', 'schedule__name', 'recognized_user__username')
+    readonly_fields = ('schedule', 'timestamp', 'event_type', 'message', 'recognized_user', 'attendance_record')
+    
+    def message_short(self, obj):
+        if len(obj.message) > 50:
+            return f"{obj.message[:50]}..."
+        return obj.message
+    
+    message_short.short_description = "Thông báo"
 
 # Register your models here.
 # admin.site.register(CameraConfig) # Cách đăng ký đơn giản nếu không cần tùy chỉnh

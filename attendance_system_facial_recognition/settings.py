@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'channels',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -113,7 +115,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE =  'Asia/Kolkata'
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
 USE_I18N = True
 
@@ -166,15 +168,15 @@ RECOGNITION_CHECK_OUT_SUBDIR = 'check_out'
 # Tham số xử lý ảnh và video
 RECOGNITION_FACE_WIDTH = 96        # Chiều rộng mong muốn của khuôn mặt đã căn chỉnh
 RECOGNITION_FRAME_WIDTH = 800      # Chiều rộng resize frame video để xử lý/hiển thị
-RECOGNITION_FRAME_SKIP = 2         # Xử lý mỗi N frame (giảm từ 3 xuống 2 để thử nghiệm)
-RECOGNITION_PREDICTION_THRESHOLD = 0.65 # Ngưỡng xác suất để chấp nhận nhận diện (thay đổi từ 0.7)
+RECOGNITION_FRAME_SKIP = 1       # Xử lý mỗi N frame (giảm từ 3 xuống 2 để thử nghiệm)
+RECOGNITION_PREDICTION_THRESHOLD = 0.8# Ngưỡng xác suất để chấp nhận nhận diện (thay đổi từ 0.7 xuống 0.4)
 
 # Tham số thu thập dữ liệu
 RECOGNITION_DEFAULT_MAX_SAMPLES = 50 # Số mẫu tối đa cần thu thập
 
 # Tham số ngưỡng nhận diện (số lần liên tiếp)
-RECOGNITION_CHECK_IN_THRESHOLD = 3  # Ngưỡng cho check-in
-RECOGNITION_CHECK_OUT_THRESHOLD = 4 # Ngưỡng cho check-out
+RECOGNITION_CHECK_IN_THRESHOLD = 4  # Ngưỡng cho check-in
+RECOGNITION_CHECK_OUT_THRESHOLD = 5 # Ngưỡng cho check-out
 
 
 # Số frame bỏ qua khi nhận diện (1 = xử lý mọi frame)
@@ -182,3 +184,29 @@ RECOGNIZE_FRAME_SKIP = 1
 
 # Số frame bỏ qua khi thu thập dữ liệu (3 = xử lý frame thứ 3)
 COLLECT_FRAME_SKIP = 1
+
+# Cấu hình Celery
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Ho_Chi_Minh'
+
+# Cấu hình Channels
+ASGI_APPLICATION = 'attendance_system_facial_recognition.asgi.application'
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+# Cấu hình Celery Beat
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'check-continuous-schedules': {
+        'task': 'recognition.tasks.schedule_continuous_recognition',
+        'schedule': crontab(minute='*/1'),  # Chạy mỗi phút
+    },
+}

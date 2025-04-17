@@ -18,6 +18,29 @@ import threading
 import re
 from unidecode import unidecode
 from .firebase_util import push_attendance_to_firebase  # Thêm import này
+import logging
+import io
+import sys
+
+# Cấu hình logging an toàn hơn
+logger = logging.getLogger(__name__)
+
+# Nếu chưa có handlers, thêm handlers mới
+if not logger.handlers:
+    # Sử dụng StreamHandler không chỉ định stream
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(stream_handler)
+    
+    # Thêm file handler với encoding utf-8
+    try:
+        file_handler = logging.FileHandler('video_processor.log', encoding='utf-8')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logger.addHandler(file_handler)
+    except Exception as e:
+        print(f"Không thể tạo file handler: {str(e)}")
+
+logger.setLevel(logging.INFO)
 
 # --- Global state for tracking collection progress ---
 # Format: { 'sanitized_username': {'current': 0, 'total': 150, 'active': False} }

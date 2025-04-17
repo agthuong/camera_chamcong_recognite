@@ -64,7 +64,7 @@ import matplotlib.pyplot as plt
 from pandas.plotting import register_matplotlib_converters
 from matplotlib import rcParams
 import math
-from .models import CameraConfig, AttendanceRecord
+from .models import CameraConfig, AttendanceRecord, UserRole, ScheduledCameraRecognition, ScheduledRecognitionLog, ContinuousAttendanceSchedule, ContinuousAttendanceLog
 from django.utils import timezone
 from django.db.models import Q
 from rest_framework import generics, filters, status
@@ -92,6 +92,12 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 # Import Profile từ ứng dụng users
 from users.models import Profile
 
+# Import các task Celery
+from .tasks import test_continuous_recognition, start_continuous_recognition, stop_continuous_recognition
+
+# Import các hàm utility từ recognition_utils
+from .recognition_utils import predict, update_attendance_in_db_in, update_attendance_in_db_out
+
 # Import từ firebase_util
 from .firebase_util import push_attendance_to_firebase, initialize_firebase
 from firebase_admin import firestore
@@ -100,7 +106,7 @@ from firebase_admin import firestore
 from .forms import usernameForm, DateForm, UsernameAndDateForm, DateForm_2, VideoRoiForm, AddCameraForm
 
 # Import các model từ models.py
-from .models import CameraConfig, AttendanceRecord
+from .models import CameraConfig, AttendanceRecord, UserRole, ScheduledCameraRecognition, ScheduledRecognitionLog, ContinuousAttendanceSchedule, ContinuousAttendanceLog
 
 # Import các hàm xử lý video từ video_roi_processor.py
 from .video_roi_processor import sanitize_filename, stream_output, process_video_with_roi, select_roi_from_source
@@ -2324,3 +2330,456 @@ def attendance_log_view(request):
         print("[Log View] Standard request detected, returning full page.")
         # Trả về template đầy đủ cho trang log
         return render(request, 'recognition/attendance_log_page.html', context)
+
+# --- Views cho lên lịch nhận diện tự động ---
+
+@login_required
+def scheduled_recognition_view(request):
+    """
+    View để hiển thị và quản lý lịch trình nhận diện tự động
+    """
+    if not request.user.is_staff:
+        return redirect('not-authorised')
+
+    if request.method == 'POST':
+        # Xử lý thêm/cập nhật lịch trình
+        schedule_id = request.POST.get('schedule_id')
+        if schedule_id:
+            # Cập nhật lịch trình hiện có
+            schedule = get_object_or_404(ScheduledCameraRecognition, id=schedule_id)
+            form = ScheduledCameraRecognitionForm(request.POST, instance=schedule)
+        else:
+            # Tạo lịch trình mới
+            form = ScheduledCameraRecognitionForm(request.POST)
+        
+        if form.is_valid():
+            schedule = form.save()
+            messages.success(request, f"Đã {'cập nhật' if schedule_id else 'tạo'} lịch trình thành công!")
+            return redirect('scheduled-recognition')
+    else:
+        # Hiển thị form trống
+        form = ScheduledCameraRecognitionForm()
+    
+    # Lấy danh sách lịch trình
+    schedules = ScheduledCameraRecognition.objects.all()
+    
+    # Lấy nhật ký gần đây
+    logs = ScheduledRecognitionLog.objects.all()[:20]
+    
+    context = {
+        'form': form,
+        'schedules': schedules,
+        'logs': logs,
+    }
+    
+    return render(request, 'recognition/scheduled_recognition.html', context)
+
+
+@login_required
+def edit_schedule_view(request, schedule_id):
+    """
+    View để chỉnh sửa lịch trình nhận diện
+    """
+    if not request.user.is_staff:
+        return redirect('not-authorised')
+    
+    schedule = get_object_or_404(ScheduledCameraRecognition, id=schedule_id)
+    
+    if request.method == 'POST':
+        form = ScheduledCameraRecognitionForm(request.POST, instance=schedule)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã cập nhật lịch trình thành công!")
+            return redirect('scheduled-recognition')
+    else:
+        form = ScheduledCameraRecognitionForm(instance=schedule)
+    
+    # Lấy danh sách lịch trình
+    schedules = ScheduledCameraRecognition.objects.all()
+    
+    # Lấy nhật ký gần đây
+    logs = ScheduledRecognitionLog.objects.all()[:20]
+    
+    context = {
+        'form': form,
+        'schedules': schedules,
+        'logs': logs,
+    }
+    
+    return render(request, 'recognition/scheduled_recognition.html', context)
+
+
+@login_required
+@require_POST
+def toggle_schedule_status(request):
+    """
+    API để bật/tắt trạng thái lịch trình
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'status': 'error', 'message': 'Bạn không có quyền thực hiện thao tác này'})
+    
+    schedule_id = request.POST.get('schedule_id')
+    new_status = request.POST.get('status')
+    
+    if not schedule_id or new_status not in ['active', 'paused']:
+        return JsonResponse({'status': 'error', 'message': 'Thông tin không hợp lệ'})
+    
+    try:
+        schedule = ScheduledCameraRecognition.objects.get(id=schedule_id)
+        schedule.status = new_status
+        schedule.save()
+        return JsonResponse({'status': 'success'})
+    except ScheduledCameraRecognition.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy lịch trình'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+@login_required
+@require_POST
+def delete_schedule(request):
+    """
+    API để xóa lịch trình
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'status': 'error', 'message': 'Bạn không có quyền thực hiện thao tác này'})
+    
+    schedule_id = request.POST.get('schedule_id')
+    
+    if not schedule_id:
+        return JsonResponse({'status': 'error', 'message': 'Thông tin không hợp lệ'})
+    
+    try:
+        schedule = ScheduledCameraRecognition.objects.get(id=schedule_id)
+        schedule.delete()
+        return JsonResponse({'status': 'success'})
+    except ScheduledCameraRecognition.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Không tìm thấy lịch trình'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+# Hàm helper để thực hiện nhận diện tự động (sẽ được gọi bởi scheduler)
+def perform_scheduled_recognition(schedule_id):
+    """
+    Thực hiện nhận diện tự động cho một lịch trình cụ thể
+    Hàm này sẽ được gọi bởi scheduler hoặc từ view test
+    """
+    try:
+        schedule = ScheduledCameraRecognition.objects.get(id=schedule_id)
+        
+        # Cập nhật thời gian chạy cuối
+        schedule.last_run = timezone.now()
+        schedule.save()
+        
+        # Khởi tạo log
+        log = ScheduledRecognitionLog.objects.create(
+            schedule=schedule,
+            message="Đang bắt đầu nhận diện tự động...",
+            success=False
+        )
+        
+        # Lấy camera config
+        camera_config = schedule.camera
+        
+        if not camera_config:
+            log.message = "Không tìm thấy cấu hình camera."
+            log.save()
+            return log
+        
+        # Kiểm tra roi
+        roi = camera_config.get_roi_tuple()
+        
+        # Khởi tạo bộ xử lý video với roi
+        from .video_roi_processor import VideoProcessorROI
+        
+        processor = VideoProcessorROI()
+        processor.camera_source = camera_config.source
+        
+        # Nếu có ROI, thiết lập nó
+        if roi:
+            processor.set_roi(roi[0], roi[1], roi[2], roi[3])
+        
+        # Bắt đầu xử lý
+        processor.start(mode='recognize', save_to_db=True)
+        
+        # Đợi một khoảng thời gian để xử lý video và nhận diện
+        time.sleep(10)  # Đợi 10 giây để có thể nhận diện
+        
+        # Lấy kết quả nhận diện
+        recognized_users = processor.get_recognized_users()
+        
+        # Dừng xử lý
+        processor.stop()
+        
+        # Cập nhật log
+        if recognized_users:
+            recognized_users_str = ', '.join(recognized_users)
+            log.recognized_users = recognized_users_str
+            log.message = f"Đã nhận diện thành công {len(recognized_users)} người dùng: {recognized_users_str}"
+            log.success = True
+        else:
+            log.message = "Hoàn thành nhận diện nhưng không tìm thấy người dùng nào."
+            log.success = True
+        
+        # Lưu log
+        log.save()
+        
+        # Cập nhật lịch trình cho lần chạy tiếp theo
+        update_next_run_time(schedule)
+        
+        return log
+    
+    except Exception as e:
+        # Xử lý lỗi và ghi log
+        try:
+            log = ScheduledRecognitionLog.objects.create(
+                schedule_id=schedule_id,
+                message=f"Lỗi khi thực hiện nhận diện tự động: {str(e)}",
+                success=False
+            )
+            return log
+        except Exception as inner_e:
+            # Nếu không thể tạo log, in lỗi và trả về None
+            print(f"Error creating log: {str(inner_e)}")
+            return None
+        
+        # In lỗi ra console
+        print(f"Error in scheduled recognition: {str(e)}")
+        traceback.print_exc()
+
+
+def update_next_run_time(schedule):
+    """
+    Cập nhật thời gian chạy tiếp theo cho lịch trình
+    """
+    if schedule.status != 'active':
+        schedule.next_run = None
+        schedule.save()
+        return
+    
+    now = timezone.now()
+    interval_minutes = schedule.interval_minutes
+    
+    # Tính toán thời gian tiếp theo
+    next_run = now + timedelta(minutes=interval_minutes)
+    
+    # Kiểm tra nếu next_run nằm trong khoảng thời gian hợp lệ của ngày
+    next_run_time = next_run.time()
+    if next_run_time < schedule.start_time or next_run_time > schedule.end_time:
+        # Nếu vượt quá end_time, đặt lại vào start_time của ngày tiếp theo
+        tomorrow = (now + timedelta(days=1)).date()
+        next_run = timezone.make_aware(datetime.combine(tomorrow, schedule.start_time))
+    
+    # Kiểm tra nếu ngày tiếp theo là ngày hoạt động
+    active_days = schedule.active_days.split(',')
+    while str(next_run.isoweekday()) not in active_days:
+        # Nếu không phải ngày hoạt động, tăng thêm 1 ngày
+        next_run = next_run + timedelta(days=1)
+        # Đặt lại về start_time
+        next_run = timezone.make_aware(datetime.combine(next_run.date(), schedule.start_time))
+    
+    schedule.next_run = next_run
+    schedule.save()
+
+
+@login_required
+def test_scheduled_recognition(request, schedule_id):
+    """
+    View để kiểm tra lịch trình nhận diện
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'status': 'error', 'message': 'Bạn không có quyền thực hiện thao tác này'})
+    
+    try:
+        # Thực hiện nhận diện tự động
+        log = perform_scheduled_recognition(schedule_id)
+        
+        if log and log.success:
+            return JsonResponse({'status': 'success', 'message': log.message})
+        else:
+            return JsonResponse({'status': 'error', 'message': log.message if log else 'Không thể thực hiện nhận diện'})
+    
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+def continuous_schedule_view(request):
+    """
+    Hiển thị và quản lý lịch trình chấm công liên tục
+    """
+    # Xử lý form thêm mới
+    if request.method == 'POST':
+        form = ContinuousAttendanceScheduleForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã tạo lịch trình chấm công liên tục thành công!")
+            return redirect('continuous-schedule')
+    else:
+        form = ContinuousAttendanceScheduleForm()
+    
+    # Lấy danh sách lịch trình
+    schedules = ContinuousAttendanceSchedule.objects.all().order_by('schedule_type', 'start_time')
+    
+    # Lấy log gần đây
+    logs = ContinuousAttendanceLog.objects.all().order_by('-timestamp')[:20]
+    
+    context = {
+        'form': form,
+        'schedules': schedules,
+        'logs': logs,
+    }
+    
+    return render(request, 'recognition/continuous_schedule.html', context)
+
+@login_required
+def edit_continuous_schedule_view(request, schedule_id):
+    """
+    Chỉnh sửa lịch trình chấm công liên tục
+    """
+    schedule = get_object_or_404(ContinuousAttendanceSchedule, id=schedule_id)
+    
+    if request.method == 'POST':
+        form = ContinuousAttendanceScheduleForm(request.POST, instance=schedule)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Đã cập nhật lịch trình chấm công liên tục thành công!")
+            return redirect('continuous-schedule')
+    else:
+        form = ContinuousAttendanceScheduleForm(instance=schedule)
+    
+    # Lấy danh sách lịch trình
+    schedules = ContinuousAttendanceSchedule.objects.all().order_by('schedule_type', 'start_time')
+    
+    # Lấy log gần đây
+    logs = ContinuousAttendanceLog.objects.all().order_by('-timestamp')[:20]
+    
+    context = {
+        'form': form,
+        'schedules': schedules,
+        'logs': logs,
+        'is_edit': True,
+    }
+    
+    return render(request, 'recognition/continuous_schedule.html', context)
+
+@login_required
+@require_POST
+def toggle_continuous_schedule_status(request):
+    """
+    Bật/tắt trạng thái lịch trình chấm công liên tục
+    """
+    schedule_id = request.POST.get('schedule_id')
+    status = request.POST.get('status')
+    
+    if not schedule_id or not status or status not in ['active', 'paused']:
+        return JsonResponse({'status': 'error', 'message': 'Thông tin không hợp lệ'})
+    
+    try:
+        schedule = ContinuousAttendanceSchedule.objects.get(id=schedule_id)
+        schedule.status = status
+        schedule.save()
+        
+        # Nếu tắt lịch trình, dừng quá trình nhận diện nếu đang chạy
+        if status == 'paused' and schedule.is_running:
+            stop_continuous_recognition.delay(schedule_id)
+        
+        return JsonResponse({
+            'status': 'success', 
+            'message': f'Đã {"kích hoạt" if status == "active" else "tạm dừng"} lịch trình thành công'
+        })
+    
+    except ContinuousAttendanceSchedule.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Lịch trình không tồn tại'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+@require_POST
+def delete_continuous_schedule(request):
+    """
+    Xóa lịch trình chấm công liên tục
+    """
+    schedule_id = request.POST.get('schedule_id')
+    
+    if not schedule_id:
+        return JsonResponse({'status': 'error', 'message': 'Thông tin không hợp lệ'})
+    
+    try:
+        schedule = ContinuousAttendanceSchedule.objects.get(id=schedule_id)
+        
+        # Dừng quá trình nhận diện nếu đang chạy
+        if schedule.is_running:
+            stop_continuous_recognition.delay(schedule_id)
+        
+        # Xóa lịch trình
+        schedule.delete()
+        
+        return JsonResponse({'status': 'success', 'message': 'Đã xóa lịch trình thành công'})
+    
+    except ContinuousAttendanceSchedule.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Lịch trình không tồn tại'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+def test_continuous_schedule(request, schedule_id):
+    """
+    Chạy thử lịch trình chấm công liên tục
+    """
+    try:
+        schedule = ContinuousAttendanceSchedule.objects.get(id=schedule_id)
+        
+        # Bắt đầu task test
+        test_continuous_recognition.delay(schedule_id)
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Đã bắt đầu chạy thử lịch trình {schedule.name}. Quá trình sẽ chạy trong khoảng 30 giây.'
+        })
+    
+    except ContinuousAttendanceSchedule.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Lịch trình không tồn tại'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+from .tasks import test_continuous_recognition, start_continuous_recognition, stop_continuous_recognition
+
+@login_required
+def monitor_continuous_schedules(request):
+    """
+    Hiển thị trạng thái của các lịch trình chấm công liên tục và log hoạt động
+    """
+    # Lấy tất cả lịch trình chấm công liên tục
+    schedules = ContinuousAttendanceSchedule.objects.all().order_by('-status', 'schedule_type', 'camera__name')
+    
+    # Lấy log mới nhất
+    all_logs = ContinuousAttendanceLog.objects.all().order_by('-timestamp')[:50]
+    
+    # Lấy thời gian hiện tại
+    now = timezone.now()
+    current_time = now.time()
+    current_day = str(now.isoweekday())  # 1-7 (1 là thứ Hai)
+    
+    # Kiểm tra xem các lịch trình có đang trong khung giờ hoạt động không
+    for schedule in schedules:
+        schedule.should_be_running = False
+        # Kiểm tra ngày trong tuần
+        if current_day in schedule.active_days.split(','):
+            # Kiểm tra thời gian
+            if schedule.start_time <= current_time <= schedule.end_time:
+                schedule.should_be_running = True
+        
+        # Lấy 5 log gần nhất của từng lịch trình
+        schedule.recent_logs = ContinuousAttendanceLog.objects.filter(
+            schedule=schedule
+        ).order_by('-timestamp')[:5]
+    
+    context = {
+        'schedules': schedules,
+        'all_logs': all_logs,
+        'current_time': now,
+        'refresh_interval': 10,  # Tự động refresh trang sau 10 giây
+    }
+    
+    return render(request, 'recognition/monitor_schedules.html', context)

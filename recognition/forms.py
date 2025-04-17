@@ -2,7 +2,7 @@ from django.forms import ModelForm
 from django.contrib.auth.models import User
 from django import forms
 #from django.contrib.admin.widgets import AdminDateWidget
-from .models import CameraConfig 
+from .models import CameraConfig, ScheduledCameraRecognition, ContinuousAttendanceSchedule
 # Import Profile từ app 'users'
 from users.models import Profile 
 # Giữ lại Q nếu cần cho các form khác, hoặc bỏ nếu chỉ dùng cho logic cũ
@@ -184,6 +184,123 @@ class AddCameraForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'placeholder': 'Ví dụ: Camera Cổng Trước'}),
             'source': forms.TextInput(attrs={'placeholder': 'Ví dụ: 0 hoặc rtsp://...'}),
         }
+
+# Form để quản lý lịch trình nhận diện tự động camera
+class ScheduledCameraRecognitionForm(forms.ModelForm):
+    active_days = forms.MultipleChoiceField(
+        choices=[
+            ('1', 'Thứ 2'),
+            ('2', 'Thứ 3'),
+            ('3', 'Thứ 4'),
+            ('4', 'Thứ 5'),
+            ('5', 'Thứ 6'),
+            ('6', 'Thứ 7'),
+            ('7', 'Chủ nhật'),
+        ],
+        widget=forms.CheckboxSelectMultiple(),
+        required=True,
+        initial=['1', '2', '3', '4', '5'],
+        label="Ngày hoạt động"
+    )
+    
+    class Meta:
+        model = ScheduledCameraRecognition
+        fields = ['name', 'camera', 'start_time', 'end_time', 'interval_minutes', 'active_days', 'status']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nhập tên lịch trình'}),
+            'camera': forms.Select(attrs={'class': 'form-control select2'}),
+            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'interval_minutes': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+        active_days = cleaned_data.get('active_days')
+        
+        if start_time and end_time and start_time >= end_time:
+            self.add_error('end_time', "Thời gian kết thúc phải sau thời gian bắt đầu")
+        
+        if active_days:
+            # Chuyển đổi list thành chuỗi ngăn cách bởi dấu phẩy
+            cleaned_data['active_days'] = ','.join(active_days)
+        
+        return cleaned_data
+    
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance', None)
+        super().__init__(*args, **kwargs)
+        
+        # Nếu đang chỉnh sửa form hiện có
+        if instance:
+            # Chuyển chuỗi ngày thành list để hiển thị đúng trong form
+            active_days_str = instance.active_days
+            active_days_list = active_days_str.split(',') if active_days_str else []
+            self.initial['active_days'] = active_days_list
+
+# Form để quản lý lịch trình chấm công liên tục
+class ContinuousAttendanceScheduleForm(forms.ModelForm):
+    active_days = forms.MultipleChoiceField(
+        choices=[
+            ('1', 'Thứ 2'),
+            ('2', 'Thứ 3'),
+            ('3', 'Thứ 4'),
+            ('4', 'Thứ 5'),
+            ('5', 'Thứ 6'),
+            ('6', 'Thứ 7'),
+            ('7', 'Chủ nhật'),
+        ],
+        widget=forms.CheckboxSelectMultiple(),
+        required=True,
+        initial=['1', '2', '3', '4', '5'],
+        label="Ngày hoạt động"
+    )
+    
+    class Meta:
+        model = ContinuousAttendanceSchedule
+        fields = ['name', 'camera', 'schedule_type', 'start_time', 'end_time', 'active_days', 'status']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nhập tên lịch trình'}),
+            'camera': forms.Select(attrs={'class': 'form-control select2'}),
+            'schedule_type': forms.Select(attrs={'class': 'form-control'}),
+            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+        }
+        help_texts = {
+            'schedule_type': 'Chọn loại chấm công (Check-in hoặc Check-out)',
+            'start_time': 'Thời điểm bắt đầu quét liên tục',
+            'end_time': 'Thời điểm kết thúc quét liên tục',
+        }
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+        active_days = cleaned_data.get('active_days')
+        
+        if start_time and end_time and start_time >= end_time:
+            self.add_error('end_time', "Thời gian kết thúc phải sau thời gian bắt đầu")
+        
+        if active_days:
+            # Chuyển đổi list thành chuỗi ngăn cách bởi dấu phẩy
+            cleaned_data['active_days'] = ','.join(active_days)
+        
+        return cleaned_data
+    
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance', None)
+        super().__init__(*args, **kwargs)
+        
+        # Nếu đang chỉnh sửa form hiện có
+        if instance:
+            # Chuyển chuỗi ngày thành list để hiển thị đúng trong form
+            active_days_str = instance.active_days
+            active_days_list = active_days_str.split(',') if active_days_str else []
+            self.initial['active_days'] = active_days_list
 
        
 

@@ -79,4 +79,19 @@ urlpatterns = [
 
     # Quản lý cơ sở dữ liệu
     path('database_manager/', recog_views.database_manager_view, name='database-manager'),
+
+    # URLs cho trang lên lịch nhận diện tự động
+    path('scheduled-recognition/', recog_views.scheduled_recognition_view, name='scheduled-recognition'),
+    path('edit-schedule/<int:schedule_id>/', recog_views.edit_schedule_view, name='edit-schedule'),
+    path('toggle-schedule-status/', recog_views.toggle_schedule_status, name='toggle-schedule-status'),
+    path('delete-schedule/', recog_views.delete_schedule, name='delete-schedule'),
+    path('test-schedule/<int:schedule_id>/', recog_views.test_scheduled_recognition, name='test-schedule'),
+    
+    # Thêm URL mới cho chấm công liên tục
+    path('continuous-schedule/', recog_views.continuous_schedule_view, name='continuous-schedule'),
+    path('edit-continuous-schedule/<int:schedule_id>/', recog_views.edit_continuous_schedule_view, name='edit-continuous-schedule'),
+    path('toggle-continuous-schedule-status/', recog_views.toggle_continuous_schedule_status, name='toggle-continuous-schedule-status'),
+    path('delete-continuous-schedule/', recog_views.delete_continuous_schedule, name='delete-continuous-schedule'),
+    path('test-continuous-schedule/<int:schedule_id>/', recog_views.test_continuous_schedule, name='test-continuous-schedule'),
+    path('monitor-schedules/', recog_views.monitor_continuous_schedules, name='monitor-schedules'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

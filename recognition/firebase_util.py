@@ -4,8 +4,29 @@ import os
 from django.conf import settings
 import logging
 from django.contrib.auth.models import User
+import io
+import sys
+from django.utils import timezone as django_timezone
 
+# Cấu hình logger với encoding utf-8 một cách an toàn hơn
 logger = logging.getLogger(__name__)
+
+# Thêm handler với encoding utf-8 nếu chưa có
+if not logger.handlers:
+    # Sử dụng StringIO thay vì sys.stdout trực tiếp
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    logger.addHandler(stream_handler)
+    
+    # Thêm file handler với encoding utf-8
+    try:
+        file_handler = logging.FileHandler('firebase.log', encoding='utf-8')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logger.addHandler(file_handler)
+    except Exception as e:
+        print(f"Không thể tạo file handler: {str(e)}")
+
+logger.setLevel(logging.INFO)
 
 # Biến global để lưu trữ kết nối Firebase
 firebase_app = None
@@ -165,11 +186,16 @@ def push_attendance_to_firebase(record, camera_name=None):
         if supervisor_email:
             user_data['supervisor_email'] = supervisor_email
         
-        # Chuẩn bị dữ liệu chấm công
+        # Chuyển đổi thời gian check-in và check-out sang múi giờ Việt Nam
+        local_check_in = django_timezone.localtime(record.check_in) if record.check_in else None
+        local_check_out = django_timezone.localtime(record.check_out) if record.check_out else None
+        
+        # Chuẩn bị dữ liệu chấm công với thời gian ở múi giờ Việt Nam
         attendance_data = {
             'date': date_str,
-            'check_in_time': record.check_in.strftime('%H:%M:%S') if record.check_in else None,
-            'check_out_time': record.check_out.strftime('%H:%M:%S') if record.check_out else None,
+            'check_in_time': local_check_in.strftime('%H:%M:%S') if local_check_in else None,
+            'check_out_time': local_check_out.strftime('%H:%M:%S') if local_check_out else None,
+            'timezone': 'Asia/Ho_Chi_Minh',  # Thêm thông tin múi giờ để rõ ràng hơn
         }
         
         # Thêm thông tin camera nếu có
