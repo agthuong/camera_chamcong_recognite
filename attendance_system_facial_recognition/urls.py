@@ -47,11 +47,6 @@ urlpatterns = [
     # --- URL Endpoint kiểm tra trạng thái xử lý ---
     path('get_processing_status/', recog_views.get_processing_status_view, name='get-processing-status'),
 
-    # API endpoints
-    path('api/attendance/', recog_views.AttendanceRecordList.as_view(), name='api-attendance'),
-    path('api/attendance/user/<str:username>/', recog_views.UserAttendanceRecordList.as_view(), name='api-user-attendance'),
-    path('api/attendance/today/', recog_views.today_attendance, name='api-today-attendance'),
-    path('api/attendance/me/', recog_views.my_attendance, name='api-my-attendance'),
     # API đồng bộ dữ liệu lên Firebase với cấu trúc mới (users/[userID]) chứa thông tin chấm công trực tiếp
     path('api/sync-firebase/', recog_views.sync_to_firebase, name='api-sync-firebase'),
     # API kiểm tra kết nối Firebase
@@ -92,6 +87,5 @@ urlpatterns = [
     path('edit-continuous-schedule/<int:schedule_id>/', recog_views.edit_continuous_schedule_view, name='edit-continuous-schedule'),
     path('toggle-continuous-schedule-status/', recog_views.toggle_continuous_schedule_status, name='toggle-continuous-schedule-status'),
     path('delete-continuous-schedule/', recog_views.delete_continuous_schedule, name='delete-continuous-schedule'),
-    path('test-continuous-schedule/<int:schedule_id>/', recog_views.test_continuous_schedule, name='test-continuous-schedule'),
     path('monitor-schedules/', recog_views.monitor_continuous_schedules, name='monitor-schedules'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

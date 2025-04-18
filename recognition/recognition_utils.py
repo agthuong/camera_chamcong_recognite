@@ -15,18 +15,7 @@ from users.models import Present, Time
 
 
 def predict(face_aligned, svc, threshold=0.7):
-    """
-    Dự đoán người dùng từ ảnh khuôn mặt đã căn chỉnh
-    
-    Args:
-        face_aligned: Ảnh khuôn mặt đã căn chỉnh
-        svc: Model SVM Classifier đã train
-        threshold: Ngưỡng xác suất để chấp nhận nhận diện
-        
-    Returns:
-        (result, probability): Kết quả dự đoán (ID người dùng) và xác suất
-    """
-    face_encodings = np.zeros((1, 128))
+    #face_encodings = np.zeros((1, 128))
     try:
         x_face_locations = face_recognition.face_locations(face_aligned)
         faces_encodings = face_recognition.face_encodings(face_aligned, known_face_locations=x_face_locations)

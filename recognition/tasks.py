@@ -4,30 +4,27 @@ Celery tasks cho hệ thống nhận diện liên tục
 import os
 import time
 import logging
-import uuid
+
 import traceback
 import numpy as np
 import cv2
-from datetime import datetime, timedelta
-import io
-import sys
+from datetime import datetime
 import threading
 import face_recognition
-import pickle
 
 from celery import shared_task
 from django.utils import timezone as django_timezone
 from django.conf import settings
 from django.contrib.auth.models import User
-from django.db import transaction
+
 
 from .models import (
-    CameraConfig, AttendanceRecord, ContinuousAttendanceSchedule, 
+    AttendanceRecord, ContinuousAttendanceSchedule, 
     ContinuousAttendanceLog
 )
 
 # Import các hàm cần thiết từ module views
-from .recognition_utils import predict, update_attendance_in_db_in, update_attendance_in_db_out
+#from .recognition_utils import predict, update_attendance_in_db_in, update_attendance_in_db_out
 from imutils.face_utils import FaceAligner
 from imutils import face_utils
 
@@ -235,6 +232,8 @@ class VideoProcessor:
         self.frame_count = 0
         self.recognized_faces = {}
         self.fa = None
+        
+
         self.load_recognition_model()
     
     def load_recognition_model(self):
@@ -480,7 +479,7 @@ class VideoProcessor:
             for i, face in enumerate(faces):
                 try:
                     # Lấy tọa độ hình chữ nhật
-                    (fx, fy, fw, fh) = face_utils.rect_to_bb(face)
+                    #(fx, fy, fw, fh) = face_utils.rect_to_bb(face)
                     
                     # Căn chỉnh khuôn mặt cho nhận diện - quan trọng để tăng độ chính xác
                     face_aligned = self.fa.align(frame, gray, face)
@@ -605,6 +604,9 @@ class VideoProcessor:
             if not self.is_running:
                 logger.warning(f"Processor đã dừng, bỏ qua chấm công cho {username}")
                 return None
+            
+            # Đánh dấu thời điểm bắt đầu xử lý
+            start_time = time.time()
             
             # Tìm user trong hệ thống
             try:
@@ -744,18 +746,26 @@ class VideoProcessor:
                         try:
                             # Sử dụng face_image_data được truyền vào
                             if face_image_data is not None and face_image_data.size > 0:
-                                # Tạo tên file dựa trên username và thời gian
-                                face_filename = f'{sanitized_username}_{today}_{now.strftime("%H%M%S")}_out.jpg'
+                                # Tạo tên file chỉ dựa trên username và ngày (không thêm timestamp)
+                                face_filename = f'{sanitized_username}_{today}_out.jpg'
                                 face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
-                                                       settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
+                                               settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
                                 relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
                                                                settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
                                 
-                                # Đảm bảo thư mục tồn tại
-                                os.makedirs(os.path.dirname(face_path), exist_ok=True)
+                                # Không cần tạo thư mục nữa vì đã tạo trong __init__
+                                # os.makedirs(os.path.dirname(face_path), exist_ok=True)
                                 
-                                # Lưu ảnh và cập nhật đường dẫn vào record (ghi đè nếu đã có)
-                                saved_img = cv2.imwrite(face_path, face_image_data)
+                                # Giảm kích thước ảnh và chất lượng để tăng tốc độ lưu
+                                # Giảm kích thước xuống một nửa
+                                face_height, face_width = face_image_data.shape[:2]
+                                face_resized = cv2.resize(face_image_data, (face_width//2, face_height//2), 
+                                               interpolation=cv2.INTER_AREA)
+                                
+                                # Lưu ảnh với chất lượng thấp hơn
+                                saved_img = cv2.imwrite(face_path, face_resized, 
+                                              [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                                
                                 if saved_img:
                                     record.check_out_image_url = relative_face_path
                                     logger.info(f"Đã lưu/cập nhật ảnh check-out cho {username}")
@@ -766,8 +776,8 @@ class VideoProcessor:
                         except Exception as img_err:
                             logger.error(f"Lỗi khi lưu ảnh check-out: {img_err}")
                         
-                        check_in_time_str = record.check_in.strftime('%H:%M:%S') if record.check_in else "chưa có"
-                        check_out_time_str = now.strftime('%H:%M:%S')
+                        #check_in_time_str = record.check_in.strftime('%H:%M:%S') if record.check_in else "chưa có"
+                        #check_out_time_str = now.strftime('%H:%M:%S')
                         time_check_out = datetime.now()
                         message = f"Đã nhận diện và chấm công RA cho {username} check-out: {time_check_out})"
                     except AttendanceRecord.DoesNotExist:
@@ -789,15 +799,23 @@ class VideoProcessor:
                 # Cố gắng đẩy dữ liệu lên Firebase nếu có
                 try:
                     from .firebase_util import push_attendance_to_firebase
+                    # Ghi lại thời gian bắt đầu đẩy Firebase
+                    firebase_start_time = time.time()
                     success = push_attendance_to_firebase(record, camera_name)
+                    firebase_time = time.time() - firebase_start_time
+                    
                     if success:
-                        logger.info(f"Đã đẩy dữ liệu chấm công lên Firebase")
+                        logger.info(f"Đã đẩy dữ liệu chấm công lên Firebase (thời gian: {firebase_time:.2f}s)")
                     else:
                         logger.warning(f"Không thể đẩy dữ liệu lên Firebase")
                 except ImportError:
                     logger.debug("Module firebase_util không khả dụng, bỏ qua đồng bộ")
                 except Exception as firebase_err:
                     logger.error(f"Lỗi khi đẩy dữ liệu lên Firebase: {firebase_err}")
+            
+                # Ghi log tổng thời gian xử lý
+                total_time = time.time() - start_time
+                logger.info(f"Tổng thời gian xử lý chấm công: {total_time:.2f} giây")
             
             except Exception as att_err:
                 message = f"Lỗi khi cập nhật chấm công: {str(att_err)}"
@@ -923,7 +941,7 @@ class VideoProcessor:
 
 
 @shared_task(bind=True)
-def start_continuous_recognition(self, schedule_id, is_test_run=False):
+def start_continuous_recognition(self, schedule_id):
     """
     Task Celery để bắt đầu nhận diện liên tục cho một lịch trình
     """
@@ -934,18 +952,17 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
         time.sleep(1)  # Chờ processor dừng
         del active_processors[schedule_id]
         
-    prefix = "$$$ TEST:" if is_test_run else "@@@"
-    logger.info(f"{prefix} TASK start_continuous_recognition BẮT ĐẦU cho schedule_id: {schedule_id}, Worker Task ID: {self.request.id}, is_test_run={is_test_run}")
+    logger.info(f"TASK start_continuous_recognition BẮT ĐẦU cho schedule_id: {schedule_id}, Worker Task ID: {self.request.id}")
     
     try:
         # Lấy thông tin lịch trình
-        logger.info(f"{prefix} Đang lấy thông tin lịch trình {schedule_id} từ DB...")
+        logger.info(f"Đang lấy thông tin lịch trình {schedule_id} từ DB...")
         schedule = ContinuousAttendanceSchedule.objects.get(id=schedule_id)
-        logger.info(f"{prefix} Đã lấy lịch trình: {schedule.name}")
+        logger.info(f"Đã lấy lịch trình: {schedule.name}")
         
         # Kiểm tra trạng thái *chỉ khi không phải là test run*
-        if not is_test_run and schedule.status != 'active': 
-            logger.warning(f"{prefix} Lịch trình {schedule_id} không hoạt động (status={schedule.status}), bỏ qua")
+        if schedule.status != 'active': 
+            logger.warning(f"Lịch trình {schedule_id} không hoạt động (status={schedule.status}), bỏ qua")
             return False
         
         # Lấy camera source
@@ -953,29 +970,23 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
         
         # Kiểm tra xem camera đã có người dùng chưa (khóa này chỉ trong phạm vi tiến trình)
         if camera_source in camera_locks:
-            logger.warning(f"{prefix} Camera {camera_source} đang được sử dụng bởi một lịch trình khác")
+            logger.warning(f"Camera {camera_source} đang được sử dụng bởi một lịch trình khác")
             
-            # Nếu là test, vẫn cho phép thử dùng camera
-            if is_test_run:
-                logger.info(f"{prefix} Đây là TEST nên sẽ thử sử dụng camera")
-            else:
-                logger.info(f"{prefix} Bỏ qua lịch trình này để tránh xung đột camera")
-                return False
-        
+
         # Kiểm tra xem lịch trình này đã đang chạy chưa (trong DB)
         if schedule.is_running:
             # Nếu là test run và đang chạy -> có thể là lỗi từ lần test trước chưa dừng hẳn
             if is_test_run:
-                logger.warning(f"{prefix} Lịch trình {schedule_id} đã is_running=True khi bắt đầu test. Sẽ thử dừng lịch trình cũ trước.")
+                logger.warning(f"Lịch trình {schedule_id} đã is_running=True khi bắt đầu test. Sẽ thử dừng lịch trình cũ trước.")
                 try:
                     # Cố gắng dừng lịch trình cũ
                     if schedule_id in active_processors:
-                        logger.info(f"{prefix} Tìm thấy processor cũ cho {schedule_id}, dừng lại trước")
+                        logger.info(f"Tìm thấy processor cũ cho {schedule_id}, dừng lại trước")
                         old_processor = active_processors[schedule_id]
                         old_processor.stop()
                         del active_processors[schedule_id]
                 except Exception as e:
-                    logger.error(f"{prefix} Lỗi khi dừng processor cũ: {e}")
+                    logger.error(f"Lỗi khi dừng processor cũ: {e}")
                 
                 # Reset is_running trong DB
                 schedule.is_running = False
@@ -983,27 +994,27 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
                 schedule.save(update_fields=['is_running', 'worker_id'])
             else: 
                 # Nếu là chạy thường và đang chạy
-                logger.warning(f"{prefix} Lịch trình {schedule_id} đã is_running=True, kiểm tra worker_id")
+                logger.warning(f"Lịch trình {schedule_id} đã is_running=True, kiểm tra worker_id")
                 
                 # Kiểm tra worker_id để xác định xem task đang chạy có còn active không
                 if schedule.worker_id:
                     # Đối với bản production cần kiểm tra worker_id với Celery inspector
                     # Ở đây đơn giản hóa bằng cách kiểm tra xem processor có trong biến active_processors không
                     if schedule_id in active_processors:
-                        logger.info(f"{prefix} Lịch trình {schedule_id} đang chạy với processor trong active_processors, bỏ qua")
+                        logger.info(f"Lịch trình {schedule_id} đang chạy với processor trong active_processors, bỏ qua")
                         return False
                     else:
-                        logger.warning(f"{prefix} Lịch trình {schedule_id} đánh dấu là running nhưng không có processor, reset trạng thái")
+                        logger.warning(f"Lịch trình {schedule_id} đánh dấu là running nhưng không có processor, reset trạng thái")
                         schedule.is_running = False
                         schedule.worker_id = None
                         schedule.save(update_fields=['is_running', 'worker_id'])
                 else:
-                    logger.warning(f"{prefix} Lịch trình {schedule_id} đánh dấu là running nhưng không có worker_id, reset trạng thái")
+                    logger.warning(f"Lịch trình {schedule_id} đánh dấu là running nhưng không có worker_id, reset trạng thái")
                     schedule.is_running = False
                     schedule.save(update_fields=['is_running'])
 
         # Tạo processor mới
-        logger.info(f"{prefix} Tạo VideoProcessor cho camera {camera_source}, type: {schedule.schedule_type}")
+        logger.info(f"Tạo VideoProcessor cho camera {camera_source}, type: {schedule.schedule_type}")
         processor = VideoProcessor(
             camera_source=camera_source,
             schedule_id=schedule_id,
@@ -1013,38 +1024,38 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
         # Thiết lập ROI nếu có
         roi = schedule.camera.get_roi_tuple()
         if roi:
-            logger.info(f"{prefix} Thiết lập ROI: {roi}")
+            logger.info(f"Thiết lập ROI: {roi}")
             processor.set_roi(*roi)
         else:
-            logger.info(f"{prefix} Không có ROI được cấu hình cho camera.")
+            logger.info(f"Không có ROI được cấu hình cho camera.")
         
         # Đánh dấu camera đang được sử dụng
         camera_locks[camera_source] = schedule_id
         
         # Cập nhật trạng thái lịch trình *trước* khi bắt đầu processor
-        logger.info(f"{prefix} Cập nhật DB: is_running=True, worker_id={self.request.id} cho schedule {schedule_id}")
+        logger.info(f"Cập nhật DB: is_running=True, worker_id={self.request.id} cho schedule {schedule_id}")
         schedule.is_running = True
         schedule.worker_id = self.request.id
         schedule.save(update_fields=['is_running', 'worker_id']) # Chỉ cập nhật trường cần thiết
-        logger.info(f"{prefix} Đã cập nhật DB.")
+        logger.info(f"Đã cập nhật DB.")
         
         # Lưu processor vào dictionary toàn cục
         active_processors[schedule_id] = processor
-        logger.info(f"{prefix} Đã lưu processor vào active_processors (key={schedule_id})")
+        logger.info(f"Đã lưu processor vào active_processors (key={schedule_id})")
         
         # Bắt đầu nhận diện
-        logger.info(f"{prefix} Gọi processor.start_continuous_recognition()...")
+        logger.info(f"Gọi processor.start_continuous_recognition()...")
         result = processor.start_continuous_recognition()
-        logger.info(f"{prefix} processor.start_continuous_recognition() trả về: {result}")
+        logger.info(f"processor.start_continuous_recognition() trả về: {result}")
 
         # Nếu processor kết thúc (có thể do lỗi hoặc hoàn thành), xóa khỏi active_processors
         if schedule_id in active_processors and active_processors[schedule_id] == processor:
-            logger.info(f"{prefix} Xóa processor khỏi active_processors sau khi kết thúc.")
+            logger.info(f"Xóa processor khỏi active_processors sau khi kết thúc.")
             del active_processors[schedule_id]
             
             # Giải phóng khóa camera
             if camera_source in camera_locks and camera_locks[camera_source] == schedule_id:
-                logger.info(f"{prefix} Giải phóng khóa camera {camera_source}")
+                logger.info(f"Giải phóng khóa camera {camera_source}")
                 del camera_locks[camera_source]
             
             # Cập nhật lại DB nếu processor dừng mà chưa có task stop nào gọi
@@ -1052,21 +1063,21 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
                 # Cần lấy lại schedule object vì có thể nó đã thay đổi
                 schedule_final = ContinuousAttendanceSchedule.objects.get(id=schedule_id)
                 if schedule_final.is_running and schedule_final.worker_id == self.request.id:
-                     logger.warning(f"{prefix} Processor dừng đột ngột, cập nhật is_running=False cho schedule {schedule_id}")
+                     logger.warning(f"Processor dừng đột ngột, cập nhật is_running=False cho schedule {schedule_id}")
                      schedule_final.is_running = False
                      schedule_final.worker_id = None
                      schedule_final.save(update_fields=['is_running', 'worker_id'])
             except Exception as db_err:
-                 logger.error(f"{prefix} Lỗi khi cập nhật DB sau khi processor dừng: {db_err}")
+                 logger.error(f"Lỗi khi cập nhật DB sau khi processor dừng: {db_err}")
 
-        logger.info(f"{prefix} TASK start_continuous_recognition KẾT THÚC cho schedule_id: {schedule_id}")
+        logger.info(f"TASK start_continuous_recognition KẾT THÚC cho schedule_id: {schedule_id}")
         return result
     
     except ContinuousAttendanceSchedule.DoesNotExist:
-        logger.error(f"{prefix} LỖI: Lịch trình {schedule_id} không tồn tại")
+        logger.error(f"Lịch trình {schedule_id} không tồn tại")
         return False
     except Exception as e:
-        logger.error(f"{prefix} LỖI không xác định trong start_continuous_recognition: {str(e)}")
+        logger.error(f"LỖI không xác định trong start_continuous_recognition: {str(e)}")
         logger.error(traceback.format_exc())
         
         # Cố gắng cập nhật trạng thái lịch trình về False nếu có lỗi
@@ -1077,14 +1088,14 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
             # Giải phóng khóa camera nếu có
             camera_source = schedule_err.camera.source
             if camera_source in camera_locks and camera_locks[camera_source] == schedule_id:
-                logger.info(f"{prefix} Giải phóng khóa camera {camera_source} do lỗi")
+                logger.info(f"Giải phóng khóa camera {camera_source} do lỗi")
                 del camera_locks[camera_source]
             
             if schedule_err.is_running and schedule_err.worker_id == self.request.id: # Chỉ cập nhật nếu task này đang quản lý
                  schedule_err.is_running = False
                  schedule_err.worker_id = None
                  schedule_err.save(update_fields=['is_running', 'worker_id'])
-                 logger.info(f"{prefix} Đã cập nhật is_running=False do lỗi.")
+                 logger.info(f"Đã cập nhật is_running=False do lỗi.")
             
                  # Ghi log lỗi vào DB
                  # Cần tạo instance tạm để ghi log nếu processor chưa kịp tạo hoặc đã bị xóa
@@ -1095,9 +1106,9 @@ def start_continuous_recognition(self, schedule_id, is_test_run=False):
                       active_processors[schedule_id].log_event('error', f"Lỗi nghiêm trọng khi bắt đầu: {str(e)}")
 
         except Exception as db_err:
-            logger.error(f"{prefix} Lỗi khi cập nhật DB hoặc ghi log lỗi: {db_err}")
+            logger.error(f"Lỗi khi cập nhật DB hoặc ghi log lỗi: {db_err}")
         
-        logger.info(f"{prefix} TASK start_continuous_recognition KẾT THÚC (trong finally) cho schedule_id: {schedule_id}") 
+        logger.info(f"TASK start_continuous_recognition KẾT THÚC (trong finally) cho schedule_id: {schedule_id}") 
 
 
 @shared_task
@@ -1182,7 +1193,6 @@ def schedule_continuous_recognition():
     """
     Task Celery chạy định kỳ để kiểm tra và khởi động/dừng các lịch trình.
     """
-    print("===== [Scheduler] BẮT ĐẦU KIỂM TRA LỊCH TRÌNH =====")
     logger.info("===== [Scheduler] BẮT ĐẦU KIỂM TRA LỊCH TRÌNH =====")
     
     try:
@@ -1195,27 +1205,16 @@ def schedule_continuous_recognition():
         current_day = str(now_local.isoweekday())  # 1-7 (1 là thứ Hai)
         
         # Log rõ ràng cả hai múi giờ để dễ debug
-        print(f"[Scheduler] Thời gian UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-        print(f"[Scheduler] Thời gian địa phương: {now_local.strftime('%Y-%m-%d %H:%M:%S %Z')}")
-        print(f"[Scheduler] Thời gian so sánh: {current_time}, Ngày: {current_day}")
-        
         logger.info(f"[Scheduler] Thời gian UTC: {now_utc.strftime('%Y-%m-%d %H:%M:%S %Z')}")
         logger.info(f"[Scheduler] Thời gian địa phương: {now_local.strftime('%Y-%m-%d %H:%M:%S %Z')}")
         logger.info(f"[Scheduler] Thời gian so sánh: {current_time}, Ngày: {current_day}")
         
         # Lấy lịch trình active
         schedules = ContinuousAttendanceSchedule.objects.filter(status='active')
-        print(f"[Scheduler] Tìm thấy {schedules.count()} lịch trình active")
         logger.info(f"[Scheduler] Tìm thấy {schedules.count()} lịch trình active")
         
         for schedule in schedules:
             # QUAN TRỌNG: In ra log chi tiết cho phân tích
-            print(f"[Scheduler] Lịch ID {schedule.id}: {schedule.name}")
-            print(f"[Scheduler] - Thời gian: {schedule.start_time} đến {schedule.end_time}")
-            print(f"[Scheduler] - Current time (địa phương): {current_time}")
-            print(f"[Scheduler] - Current day: {current_day} in active days: {schedule.active_days}")
-            print(f"[Scheduler] - Điều kiện ngày: {current_day in schedule.active_days.split(',')}")
-            
             # Kiểm tra điều kiện thời gian từng phần
             is_after_start = current_time >= schedule.start_time
             is_before_end = current_time <= schedule.end_time
@@ -1229,13 +1228,9 @@ def schedule_continuous_recognition():
                 is_before_end = current_time >= schedule.start_time or current_time <= schedule.end_time
                 
                 # Log giải thích thêm cho trường hợp đặc biệt này
-                print(f"[Scheduler] - Lịch qua đêm được phát hiện (end < start)")
                 logger.info(f"[Scheduler] - Lịch qua đêm được phát hiện (end < start)")
             
             in_time_range = is_after_start and is_before_end
-            print(f"[Scheduler] - Kiểm tra thời gian: After start: {is_after_start}, Before end: {is_before_end}")
-            print(f"[Scheduler] - In time range: {in_time_range}, Running: {schedule.is_running}")
-            
             # Log tương tự đến file
             logger.info(f"[Scheduler] Lịch ID {schedule.id}: {schedule.name}")
             logger.info(f"[Scheduler] - Thời gian: {schedule.start_time} đến {schedule.end_time}")
@@ -1250,7 +1245,6 @@ def schedule_continuous_recognition():
                 # SỬA ĐỔI LOGIC: Sử dụng in_time_range đã tính ở trên
                 if in_time_range and not schedule.is_running:
                     # Bắt đầu nhận diện
-                    print(f"[Scheduler] >>> BẮT ĐẦU lịch trình {schedule.id} - {schedule.name}")
                     logger.info(f"[Scheduler] >>> BẮT ĐẦU lịch trình {schedule.id} - {schedule.name}")
                     start_continuous_recognition.delay(schedule.id)
                 
@@ -1258,7 +1252,6 @@ def schedule_continuous_recognition():
                 # Nếu không trong time range và đang chạy -> dừng
                 elif not in_time_range and schedule.is_running:
                     # Dừng nhận diện
-                    print(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Ngoài giờ)")
                     logger.info(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Ngoài giờ)")
                     stop_continuous_recognition.delay(schedule.id)
                 else:
@@ -1266,119 +1259,16 @@ def schedule_continuous_recognition():
                              "đang dừng đúng" if not schedule.is_running and not in_time_range else \
                              "cần START" if not schedule.is_running and in_time_range else \
                              "cần STOP" if schedule.is_running and not in_time_range else "không xác định"
-                    print(f"[Scheduler] --- Lịch trình {schedule.id}: {status}")
+
                     logger.info(f"[Scheduler] --- Lịch trình {schedule.id}: {status}")
             else:
                 if schedule.is_running:
-                    print(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Không hoạt động ngày này)")
                     logger.info(f"[Scheduler] <<< DỪNG lịch trình {schedule.id} - {schedule.name} (Không hoạt động ngày này)")
                     stop_continuous_recognition.delay(schedule.id)
         
-        print("===== [Scheduler] KẾT THÚC KIỂM TRA LỊCH TRÌNH =====")
         logger.info("===== [Scheduler] KẾT THÚC KIỂM TRA LỊCH TRÌNH =====")
         return True
     except Exception as e:
-        print(f"[Scheduler] !!! LỖI: {str(e)}")
-        print(traceback.format_exc())
         logger.error(f"[Scheduler] !!! LỖI: {str(e)}")
         logger.error(traceback.format_exc())
         return False
-    
-@shared_task(bind=True)
-def test_continuous_recognition(self, schedule_id):
-    """
-    Task Celery để test lịch trình chấm công (chạy ngay, không theo lịch)
-    Cập nhật: Tạm dừng lịch trình trong DB khi test để tránh bị dừng bởi scheduler.
-    """
-    logger.info(f"$$$ TASK test_continuous_recognition BẮT ĐẦU cho schedule_id: {schedule_id}, Worker Task ID: {self.request.id}")
-    original_status = None # Lưu trạng thái gốc
-    schedule = None # Khởi tạo schedule
-
-    try:
-        # Lấy thông tin lịch trình và trạng thái gốc
-        logger.info(f"$$$ Đang lấy thông tin lịch trình {schedule_id} từ DB...")
-        schedule = ContinuousAttendanceSchedule.objects.get(id=schedule_id)
-        original_status = schedule.status 
-        logger.info(f"$$$ Thông tin lịch trình: {schedule.name} - Camera: {schedule.camera.name} - Trạng thái gốc: {original_status}")
-        
-        # Dừng lịch trình nếu đang chạy (gọi task stop)
-        if schedule.is_running:
-            logger.info(f"$$$ Lịch trình đang chạy, gửi task stop_continuous_recognition trước khi test")
-            stop_task_result = stop_continuous_recognition.delay(schedule_id)
-            logger.info(f"$$$ Đã gửi task stop, ID: {stop_task_result.id}. Chờ một chút...")
-            time.sleep(3) # Tăng thời gian chờ stop
-            schedule.refresh_from_db()
-            if schedule.is_running:
-                 logger.warning(f"$$$ Lịch trình VẪN đang chạy sau khi gọi stop. Có thể có vấn đề. Tiếp tục test...")
-            else:
-                 logger.info(f"$$$ Lịch trình đã dừng thành công.")
-
-        # Tạm thời đặt trạng thái thành paused trong DB
-        if schedule.status != 'paused':
-            logger.info(f"$$$ Tạm thời đặt status = paused cho schedule {schedule_id} trong DB.")
-            schedule.status = 'paused'
-            schedule.save(update_fields=['status'])
-            logger.info(f"$$$ Đã cập nhật status = paused.")
-
-        # Bắt đầu nhận diện (gọi task start VỚI is_test_run=True)
-        logger.info(f"$$$ Gửi task start_continuous_recognition(is_test_run=True) để bắt đầu test...")
-        start_task_result = start_continuous_recognition.delay(schedule_id, is_test_run=True) # Truyền is_test_run=True
-        logger.info(f"$$$ Đã gửi task start, ID: {start_task_result.id}")
-        
-        # Giảm thời gian chạy test xuống 60 giây để test nhanh hơn và có thể chạy nhiều lịch trình
-        test_duration = 60  # Giảm từ 300 xuống 60 giây
-        logger.info(f"$$$ Chờ {test_duration} giây để quá trình test chạy...")
-        time.sleep(test_duration)
-        
-        logger.info(f"$$$ Đã chạy đủ {test_duration} giây.")
-        # Dừng lại sau khi test (bước này sẽ được thực hiện trong finally)
-
-        logger.info(f"$$$ TASK test_continuous_recognition KẾT THÚC THÀNH CÔNG cho schedule_id: {schedule_id}")
-        return True
-            
-    except ContinuousAttendanceSchedule.DoesNotExist:
-        logger.error(f"$$$ LỖI: Lịch trình {schedule_id} không tồn tại khi test")
-        return False
-    except Exception as e:
-        logger.error(f"$$$ LỖI không xác định trong test_continuous_recognition: {str(e)}")
-        logger.error(traceback.format_exc())
-        return False
-    finally:
-        # Luôn đảm bảo dừng tiến trình và khôi phục trạng thái gốc
-        logger.info(f"$$$ Bắt đầu khối finally cho schedule_id: {schedule_id}")
-        # Gửi task stop để dừng tiến trình test (nếu đang chạy)
-        try:
-            logger.info(f"$$$ Gửi task stop_continuous_recognition trong finally...")
-            stop_after_test_result = stop_continuous_recognition.delay(schedule_id)
-            logger.info(f"$$$ Đã gửi task stop trong finally, ID: {stop_after_test_result.id}")
-        except Exception as stop_err:
-             logger.error(f"$$$ Lỗi khi gửi task stop trong finally: {stop_err}")
-
-        # Khôi phục lại trạng thái gốc trong DB nếu cần
-        if schedule and original_status: # Bỏ kiểm tra schedule.status != original_status ở đây
-            try:
-                time.sleep(2)
-                # Cần lấy lại schedule object vì nó có thể đã thay đổi
-                schedule_final = ContinuousAttendanceSchedule.objects.get(id=schedule_id) 
-                if schedule_final.status != original_status: # Kiểm tra ở đây
-                    logger.info(f"$$$ Khôi phục status gốc ({original_status}) cho schedule {schedule_id}")
-                    schedule_final.status = original_status
-                    if original_status == 'active' and schedule_final.is_running:
-                        logger.warning(f"$$$ is_running vẫn là True trước khi khôi phục status, đặt thành False.")
-                        schedule_final.is_running = False 
-                    schedule_final.save(update_fields=['status', 'is_running'])
-                    logger.info(f"$$$ Đã khôi phục status gốc.")
-                else:
-                    logger.info(f"$$$ Status hiện tại ({schedule_final.status}) đã là status gốc ({original_status}). Không cần khôi phục.")
-                    # Vẫn đảm bảo is_running là False nếu status gốc là active
-                    if original_status == 'active' and schedule_final.is_running:
-                         logger.warning(f"$$$ Status gốc là active nhưng is_running vẫn True. Đặt thành False.")
-                         schedule_final.is_running = False
-                         schedule_final.save(update_fields=['is_running'])
-
-            except ContinuousAttendanceSchedule.DoesNotExist:
-                 logger.error(f"$$$ Lỗi: Không tìm thấy lịch trình {schedule_id} khi khôi phục status.")
-            except Exception as restore_err:
-                logger.error(f"$$$ Lỗi khi khôi phục status gốc cho schedule {schedule_id}: {restore_err}")
-        
-        logger.info(f"$$$ TASK test_continuous_recognition KẾT THÚC (trong finally) cho schedule_id: {schedule_id}") 

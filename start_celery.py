@@ -14,13 +14,6 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'attendance_system_facial_recogn
 django.setup()
 
 # Fix múi giờ cho Celery logs - thêm dòng này để sửa lỗi múi giờ
-try:
-    import celery_timezone_fix
-    print("Đã áp dụng fix múi giờ cho Celery")
-except ImportError:
-    print("CẢNH BÁO: Không thể áp dụng fix múi giờ. File celery_timezone_fix.py không tồn tại.")
-    print("Hãy đảm bảo file celery_timezone_fix.py đã được tạo.")
-
 # Import sau khi setup Django
 from django.utils import timezone
 from recognition.models import ContinuousAttendanceSchedule

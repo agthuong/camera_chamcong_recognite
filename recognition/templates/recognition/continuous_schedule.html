@@ -361,11 +361,6 @@
                                                     data-csrf="{{ csrf_token }}" title="Xóa lịch trình">
                                                 <i class="fas fa-trash"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-info run-now-btn" 
-                                                    data-id="{{ schedule.id }}"
-                                                    data-name="{{ schedule.name }}" title="Chạy thử lịch trình này">
-                                                <i class="fas fa-play-circle"></i>
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -578,87 +573,6 @@
                         },
                         error: function() {
                             Swal.fire('Lỗi!', 'Đã xảy ra lỗi khi xử lý yêu cầu.', 'error');
-                        }
-                    });
-                }
-            });
-        });
-
-        // Xử lý nút Chạy thử
-        $('.run-now-btn').click(function() {
-            const scheduleId = $(this).data('id');
-            const scheduleName = $(this).data('name');
-            const button = $(this);
-            
-            Swal.fire({
-                title: 'Xác nhận chạy thử?',
-                html: `Bạn có chắc muốn chạy thử lịch trình <strong>${scheduleName}</strong>?<br>Quá trình này sẽ chạy khoảng 30 giây.`, // Sửa lỗi thiếu dấu ngoặc nhọn
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Chạy thử',
-                cancelButtonText: 'Hủy bỏ'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Hiển thị loading
-                    Swal.fire({
-                        title: 'Đang thực hiện...',
-                        html: 'Vui lòng chờ trong khi hệ thống khởi động quá trình nhận diện.',
-                        allowOutsideClick: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
-                    });
-                    
-                    // Vô hiệu hóa nút
-                    button.prop('disabled', true);
-                    
-                    // Gửi AJAX request
-                    $.ajax({
-                        url: `/test-continuous-schedule/${scheduleId}/`,
-                        type: 'GET',
-                        success: function(response) {
-                            Swal.close();
-                            
-                            if (response.status === 'success') {
-                                Swal.fire({
-                                    title: 'Đã bắt đầu!',
-                                    html: response.message,
-                                    icon: 'success'
-                                });
-                                
-                                // Reload sau 30 giây
-                                setTimeout(function() {
-                                    location.reload();
-                                }, 32000);
-                            } else {
-                                Swal.fire({
-                                    title: 'Lỗi!',
-                                    html: response.message || 'Có lỗi xảy ra khi thực hiện nhận diện.',
-                                    icon: 'error'
-                                });
-                                
-                                // Kích hoạt lại nút
-                                button.prop('disabled', false);
-                            }
-                        },
-                        error: function(xhr, status, error) {
-                            Swal.close();
-                            
-                            let errorMessage = 'Có lỗi xảy ra khi thực hiện nhận diện.';
-                            if (xhr.responseJSON && xhr.responseJSON.message) {
-                                errorMessage = xhr.responseJSON.message;
-                            }
-                            
-                            Swal.fire({
-                                title: 'Lỗi!',
-                                html: errorMessage,
-                                icon: 'error'
-                            });
-                            
-                            // Kích hoạt lại nút
-                            button.prop('disabled', false);
                         }
                     });
                 }
