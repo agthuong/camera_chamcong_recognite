@@ -88,7 +88,8 @@ from rest_framework import status, generics, filters
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-
+from itertools import groupby
+from operator import attrgetter
 # Import Profile từ ứng dụng users
 from users.models import Profile
 
@@ -2606,7 +2607,7 @@ def test_scheduled_recognition(request, schedule_id):
 @login_required
 def continuous_schedule_view(request):
     """
-    Hiển thị và quản lý lịch trình chấm công liên tục
+    Hiển thị và quản lý lịch trình chấm công liên tục, nhóm theo camera.
     """
     # Xử lý form thêm mới
     if request.method == 'POST':
@@ -2615,21 +2616,33 @@ def continuous_schedule_view(request):
             form.save()
             messages.success(request, "Đã tạo lịch trình chấm công liên tục thành công!")
             return redirect('continuous-schedule')
+        # Nếu form không valid, form sẽ được trả lại context bên dưới để hiển thị lỗi
     else:
         form = ContinuousAttendanceScheduleForm()
-    
-    # Lấy danh sách lịch trình
-    schedules = ContinuousAttendanceSchedule.objects.all().order_by('schedule_type', 'start_time')
-    
+
+    # Lấy danh sách lịch trình, sắp xếp theo camera name rồi đến loại và thời gian
+    schedules_qs = ContinuousAttendanceSchedule.objects.select_related('camera').all().order_by('camera__name', 'schedule_type', 'start_time')
+
+    # Nhóm các lịch trình theo camera
+    grouped_schedules = []
+    # Sử dụng itertools.groupby để nhóm hiệu quả
+    for camera, group in groupby(schedules_qs, key=attrgetter('camera')):
+        # Chuyển group iterator thành list để có thể dùng nhiều lần
+        schedules_for_camera = list(group)
+        grouped_schedules.append((camera, schedules_for_camera))
+
     # Lấy log gần đây
     logs = ContinuousAttendanceLog.objects.all().order_by('-timestamp')[:20]
-    
+
     context = {
         'form': form,
-        'schedules': schedules,
+        # Truyền dữ liệu đã nhóm vào template
+        'grouped_schedules': grouped_schedules,
+        # 'schedules': schedules, # Không cần truyền danh sách phẳng nữa
         'logs': logs,
+        'is_edit': False, # Đảm bảo is_edit là False cho view này
     }
-    
+
     return render(request, 'recognition/continuous_schedule.html', context)
 
 @login_required
@@ -2637,30 +2650,36 @@ def edit_continuous_schedule_view(request, schedule_id):
     """
     Chỉnh sửa lịch trình chấm công liên tục
     """
-    schedule = get_object_or_404(ContinuousAttendanceSchedule, id=schedule_id)
-    
+    schedule_instance = get_object_or_404(ContinuousAttendanceSchedule, id=schedule_id)
+
     if request.method == 'POST':
-        form = ContinuousAttendanceScheduleForm(request.POST, instance=schedule)
+        form = ContinuousAttendanceScheduleForm(request.POST, instance=schedule_instance)
         if form.is_valid():
             form.save()
             messages.success(request, "Đã cập nhật lịch trình chấm công liên tục thành công!")
             return redirect('continuous-schedule')
+        # Nếu form không valid, form sẽ được trả lại context bên dưới
     else:
-        form = ContinuousAttendanceScheduleForm(instance=schedule)
-    
-    # Lấy danh sách lịch trình
-    schedules = ContinuousAttendanceSchedule.objects.all().order_by('schedule_type', 'start_time')
-    
+        form = ContinuousAttendanceScheduleForm(instance=schedule_instance)
+
+    # Lấy danh sách lịch trình và nhóm lại (giống như view chính)
+    schedules_qs = ContinuousAttendanceSchedule.objects.select_related('camera').all().order_by('camera__name', 'schedule_type', 'start_time')
+    grouped_schedules = []
+    for camera, group in groupby(schedules_qs, key=attrgetter('camera')):
+        schedules_for_camera = list(group)
+        grouped_schedules.append((camera, schedules_for_camera))
+
     # Lấy log gần đây
     logs = ContinuousAttendanceLog.objects.all().order_by('-timestamp')[:20]
-    
+
     context = {
         'form': form,
-        'schedules': schedules,
+        'grouped_schedules': grouped_schedules, # Dữ liệu đã nhóm
         'logs': logs,
-        'is_edit': True,
+        'is_edit': True, # Đánh dấu là trang edit
+        'editing_schedule_id': schedule_id # Có thể cần ID này trong template nếu muốn highlight
     }
-    
+
     return render(request, 'recognition/continuous_schedule.html', context)
 
 @login_required

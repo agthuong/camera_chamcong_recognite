@@ -3383,3 +3383,1017 @@
 2025-04-17 19:39:21,942 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
 2025-04-17 19:39:25,063 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
 2025-04-17 19:39:25,254 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:24:37,575 - recognition.firebase_util - INFO - Đã kết nối thành công với Firebase
+2025-04-18 09:25:37,679 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 09:25:41,548 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:26:41,563 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 09:26:45,706 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:27:45,724 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 09:27:49,850 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:27:51,141 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:27:57,926 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:27:58,684 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:02,551 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:03,409 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:05,904 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:06,195 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:08,768 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:08,939 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:12,059 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:12,235 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:15,846 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:15,996 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:18,888 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:19,336 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:42,352 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:42,499 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:45,093 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:45,264 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:49,346 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:49,499 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:51,948 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:52,448 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:55,022 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:55,345 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:28:58,018 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:28:58,737 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:01,250 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:01,721 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:04,221 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:04,392 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:06,956 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:07,416 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:09,879 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:10,335 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:31,092 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:31,575 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:34,062 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:34,249 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:38,839 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:39,006 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:41,502 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:41,655 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:44,137 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:44,302 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:46,752 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:46,900 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:49,762 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:49,916 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:52,530 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:52,688 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:29:56,613 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:29:56,785 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:30:01,029 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:30:01,639 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:14,980 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:15,462 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:17,972 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:18,172 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:20,767 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:20,967 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:23,991 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:24,183 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:27,255 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:27,442 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:30,138 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:30,341 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:33,353 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:33,532 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:36,017 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:36,528 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:39,201 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:39,383 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:39:42,356 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:39:42,548 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:17,049 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:17,455 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:22,885 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:23,424 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:27,906 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:28,431 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:33,481 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:33,710 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:37,640 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:37,855 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:41,209 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:41,434 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:46,404 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:46,592 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:51,167 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:51,705 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:55,618 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:55,800 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:40:59,145 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:40:59,327 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:41:02,445 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:41:02,619 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:41:05,418 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:41:05,593 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:41:35,910 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:41:36,473 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:41:39,703 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:41:39,941 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:41:45,431 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:41:45,637 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:41:51,940 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:41:52,545 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:41:57,207 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:41:57,395 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:01,335 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:01,586 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:05,284 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:05,455 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:08,641 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:08,828 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:12,008 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:12,539 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:15,518 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:15,712 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:19,917 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:20,108 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:53,666 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:53,887 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:42:58,195 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:42:58,433 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:03,318 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:03,554 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:09,529 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:09,741 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:12,674 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:12,866 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:18,429 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:18,651 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:26,252 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:26,478 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:31,825 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:32,044 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:35,737 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:35,927 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:39,534 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:39,711 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:43:42,518 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:43:42,776 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:15,175 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:15,435 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:18,873 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:19,121 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:26,566 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:26,806 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:31,521 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:31,730 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:35,926 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:36,412 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:43,179 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:43,393 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:49,434 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:49,634 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:44:57,686 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:44:57,991 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:45:07,297 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:45:07,821 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:45:11,760 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:45:12,015 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:45:15,861 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:45:16,055 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:45:48,240 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:45:48,450 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:45:51,362 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:45:51,588 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:45:55,149 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:45:55,692 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:05,006 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:05,544 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:08,645 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:08,879 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:12,554 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:12,763 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:15,697 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:15,872 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:18,449 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:18,960 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:21,480 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:21,657 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:24,304 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:24,481 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:48,039 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:48,549 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:51,141 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:51,665 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:54,164 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:54,359 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:46:59,040 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:46:59,562 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:02,406 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:02,601 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:05,193 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:05,388 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:07,948 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:08,459 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:11,197 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:11,404 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:14,270 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:14,454 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:17,190 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:17,683 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:42,579 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:42,765 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:45,456 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:45,627 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:48,360 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:48,565 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:55,012 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:55,521 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:47:59,661 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:47:59,869 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:48:03,921 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:48:04,441 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:48:09,204 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:48:09,401 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:48:13,489 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:48:13,719 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:48:18,211 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:48:18,473 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:48:22,306 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:48:22,523 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:48:26,743 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:48:26,947 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:48:56,797 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:48:57,367 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:00,756 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:01,039 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:04,403 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:04,621 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:09,028 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:09,240 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:11,777 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:11,990 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:15,024 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:15,262 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:19,062 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:19,278 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:23,293 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:23,510 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 09:49:28,175 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 09:49:28,396 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:08:56,100 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:08:57,564 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:09:01,643 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:09:02,754 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:09:06,964 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:09:08,668 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:09:16,938 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:09:18,382 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:09:22,645 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:09:24,113 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:09:28,830 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:09:32,019 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:09:37,045 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:09:38,661 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:10:57,995 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:10:59,178 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:12:33,757 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:12:34,627 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:12:38,798 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:12:40,094 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:12:45,581 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:12:47,143 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:12:54,196 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:12:55,358 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:12:58,838 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:13:00,042 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:13:05,476 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:13:06,906 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:14:37,515 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:14:38,239 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:14:41,873 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:14:44,282 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:14:49,568 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:14:52,226 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:14:57,459 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:14:59,439 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:15:07,551 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:15:09,755 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:15:15,061 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:15:17,245 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:15:22,492 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:15:25,204 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:15:30,467 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:15:32,912 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:15:38,126 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:15:40,035 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:15:45,249 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:15:48,169 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:15:53,412 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:15:55,604 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:16:01,100 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:16:03,279 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:18:44,137 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:18:45,970 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:18:51,252 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:18:53,721 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:00,056 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:01,603 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:08,976 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:10,243 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:14,213 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:15,191 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:19,639 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:21,248 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:25,252 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:26,562 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:29,793 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:30,454 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:33,782 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:35,049 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:38,221 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:39,136 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:42,186 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:42,802 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:19:46,377 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:19:47,687 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:22:41,066 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:22:42,754 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:22:49,544 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:22:51,721 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:22:58,141 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:02,812 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:15,746 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:17,886 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:23,153 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:25,276 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:31,068 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:32,858 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:36,598 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:38,122 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:42,383 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:43,425 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:47,176 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:48,410 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:52,250 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:53,111 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:23:57,416 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:23:58,455 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:24:02,825 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:25:03,577 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 10:25:07,127 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:26:07,135 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 10:26:34,158 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:26:34,958 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:26:37,804 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:26:38,873 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:26:41,868 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:26:42,546 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:26:45,446 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:26:46,761 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:26:52,426 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:26:53,119 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:26:57,059 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:26:57,786 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:27:00,746 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:27:01,913 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:27:04,690 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:27:07,478 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:27:10,719 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:27:12,015 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:27:15,177 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:27:16,478 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:27:19,690 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:27:20,833 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:27:25,367 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:27:26,390 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:28:43,331 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:28:44,667 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:28:49,207 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:28:50,762 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:28:54,540 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:28:57,074 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:01,493 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:02,696 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:04,095 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:07,274 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:29:07,914 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:08,650 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:11,997 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:13,034 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:16,608 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:18,108 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:21,236 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:22,578 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:27,471 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:29,146 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:32,660 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:33,977 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:37,219 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:38,937 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:29:43,508 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:29:44,963 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:30:05,638 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:30:07,714 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:30:11,127 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:30:13,331 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:30:21,654 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:30:24,501 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:30:56,533 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:30:57,682 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:00,745 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:01,567 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:04,468 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:05,160 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:09,748 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:10,808 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:13,537 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:14,592 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:17,362 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:18,081 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:21,115 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:22,145 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:24,890 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:25,992 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:28,628 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:29,305 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:32,135 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:33,168 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:36,169 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:37,263 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:31:40,777 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:31:41,895 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:33:35,870 - recognition.firebase_util - INFO - Đã kết nối thành công với Firebase
+2025-04-18 10:34:35,930 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 10:44:24,656 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:45:24,710 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 10:45:27,984 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:46:27,993 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 10:46:31,439 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:47:31,458 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 10:47:34,459 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:47:34,974 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:47:40,973 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:47:41,843 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:47:45,931 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:47:47,122 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:47:50,209 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:47:51,417 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:47:54,770 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:47:55,362 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:47:58,373 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:47:58,955 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:48:04,259 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:48:05,667 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:48:09,155 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:48:10,299 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:48:14,202 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:48:15,444 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:48:20,258 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:48:21,144 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:49:37,704 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:49:41,768 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:49:44,187 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:49:46,839 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:49:47,415 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:49:53,438 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:49:55,033 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:49:55,933 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:04,940 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:05,663 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:09,674 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:10,942 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:14,064 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:14,779 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:18,208 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:19,400 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:23,284 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:23,909 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:26,964 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:27,872 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:31,014 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:31,849 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:34,875 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:35,696 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:38,973 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:39,853 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:50:53,278 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:50:55,537 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:50:59,543 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:02,646 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:10,927 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:12,925 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:17,457 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:19,645 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:23,916 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:25,884 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:30,746 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:32,182 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:37,134 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:39,453 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:43,257 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:44,577 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:48,193 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:50,775 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:51:54,825 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:51:56,893 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:52:02,182 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:52:04,397 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:52:08,052 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:52:10,646 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:52:14,810 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:52:17,618 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:52:26,611 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:52:28,285 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:52:33,757 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:52:36,077 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:52:40,532 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:52:45,176 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:52:51,514 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:52:59,547 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:00,990 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:53:02,340 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:07,910 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:08,758 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:17,063 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:18,021 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:21,806 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:23,663 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:28,305 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:29,547 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:31,368 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:33,947 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:53:35,596 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:38,149 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:38,709 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:42,026 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:43,574 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:53:45,187 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:48,042 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:50,105 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:53:51,248 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:53:52,103 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:54:04,834 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:54:07,458 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:54:11,451 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:54:13,875 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:54:39,846 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:54:41,788 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:54:46,077 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:54:47,855 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:54:51,071 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:54:52,788 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:54:55,974 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:54:57,660 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:55:00,921 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:02,125 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:55:05,549 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:07,066 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:55:11,034 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:13,508 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:55:18,189 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:22,343 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:55:26,203 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:30,698 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:55:31,477 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:35,098 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:55:36,720 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:39,443 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:40,240 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:55:41,491 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:55:45,728 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:46,922 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:55:51,636 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:53,051 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:55:57,349 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:55:58,633 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:56:04,166 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:04,748 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:05,809 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:56:09,299 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:56:09,814 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:12,082 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:56:13,718 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:16,895 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:17,787 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:56:18,451 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:56:21,953 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:23,012 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:23,715 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:56:24,599 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:56:27,641 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:29,976 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:56:33,688 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:36,313 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:56:43,834 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:47,038 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:56:53,602 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:56:55,785 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:56:59,288 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:57:01,585 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:57:04,659 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:57:06,043 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:57:09,155 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:57:11,358 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:57:38,396 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:57:41,527 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:57:47,967 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:57:50,433 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:57:56,706 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:57:59,370 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:58:04,100 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:58:06,261 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:58:23,443 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:58:27,001 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:58:32,433 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:58:32,977 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:58:34,583 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:58:38,387 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:58:38,972 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:58:40,179 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:58:49,789 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:58:52,018 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:58:59,762 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:01,463 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:59:05,649 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:06,690 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:59:10,140 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:11,375 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:59:16,261 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:18,543 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:18,692 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:59:21,979 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:22,926 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:59:24,921 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:59:29,168 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:31,594 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:33,749 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 10:59:36,347 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:59:39,900 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:41,238 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:59:45,463 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:48,094 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 10:59:54,776 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 10:59:57,287 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:05:17,409 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:05:18,884 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:05:21,786 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:05:22,957 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:05:44,376 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:05:46,244 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:05:49,091 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:05:50,412 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:05:56,933 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:05:58,054 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:01,061 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:02,212 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:05,130 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:06,433 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:09,543 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:10,245 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:14,234 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:16,301 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:19,591 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:21,718 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:25,403 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:26,333 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:30,583 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:31,468 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:34,589 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:35,732 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:38,511 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:39,506 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:42,273 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:43,412 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:46,675 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:48,461 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:52,653 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:54,325 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:06:57,531 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:06:59,010 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:02,741 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:04,524 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:08,150 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:09,229 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:12,629 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:13,900 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:20,368 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:21,368 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:24,207 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:25,009 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:27,796 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:29,074 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:31,970 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:33,723 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:37,157 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:38,292 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:49,207 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:50,549 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:07:54,525 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:07:56,042 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:13,708 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:15,782 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:20,628 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:22,987 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:26,144 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:27,324 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:30,000 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:31,794 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:34,360 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:36,122 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:39,281 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:40,674 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:43,580 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:44,422 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:47,165 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:48,595 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:51,857 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:53,163 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:08:56,843 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:08:58,138 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:09:02,035 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:09:03,584 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:10:51,778 - recognition.firebase_util - INFO - Đã kết nối thành công với Firebase
+2025-04-18 11:14:15,984 - recognition.firebase_util - INFO - Đã kết nối thành công với Firebase
+2025-04-18 11:15:16,128 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 11:15:40,818 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:16:40,903 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: 504 Deadline Exceeded
+2025-04-18 11:16:49,253 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:17:11,514 - recognition.firebase_util - ERROR - Lỗi khi đẩy dữ liệu lên Firebase: [Errno 22] Invalid argument
+2025-04-18 11:17:20,129 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:17:24,180 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:18:29,213 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:18:32,135 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:18:40,852 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:18:43,995 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:19:09,663 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:19:13,263 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:19:20,955 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:19:22,979 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:19:32,263 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:19:34,304 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:20:30,723 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:20:31,381 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:20:36,180 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:20:37,238 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:20:44,588 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:20:45,610 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:20:56,487 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:20:57,215 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:02,643 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:04,676 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:09,484 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:09,791 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:10,697 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:11,721 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:21:14,252 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:15,132 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:20,183 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:20,488 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:25,028 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:26,055 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:26,298 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:27,591 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:21:31,856 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:32,975 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:33,451 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:35,227 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:21:37,612 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:38,269 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:21:43,260 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:21:43,914 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:22:01,329 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:06,564 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:12,262 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:13,511 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:23,988 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:25,776 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:29,245 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:29,616 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:30,203 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:22:30,587 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:34,021 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:34,400 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:34,631 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:22:35,602 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:38,321 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:38,597 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:22:39,365 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:40,645 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:44,596 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:46,249 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:46,249 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:47,172 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:22:50,445 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:51,323 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:51,822 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:22:52,267 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:22:55,560 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:55,980 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:22:56,900 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:22:57,394 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:00,668 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:01,199 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:02,075 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:23:02,432 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:05,907 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:06,271 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:06,907 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:23:07,504 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:10,534 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:11,179 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:23:11,198 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:12,430 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:14,818 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:15,731 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:23:16,064 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:17,610 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:19,658 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:20,578 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:23:21,623 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:22,822 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:27,035 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:28,284 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:32,318 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:33,862 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:37,769 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:39,302 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:43,296 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:44,823 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:48,658 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:50,150 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:50,228 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:51,186 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:23:55,198 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:55,817 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:23:56,962 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:23:58,446 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:23:59,416 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:00,026 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:02,426 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:03,965 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:04,261 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:05,120 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:24:07,919 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:08,803 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:09,138 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:10,277 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:24:12,740 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:13,650 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:13,888 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:15,098 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:24:17,204 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:17,777 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:18,768 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:19,967 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:24:21,371 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:21,619 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:25,902 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:26,489 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:29,090 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:30,295 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:30,583 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:24:30,871 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:34,434 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:34,792 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:35,723 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:36,311 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:24:39,999 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:40,930 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:24:53,080 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:54,288 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:24:58,348 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:24:59,973 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:03,978 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:05,537 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:09,718 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:10,941 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:12,813 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:13,767 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:14,551 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:15,785 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:17,744 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:18,481 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:19,780 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:21,710 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:22,199 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:22,823 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:25,589 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:26,775 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:27,144 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:27,386 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:31,359 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:31,590 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:32,200 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:32,888 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:36,055 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:36,639 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:36,733 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:38,531 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:40,219 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:40,912 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:42,303 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:44,093 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:44,532 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:45,176 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:47,820 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:48,774 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:49,023 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:49,308 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:25:52,917 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:53,854 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:57,626 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:57,800 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:25:58,218 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:25:59,307 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:01,918 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:02,439 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:26:05,313 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:06,557 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:10,483 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:11,692 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:15,561 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:17,189 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:21,406 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:23,236 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:27,076 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:28,603 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:32,365 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:32,395 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:33,298 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:26:33,878 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:36,946 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:37,362 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:26:37,566 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:39,173 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:40,914 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:41,830 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:26:42,811 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:44,006 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:47,851 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:48,168 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:48,746 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:26:49,668 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:52,338 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:53,171 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:26:53,322 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:54,228 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:26:56,882 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:26:57,278 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:01,163 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:01,727 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:05,657 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:05,922 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:09,799 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:10,115 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:10,453 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:11,965 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:27:14,100 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:14,702 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:15,648 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:16,837 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:27:18,361 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:18,949 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:20,516 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:21,732 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:27:22,707 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:22,949 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:25,652 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:26,884 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:27:36,464 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:37,946 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:27:41,978 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:43,242 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:27:54,348 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:54,765 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:54,965 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:27:56,644 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:27:58,457 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:27:59,400 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:00,280 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:02,795 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:28:03,001 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:03,916 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:06,567 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:08,251 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:28:08,419 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:09,317 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:11,827 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:12,876 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:13,250 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:28:13,765 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:16,926 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:17,456 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:18,349 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:18,380 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:28:22,001 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:22,129 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:22,568 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:23,320 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:28:26,160 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:26,459 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:27,019 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:28,604 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:28:30,480 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:31,317 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:35,061 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:35,173 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:36,052 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường
+2025-04-18 11:28:36,675 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Phạm Văn Minh
+2025-04-18 11:28:39,694 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:40,344 - recognition.firebase_util - INFO - Đã khởi tạo Firebase trước đó, sử dụng kết nối hiện có
+2025-04-18 11:28:40,581 - recognition.firebase_util - INFO - Đẩy thành công dữ liệu chấm công lên Firebase cho Võ Mạnh Thường

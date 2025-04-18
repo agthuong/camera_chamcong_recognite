@@ -12,21 +12,23 @@
             <h5 class="mb-0">Bộ lọc</h5>
         </div>
         <div class="card-body">
-            <form method="get" id="log-filter-form-page" class="form-inline"> {# ID khác để tránh xung đột JS nếu có #}
-                 <div class="form-group mr-2 mb-2">
-                     <label for="start_date_page" class="sr-only">Từ ngày</label>
+            <form method="get" id="log-filter-form-page" class="form-inline">
+                 <div class="form-group mr-3 mb-2">
+                     <label for="start_date_page" class="mr-2">Từ ngày:</label>
                      <input type="date" class="form-control form-control-sm" id="start_date_page" name="start_date" title="Từ ngày" value="{{ start_date|default:'' }}">
                  </div>
-                 <div class="form-group mr-2 mb-2">
-                     <label for="end_date_page" class="sr-only">Đến ngày</label>
+                 <div class="form-group mr-3 mb-2">
+                     <label for="end_date_page" class="mr-2">Đến ngày:</label>
                      <input type="date" class="form-control form-control-sm" id="end_date_page" name="end_date" title="Đến ngày" value="{{ end_date|default:'' }}">
                  </div>
-                 <div class="form-group mr-2 mb-2">
-                     <label for="search_page" class="sr-only">Tìm tên</label>
+                 <div class="form-group mr-3 mb-2">
+                     <label for="search_page" class="mr-2">Tìm tên:</label>
                      <input type="text" class="form-control form-control-sm" id="search_page" name="search" placeholder="Tìm tên..." value="{{ search_query|default:'' }}">
                  </div>
-                 <button type="submit" class="btn btn-primary btn-sm mb-2 mr-1">Lọc</button>
-                 <button type="button" id="reload-log-btn-page" class="btn btn-secondary btn-sm mb-2" title="Tải lại"><i class="fas fa-sync-alt"></i></button>
+                 <div class="form-group mb-2">
+                     <button type="submit" class="btn btn-primary btn-sm mr-1">Lọc</button>
+                     <button type="button" id="reload-log-btn-page" class="btn btn-secondary btn-sm" title="Tải lại"><i class="fas fa-sync-alt"></i></button>
+                </div>
             </form>
         </div>
     </div>
@@ -35,7 +37,7 @@
         <div class="card-header bg-success text-white py-2">
             <h5 class="mb-0">Kết quả</h5>
         </div>
-        <div class="card-body p-0" id="attendance-log-table-container-page"> {# ID khác #}
+        <div class="card-body p-0" id="attendance-log-table-container-page">
             {% include 'recognition/partials/attendance_log_table.html' with attendance_records=attendance_records %}
         </div>
     </div>
@@ -76,6 +78,19 @@ $(document).ready(function() {
     filterForm.submit(function(e) {
         e.preventDefault();
         var formData = $(this).serialize();
+        var startDateStr = $('#start_date_page').val();
+        var endDateStr = $('#end_date_page').val();
+        
+        if (startDateStr && endDateStr) {
+            var startDate = new Date(startDateStr);
+            var endDate = new Date(endDateStr);
+            
+            if (endDate < startDate) {
+                alert('Lỗi: Ngày kết thúc không thể sớm hơn ngày bắt đầu.'); 
+                return; 
+            }
+        }
+        
         reloadAttendanceLog(formData);
     });
 

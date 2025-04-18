@@ -1,6 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User # Nếu bạn muốn liên kết với User sau này
 from django.utils import timezone
+from django.core.exceptions import ValidationError
+from django.db.models import Q
+import datetime
 
 # Model để lưu cấu hình Camera và ROI tương ứng
 class CameraConfig(models.Model):
@@ -268,10 +271,127 @@ class ContinuousAttendanceSchedule(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
+    def _time_ranges_overlap(self, start1, end1, start2, end2):
+        """
+        Kiểm tra xem hai khoảng thời gian có chồng chéo không.
+        Hỗ trợ xử lý lịch qua đêm (end_time < start_time).
+        """
+        # Chuyển đổi TimeField thành datetime để so sánh dễ dàng hơn
+        # Sử dụng một ngày cố định (ví dụ: 1970-01-01)
+        ref_date = datetime.date(1970, 1, 1)
+        dt1_start = datetime.datetime.combine(ref_date, start1)
+        dt1_end = datetime.datetime.combine(ref_date, end1)
+        dt2_start = datetime.datetime.combine(ref_date, start2)
+        dt2_end = datetime.datetime.combine(ref_date, end2)
+
+        # Xử lý lịch qua đêm cho khoảng 1
+        range1_overnight = dt1_end < dt1_start
+        if range1_overnight:
+            # Chia thành 2 khoảng: [start, midnight) và [midnight, end) của ngày hôm sau
+            dt1_end_next_day = dt1_end + datetime.timedelta(days=1)
+            # Kiểm tra xem dt2 có overlap với [dt1_start, midnight_next_day) HOẶC [midnight, dt1_end)
+            midnight_next_day = datetime.datetime.combine(ref_date + datetime.timedelta(days=1), datetime.time.min)
+            midnight_this_day = datetime.datetime.combine(ref_date, datetime.time.min)
+
+            overlap1 = (dt1_start < dt2_end and dt2_start < midnight_next_day)
+            overlap2 = (midnight_this_day < dt2_end and dt2_start < dt1_end)
+            # Xử lý trường hợp range 2 cũng qua đêm
+            if dt2_end < dt2_start:
+                 dt2_end_next_day = dt2_end + datetime.timedelta(days=1)
+                 # Check overlap với [dt1_start, midnight_next_day) vs [dt2_start, midnight_next_day)
+                 overlap1 = (dt1_start < dt2_end_next_day and dt2_start < midnight_next_day)
+                 # Check overlap với [midnight, dt1_end) vs [midnight, dt2_end)
+                 overlap2 = (midnight_this_day < dt1_end and midnight_this_day < dt2_end)
+            return overlap1 or overlap2
+        
+        # Xử lý lịch qua đêm cho khoảng 2
+        range2_overnight = dt2_end < dt2_start
+        if range2_overnight:
+             # Tương tự như trên, đảo vai trò range 1 và 2
+             dt2_end_next_day = dt2_end + datetime.timedelta(days=1)
+             midnight_next_day = datetime.datetime.combine(ref_date + datetime.timedelta(days=1), datetime.time.min)
+             midnight_this_day = datetime.datetime.combine(ref_date, datetime.time.min)
+             # Check overlap [dt2_start, midnight_next_day) vs dt1
+             overlap1 = (dt2_start < dt1_end and dt1_start < midnight_next_day)
+             # Check overlap [midnight, dt2_end) vs dt1
+             overlap2 = (midnight_this_day < dt1_end and dt1_start < dt2_end)
+             return overlap1 or overlap2
+
+        # Trường hợp cả hai không qua đêm
+        # Overlap khi: start1 < end2 và start2 < end1
+        return dt1_start < dt2_end and dt2_start < dt1_end
+
+    def clean(self):
+        super().clean() # Gọi clean của lớp cha
+
+        # Chỉ kiểm tra nếu lịch trình đang active
+        if self.status != 'active':
+            return
+
+        # Tìm TẤT CẢ các lịch trình active khác cùng camera và khác ID
+        conflicting_schedules = ContinuousAttendanceSchedule.objects.filter(
+            camera=self.camera,
+            status='active'
+        ).exclude(pk=self.pk) # Loại trừ chính lịch trình đang kiểm tra
+
+        if not conflicting_schedules.exists():
+            return # Không có lịch trình nào xung đột tiềm năng
+
+        # Lấy danh sách ngày hoạt động của lịch trình hiện tại
+        current_active_days = set(self.active_days.split(','))
+
+        # Kiểm tra từng lịch trình xung đột tiềm năng
+        for conflict_schedule in conflicting_schedules:
+            conflict_active_days = set(conflict_schedule.active_days.split(','))
+
+            # Tìm các ngày trùng lặp
+            common_days = current_active_days.intersection(conflict_active_days)
+
+            if common_days:
+                # Nếu có ngày trùng, kiểm tra giờ chồng chéo
+                if self._time_ranges_overlap(self.start_time, self.end_time,
+                                             conflict_schedule.start_time, conflict_schedule.end_time):
+                    # Nếu giờ cũng chồng chéo, báo lỗi với thông báo đơn giản
+                    error_message = "Đã có lịch trình trùng giờ trên camera này. Vui lòng điều chỉnh thời gian/ngày."
+                    raise ValidationError(error_message)
+
+    def save(self, *args, **kwargs):
+        # Gọi full_clean để chạy validation (bao gồm cả clean) trước khi lưu
+        # Không cần check force_insert hay force_update vì full_clean xử lý các trường hợp đó
+        self.full_clean()
+        super().save(*args, **kwargs) # Gọi save gốc
+
+    def get_active_days_display(self):
+        """
+        Trả về danh sách các tuple (số ngày, tên ngày Tiếng Việt) cho các ngày hoạt động.
+        """
+        if not self.active_days:
+            return []
+        
+        days_map = {
+            '1': 'Thứ 2',
+            '2': 'Thứ 3',
+            '3': 'Thứ 4',
+            '4': 'Thứ 5',
+            '5': 'Thứ 6',
+            '6': 'Thứ 7',
+            '7': 'CN'
+        }
+        
+        active_day_numbers = self.active_days.split(',')
+        display_list = []
+        # Sắp xếp theo đúng thứ tự ngày trong tuần
+        for day_num in sorted(active_day_numbers, key=lambda x: int(x) if x.isdigit() else 0):
+            day_name = days_map.get(day_num)
+            if day_name:
+                display_list.append((day_num, day_name))
+        return display_list
+
     def __str__(self):
-        return f"{self.name} - {self.get_schedule_type_display()} ({self.camera.name})"
-    
+        # Cập nhật __str__ để rõ ràng hơn một chút
+        return f"{self.name} ({self.camera.name}) - {self.get_schedule_type_display()} [{self.get_status_display()}]"
+
     class Meta:
         verbose_name = "Lịch trình chấm công liên tục"
         verbose_name_plural = "Các lịch trình chấm công liên tục"

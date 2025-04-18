@@ -679,94 +679,76 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                     if not recognized_persons.get(person_name, False):
                                         print(f"[RECOGNIZED] {person_name}")
                                         recognized_persons[person_name] = True
+                                    
+                                    # Đơn giản hóa luồng xử lý, chỉ lưu ảnh và hiển thị thông báo
                                     try:
-                                        sanitized_person_name_for_file = sanitize_filename(person_name)
-                                        try:
-                                            user = User.objects.get(username=person_name)
-                                        except User.DoesNotExist:
-                                            print(f"[PROCESS INFO] Tạo mới người dùng '{person_name}' trong cơ sở dữ liệu.")
-                                            user = User.objects.create_user(
-                                                username=person_name,
-                                                password=f"default_{person_name}",
-                                                first_name=person_name
-                                            )
-
+                                        # Xác định tên file và đường dẫn
                                         now = timezone.now()
                                         today = now.date()
-
-                                        record, created = AttendanceRecord.objects.get_or_create(
-                                            user=user,
-                                            date=today,
-                                            defaults={
-                                                'check_in': now,
-                                                'project': project,
-                                                'company': company,
-                                                'employee_id': employee_id
-                                            }
-                                        )
-
-                                        if project and not record.project:
-                                            record.project = project
-                                        if company and not record.company:
-                                            record.company = company
-                                        if employee_id and not record.employee_id:
-                                            record.employee_id = employee_id
-
-                                        if created:
+                                        sanitized_person_name_for_file = sanitize_filename(person_name)
+                                        
+                                        # Xác định xem đây là check-in hay check-out
+                                        # Giả lập bằng cách kiểm tra xem đã có ảnh check-in hôm nay chưa
+                                        check_in_file_pattern = f'{sanitized_person_name_for_file}_{today}_*.jpg'
+                                        check_in_dir = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR)
+                                        
+                                        import glob
+                                        existing_check_ins = glob.glob(os.path.join(check_in_dir, check_in_file_pattern))
+                                        
+                                        # Nếu chưa có ảnh check-in hôm nay -> đây là check-in
+                                        is_check_in = len(existing_check_ins) == 0
+                                        
+                                        if is_check_in:
+                                            # Xử lý check-in
                                             face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}.jpg'
-                                            face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
-                                            relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
-                                            os.makedirs(os.path.dirname(face_path), exist_ok=True)
-                                            saved_img_in = cv2.imwrite(face_path, face_aligned)
-                                            if not saved_img_in:
-                                                print(f"[PROCESS ERROR] Không thể lưu ảnh check-in tại: {face_path}")
-                                            else:
-                                                record.check_in_image_url = relative_face_path
-                                                record.save()
-                                                last_save_time[person_name] = now
-                                                print(f"[PROCESS INFO] Đã lưu check-in cho '{person_name}'")
-                                                
-                                                try:
-                                                    success = push_attendance_to_firebase(record, camera_name)
-                                                    if success:
-                                                        print(f"[PROCESS INFO] Đã đẩy dữ liệu check-in lên Firebase cho '{person_name}'")
-                                                    else:
-                                                        print(f"[PROCESS ERROR] Không thể đẩy dữ liệu lên Firebase cho '{person_name}'")
-                                                except Exception as firebase_err:
-                                                    print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-in lên Firebase: {firebase_err}")
-                                        else:
-                                            record.check_out = now
+                                            face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
+                                                                    settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
+                                            relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
+                                                                        settings.RECOGNITION_CHECK_IN_SUBDIR, face_filename)
                                             
+                                            # Tạo thư mục nếu chưa tồn tại
+                                            os.makedirs(os.path.dirname(face_path), exist_ok=True)
+                                            
+                                            # Lưu ảnh
+                                            saved_img = cv2.imwrite(face_path, face_aligned)
+                                            if saved_img:
+                                                print(f"[PROCESS INFO] Phát hiện check-in cho '{person_name}' - đã lưu ảnh nhưng không lưu dữ liệu chấm công")
+                                                last_save_time[person_name] = now
+                                            else:
+                                                print(f"[PROCESS ERROR] Không thể lưu ảnh check-in tại: {face_path}")
+                                        else:
+                                            # Xử lý check-out
                                             face_filename = f'{sanitized_person_name_for_file}_{today}_{now.strftime("%H%M%S")}_out.jpg'
                                             face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
                                                                     settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
                                             relative_face_path = os.path.join(settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
                                                                         settings.RECOGNITION_CHECK_OUT_SUBDIR, face_filename)
                                             
+                                            # Tạo thư mục nếu chưa tồn tại
                                             os.makedirs(os.path.dirname(face_path), exist_ok=True)
-                                            saved_img_out = cv2.imwrite(face_path, face_aligned)
                                             
-                                            if not saved_img_out:
-                                                print(f"[PROCESS ERROR] Không thể lưu ảnh check-out tại: {face_path}")
-                                            else:
-                                                record.check_out_image_url = relative_face_path
-                                                record.save()
+                                            # Lưu ảnh
+                                            saved_img = cv2.imwrite(face_path, face_aligned)
+                                            if saved_img:
+                                                # Lấy thời gian check-in từ tên file
+                                                check_in_time_str = "không rõ"
+                                                if existing_check_ins:
+                                                    # Lấy file đầu tiên
+                                                    check_in_file = os.path.basename(existing_check_ins[0])
+                                                    # Trích xuất thời gian từ tên file (định dạng: name_YYYY-MM-DD_HHMMSS.jpg)
+                                                    try:
+                                                        time_part = check_in_file.split('_')[-1].split('.')[0]
+                                                        check_in_time_str = f"{time_part[:2]}:{time_part[2:4]}:{time_part[4:6]}"
+                                                    except:
+                                                        pass
+                                                
+                                                check_out_time_str = now.strftime('%H:%M:%S')
+                                                print(f"[PROCESS INFO] Phát hiện check-out cho '{person_name}'")
                                                 last_save_time[person_name] = now
-                                                
-                                                check_in_time_str = record.check_in.strftime('%H:%M:%S') if record.check_in else "không rõ"
-                                                check_out_time_str = record.check_out.strftime('%H:%M:%S')
-                                                print(f"[PROCESS INFO] Đã cập nhật check-out cho '{person_name}' (check-in: {check_in_time_str}, check-out: {check_out_time_str})")
-                                                
-                                                try:
-                                                    success = push_attendance_to_firebase(record, camera_name)
-                                                    if success:
-                                                        print(f"[PROCESS INFO] Đã đẩy dữ liệu check-out lên Firebase cho '{person_name}'")
-                                                    else:
-                                                        print(f"[PROCESS ERROR] Không thể đẩy dữ liệu check-out lên Firebase cho '{person_name}'")
-                                                except Exception as firebase_err:
-                                                    print(f"[PROCESS ERROR] Lỗi khi đẩy dữ liệu check-out lên Firebase: {firebase_err}")
+                                            else:
+                                                print(f"[PROCESS ERROR] Không thể lưu ảnh check-out tại: {face_path}")
                                     except Exception as e:
-                                        print(f"[PROCESS ERROR] Lỗi khi lưu thông tin chấm công: {e}")
+                                        print(f"[PROCESS ERROR] Lỗi khi xử lý ảnh chấm công: {e}")
                                         import traceback
                                         traceback.print_exc()
 
@@ -847,7 +829,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
     else:
         return {}
 
-# --- Example Usage (for testing this module directly) ---
+
 if __name__ == '__main__':
-    # ... (Phần __main__ có thể giữ nguyên hoặc cập nhật để test chế độ stream nếu muốn)
-     pass # Thay pass bằng nội dung __main__ hiện tại của bạn 
+
+     pass  
