@@ -830,6 +830,3 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
         return {}
 
 
-if __name__ == '__main__':
-
-     pass  

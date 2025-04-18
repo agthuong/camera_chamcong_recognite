@@ -277,6 +277,9 @@ class ContinuousAttendanceSchedule(models.Model):
         Kiểm tra xem hai khoảng thời gian có chồng chéo không.
         Hỗ trợ xử lý lịch qua đêm (end_time < start_time).
         """
+        if start1 is None or end1 is None or start2 is None or end2 is None:
+            return False
+
         # Chuyển đổi TimeField thành datetime để so sánh dễ dàng hơn
         # Sử dụng một ngày cố định (ví dụ: 1970-01-01)
         ref_date = datetime.date(1970, 1, 1)

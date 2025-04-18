@@ -266,14 +266,14 @@ class ContinuousAttendanceScheduleForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nhập tên lịch trình'}),
             'camera': forms.Select(attrs={'class': 'form-control select2'}),
             'schedule_type': forms.Select(attrs={'class': 'form-control'}),
-            'start_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
-            'end_time': forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'}),
+            'start_time': forms.TextInput(attrs={'class': 'form-control timepicker-24hr', 'placeholder': 'HH:MM'}),
+            'end_time': forms.TextInput(attrs={'class': 'form-control timepicker-24hr', 'placeholder': 'HH:MM'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
         help_texts = {
             'schedule_type': 'Chọn loại chấm công (Check-in hoặc Check-out)',
-            'start_time': 'Thời điểm bắt đầu quét liên tục',
-            'end_time': 'Thời điểm kết thúc quét liên tục',
+            'start_time': 'Thời điểm bắt đầu quét (định dạng 24 giờ, ví dụ: 08:30)',
+            'end_time': 'Thời điểm kết thúc quét (định dạng 24 giờ, ví dụ: 17:00)',
         }
     
     def clean(self):

@@ -2,7 +2,7 @@
 {% load static %}
 {% load crispy_forms_tags %}
 
-{% block title %}Lịch trình chấm công liên tục{% endblock %}
+{% block title %}Lịch trình chấm công{% endblock %}
 
 {% block extra_head %}
     <!-- Select2 CSS -->
@@ -10,6 +10,8 @@
     <link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css" rel="stylesheet" />
     <!-- Toastify CSS -->
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         .schedule-card {
             margin-bottom: 1.5rem;
@@ -156,6 +158,16 @@
         .card-actions > * {
             margin-left: 0.5rem;
         }
+        .duration-input-group {
+            display: flex;
+            align-items: center;
+        }
+        .duration-input-group .form-control {
+            flex: 1;
+        }
+        .duration-input-group .input-group-append {
+            margin-left: -1px; /* Fix overlapping border */
+        }
     </style>
 {% endblock %}
 
@@ -224,7 +236,19 @@
                     <div class="col-md-4">
                         {{ form.start_time|as_crispy_field }}
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-2">
+                        <div class="form-group">
+                             <label for="id_duration">Thời lượng (giờ)</label>
+                             <div class="input-group duration-input-group">
+                                 <input type="number" step="0.1" min="0" class="form-control" id="id_duration" placeholder="VD: 8.5">
+                                 <div class="input-group-append">
+                                     <span class="input-group-text">giờ</span>
+                                 </div>
+                             </div>
+                             <small class="form-text text-muted">Nhập số giờ, ví dụ 8 hoặc 8.5 (8 tiếng rưỡi)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         {{ form.end_time|as_crispy_field }}
                     </div>
                 </div>
@@ -410,6 +434,8 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://npmcdn.com/flatpickr/dist/l10n/vn.js"></script>
 <script>
     $(document).ready(function() {
         // Khởi tạo Select2
@@ -637,6 +663,110 @@
                     });
                 }
             });
+        });
+
+        // --- Khởi tạo Flatpickr ---
+        const startTimePicker = flatpickr("#id_start_time", { // Sử dụng ID của trường
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "H:i",
+            time_24hr: true,
+            locale: "vn",
+            onChange: function(selectedDates, dateStr, instance) {
+                calculateDuration(); // Tính lại thời lượng khi giờ bắt đầu thay đổi
+                // Nếu có thời lượng, tính lại giờ kết thúc
+                const durationVal = parseFloat($('#id_duration').val());
+                if (!isNaN(durationVal) && durationVal > 0) {
+                    calculateEndTime();
+                }
+            }
+        });
+
+        const endTimePicker = flatpickr("#id_end_time", { // Sử dụng ID của trường
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "H:i",
+            time_24hr: true,
+            locale: "vn",
+            onChange: function(selectedDates, dateStr, instance) {
+                calculateDuration(); // Tính lại thời lượng khi giờ kết thúc thay đổi
+            }
+        });
+
+        // --- Hàm tính toán và hiển thị thời lượng ---
+        function calculateDuration() {
+            const startStr = $('#id_start_time').val();
+            const endStr = $('#id_end_time').val();
+
+            if (startStr && endStr) {
+                try {
+                    const startParts = startStr.split(':').map(Number);
+                    const endParts = endStr.split(':').map(Number);
+
+                    if (startParts.length === 2 && endParts.length === 2 && 
+                        !isNaN(startParts[0]) && !isNaN(startParts[1]) && 
+                        !isNaN(endParts[0]) && !isNaN(endParts[1])) 
+                    {
+                        const startDate = new Date(0, 0, 0, startParts[0], startParts[1]);
+                        let endDate = new Date(0, 0, 0, endParts[0], endParts[1]);
+
+                        // Xử lý trường hợp qua đêm (giờ kết thúc < giờ bắt đầu)
+                        if (endDate < startDate) {
+                            endDate.setDate(endDate.getDate() + 1); // Thêm 1 ngày
+                        }
+
+                        const diffMillis = endDate - startDate;
+                        const diffHours = diffMillis / (1000 * 60 * 60);
+
+                        $('#id_duration').val(diffHours.toFixed(1)); // Hiển thị 1 chữ số thập phân
+                    } else {
+                         $('#id_duration').val(''); // Xóa nếu định dạng giờ không đúng
+                    }
+                } catch (e) {
+                    console.error("Error parsing time:", e);
+                    $('#id_duration').val('');
+                }
+            } else {
+                $('#id_duration').val(''); // Xóa nếu thiếu giờ bắt đầu hoặc kết thúc
+            }
+        }
+
+        // --- Hàm tính toán giờ kết thúc từ thời lượng ---
+        function calculateEndTime() {
+            const startStr = $('#id_start_time').val();
+            const durationVal = parseFloat($('#id_duration').val());
+
+            if (startStr && !isNaN(durationVal) && durationVal > 0) {
+                 try {
+                     const startParts = startStr.split(':').map(Number);
+                     if (startParts.length === 2 && !isNaN(startParts[0]) && !isNaN(startParts[1])) {
+                         const startDate = new Date(0, 0, 0, startParts[0], startParts[1]);
+
+                         // Cộng thêm thời lượng (tính bằng mili giây)
+                         const durationMillis = durationVal * 60 * 60 * 1000;
+                         const endDate = new Date(startDate.getTime() + durationMillis);
+
+                         // Lấy giờ và phút, định dạng HH:MM
+                         const endHour = String(endDate.getHours()).padStart(2, '0');
+                         const endMinute = String(endDate.getMinutes()).padStart(2, '0');
+                         const endTimeStr = `${endHour}:${endMinute}`;
+
+                         // Cập nhật giá trị và Flatpickr cho ô End Time
+                         endTimePicker.setDate(endTimeStr, true); // true để trigger onChange
+                         $('#id_end_time').val(endTimeStr); // Cập nhật cả giá trị input trực tiếp
+
+                     } else {
+                         // Không cập nhật nếu giờ bắt đầu sai
+                     }
+                 } catch (e) {
+                     console.error("Error calculating end time:", e);
+                 }
+            }
+        }
+
+        // --- Gắn sự kiện cho ô thời lượng ---
+        $('#id_duration').on('input change', function() {
+            calculateEndTime(); // Tính lại giờ kết thúc khi thời lượng thay đổi
         });
     });
 </script>

@@ -57,10 +57,6 @@ active_processors = {}
 # Lưu trữ các camera đang được sử dụng - dùng để kiểm soát truy cập vào camera
 camera_locks = {}
 
-# Tạo thư mục lưu ảnh debug (nếu chưa có)
-TEMP_FACES_DIR = os.path.join(settings.BASE_DIR, 'temp_celery_faces')
-os.makedirs(TEMP_FACES_DIR, exist_ok=True)
-
 # --- Lớp đọc video bằng thread --- 
 class ThreadedVideoCapture:
     """
@@ -380,8 +376,7 @@ class VideoProcessor:
                 
                 # Xử lý mỗi n frame (để giảm tải CPU)
                 if self.frame_count % settings.RECOGNIZE_FRAME_SKIP != 0:
-                    # Bỏ qua frame này trong chu kỳ
-                    time.sleep(0.01)  # Ngủ nhẹ để tránh CPU quá tải
+                    time.sleep(0.01) 
                     continue
                 
                 # --- Chuẩn bị frame cho việc xử lý ---
@@ -441,15 +436,6 @@ class VideoProcessor:
                     logger.warning("Frame được xử lý không hợp lệ hoặc rỗng, bỏ qua frame này")
                     continue
                 
-                # --- Ghi frame vào file nếu cần debug visual ---
-                if settings.DEBUG and self.frame_count % 100 == 0:  # Mỗi 100 frame và khi DEBUG=True
-                    debug_dir = os.path.join(settings.BASE_DIR, 'debug_frames')
-                    if not os.path.exists(debug_dir):
-                        os.makedirs(debug_dir)
-                    filename = os.path.join(debug_dir, f"sched_{self.schedule_id}_frame_{self.frame_count}.jpg")
-                    cv2.imwrite(filename, frame_to_process)
-                    logger.debug(f"Đã lưu debug frame: {filename}")
-                
                 # Nhận diện khuôn mặt
                 self.recognize_faces(frame_to_process)
                 
@@ -503,16 +489,6 @@ class VideoProcessor:
                     if face_aligned is None or face_aligned.size == 0:
                         logger.warning(f"Căn chỉnh khuôn mặt {i} thất bại, bỏ qua")
                         continue
-                    
-                    # Lưu ảnh debug nếu cần - hữu ích cho phân tích lỗi
-                    if self.schedule_id is not None:  # Chỉ lưu khi có schedule_id
-                        timestamp_str = django_timezone.now().strftime("%Y%m%d_%H%M%S_%f")
-                        debug_filename = f"sched_{self.schedule_id}_frame_{self.frame_count}_face_{i}_{timestamp_str}.jpg"
-                        debug_filepath = os.path.join(TEMP_FACES_DIR, debug_filename)
-                        try:
-                            cv2.imwrite(debug_filepath, face_aligned)
-                        except Exception as save_err:
-                            logger.error(f"Lỗi khi lưu ảnh debug: {save_err}")
                             
                     # Nhận diện khuôn mặt - sử dụng phương thức đúng từ hàm predict của video_roi_processor
                     try:
@@ -586,7 +562,8 @@ class VideoProcessor:
                         # Nếu đạt ngưỡng, thực hiện chấm công
                         if self.recognized_faces[username] >= threshold:
                             logger.info(f"===== ĐẠT NGƯỠNG CHO {username} =====")
-                            self.process_attendance(username)
+                            # Truyền dữ liệu ảnh đã căn chỉnh vào process_attendance
+                            self.process_attendance(username, face_image_data=face_aligned)
                             self.recognized_faces[username] = 0  # Reset counter sau khi xử lý
                 
                 except Exception as face_err:
@@ -616,9 +593,13 @@ class VideoProcessor:
             logger.error(traceback.format_exc())
             return []
     
-    def process_attendance(self, username):
+    def process_attendance(self, username, face_image_data=None):
         """
         Xử lý chấm công cho người dùng đã được nhận diện
+
+        Args:
+            username (str): Tên người dùng.
+            face_image_data (np.ndarray, optional): Dữ liệu ảnh khuôn mặt đã căn chỉnh (numpy array). Mặc định là None.
         """
         try:
             if not self.is_running:
@@ -684,9 +665,8 @@ class VideoProcessor:
                         
                         # Lưu ảnh khuôn mặt (nếu có)
                         try:
-                            # Lấy ảnh mặt mới nhất
-                            latest_face_img = self.get_latest_face_image(username)
-                            if latest_face_img is not None:
+                            # Sử dụng face_image_data được truyền vào
+                            if face_image_data is not None and face_image_data.size > 0:
                                 # Tạo tên file dựa trên username và thời gian
                                 face_filename = f'{sanitized_username}_{today}_{now.strftime("%H%M%S")}.jpg'
                                 face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
@@ -698,12 +678,14 @@ class VideoProcessor:
                                 os.makedirs(os.path.dirname(face_path), exist_ok=True)
                                 
                                 # Lưu ảnh và cập nhật đường dẫn vào record
-                                saved_img = cv2.imwrite(face_path, latest_face_img)
+                                saved_img = cv2.imwrite(face_path, face_image_data)
                                 if saved_img:
                                     record.check_in_image_url = relative_face_path
                                     logger.info(f"Đã lưu ảnh check-in cho {username}")
                                 else:
                                     logger.error(f"Không thể lưu ảnh check-in")
+                            else:
+                                 logger.warning(f"Không có dữ liệu ảnh để lưu cho check-in của {username}")
                         except Exception as img_err:
                             logger.error(f"Lỗi khi lưu ảnh check-in: {img_err}")
                         
@@ -760,9 +742,8 @@ class VideoProcessor:
                         
                         # Lưu ảnh khuôn mặt check-out (nếu có)
                         try:
-                            # Lấy ảnh mặt mới nhất
-                            latest_face_img = self.get_latest_face_image(username)
-                            if latest_face_img is not None:
+                            # Sử dụng face_image_data được truyền vào
+                            if face_image_data is not None and face_image_data.size > 0:
                                 # Tạo tên file dựa trên username và thời gian
                                 face_filename = f'{sanitized_username}_{today}_{now.strftime("%H%M%S")}_out.jpg'
                                 face_path = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, 
@@ -773,13 +754,15 @@ class VideoProcessor:
                                 # Đảm bảo thư mục tồn tại
                                 os.makedirs(os.path.dirname(face_path), exist_ok=True)
                                 
-                                # Lưu ảnh và cập nhật đường dẫn vào record
-                                saved_img = cv2.imwrite(face_path, latest_face_img)
+                                # Lưu ảnh và cập nhật đường dẫn vào record (ghi đè nếu đã có)
+                                saved_img = cv2.imwrite(face_path, face_image_data)
                                 if saved_img:
                                     record.check_out_image_url = relative_face_path
-                                    logger.info(f"Đã lưu ảnh check-out cho {username}")
+                                    logger.info(f"Đã lưu/cập nhật ảnh check-out cho {username}")
                                 else:
                                     logger.error(f"Không thể lưu ảnh check-out")
+                            else:
+                                logger.warning(f"Không có dữ liệu ảnh để lưu cho check-out của {username}")
                         except Exception as img_err:
                             logger.error(f"Lỗi khi lưu ảnh check-out: {img_err}")
                         
@@ -871,35 +854,6 @@ class VideoProcessor:
         except Exception as e:
             logger.error(f"Lỗi khi sanitize filename: {e}")
             return f"user_{hash(filename) % 10000}"  # Fallback
-    
-    def get_latest_face_image(self, username):
-        """
-        Lấy ảnh khuôn mặt mới nhất được lưu trong debug dir
-        """
-        try:
-            if not self.schedule_id:
-                return None
-                
-            # Tìm tất cả file ảnh liên quan đến schedule này
-            files = [f for f in os.listdir(TEMP_FACES_DIR) if f.startswith(f"sched_{self.schedule_id}_") and f.endswith(".jpg")]
-            
-            if not files:
-                logger.warning(f"Không tìm thấy ảnh khuôn mặt nào cho schedule {self.schedule_id}")
-                return None
-                
-            # Sắp xếp theo thời gian (file mới nhất đầu tiên)
-            files.sort(reverse=True)
-            
-            # Lấy file mới nhất
-            latest_file = os.path.join(TEMP_FACES_DIR, files[0])
-            
-            # Đọc ảnh và trả về
-            img = cv2.imread(latest_file)
-            logger.info(f"Đã lấy ảnh khuôn mặt mới nhất: {latest_file}")
-            return img
-        except Exception as e:
-            logger.error(f"Lỗi khi lấy ảnh khuôn mặt mới nhất: {e}")
-            return None
     
     def log_event(self, event_type, message, user=None, attendance_record=None):
         """
