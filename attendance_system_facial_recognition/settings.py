@@ -13,8 +13,9 @@ https://docs.djangoproject.com/en/2.2/ref/settings/
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+#BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
@@ -83,13 +84,17 @@ WSGI_APPLICATION = 'attendance_system_facial_recognition.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3'),
+        'NAME': os.environ.get('DB_NAME', BASE_DIR / 'db.sqlite3'),
+        'USER': os.environ.get('DB_USER', ''),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', ''),
+        'PORT': os.environ.get('DB_PORT', ''),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
@@ -115,12 +120,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
+# Thiết lập múi giờ chung cho toàn bộ ứng dụng
 TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
 USE_I18N = True
 
 USE_L10N = True
 
+# Thiết lập USE_TZ = True để Django sử dụng timezone-aware datetimes
 USE_TZ = True
 
 
@@ -169,13 +176,13 @@ RECOGNITION_CHECK_OUT_SUBDIR = 'check_out'
 RECOGNITION_FACE_WIDTH = 96        # Chiều rộng mong muốn của khuôn mặt đã căn chỉnh
 RECOGNITION_FRAME_WIDTH = 800      # Chiều rộng resize frame video để xử lý/hiển thị
 RECOGNITION_FRAME_SKIP = 1       # Xử lý mỗi N frame (giảm từ 3 xuống 2 để thử nghiệm)
-RECOGNITION_PREDICTION_THRESHOLD = 0.8# Ngưỡng xác suất để chấp nhận nhận diện (thay đổi từ 0.7 xuống 0.4)
+RECOGNITION_PREDICTION_THRESHOLD = 0.85# Ngưỡng xác suất để chấp nhận nhận diện (thay đổi từ 0.7 xuống 0.4)
 
 # Tham số thu thập dữ liệu
 RECOGNITION_DEFAULT_MAX_SAMPLES = 50 # Số mẫu tối đa cần thu thập
 
 # Tham số ngưỡng nhận diện (số lần liên tiếp)
-RECOGNITION_CHECK_IN_THRESHOLD = 4  # Ngưỡng cho check-in
+RECOGNITION_CHECK_IN_THRESHOLD = 5  # Ngưỡng cho check-in
 RECOGNITION_CHECK_OUT_THRESHOLD = 5 # Ngưỡng cho check-out
 
 
@@ -185,13 +192,13 @@ RECOGNIZE_FRAME_SKIP = 1
 # Số frame bỏ qua khi thu thập dữ liệu (3 = xử lý frame thứ 3)
 COLLECT_FRAME_SKIP = 1
 
-# Cấu hình Celery
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+# Cấu hình Celery - Sử dụng biến môi trường nếu có
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Asia/Ho_Chi_Minh'
+CELERY_TIMEZONE = TIME_ZONE  # Đảm bảo Celery sử dụng cùng timezone với Django
 
 # Cấu hình Channels
 ASGI_APPLICATION = 'attendance_system_facial_recognition.asgi.application'

@@ -49,14 +49,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
 # Local application imports
-from .forms import ContinuousAttendanceScheduleForm, ScheduledCameraRecognitionForm, usernameForm, DateForm, UsernameAndDateForm, DateForm_2, VideoRoiForm, AddCameraForm
+from .forms import ContinuousAttendanceScheduleForm, ScheduledCameraRecognitionForm, VideoRoiForm, AddCameraForm
 from .models import CameraConfig, AttendanceRecord, ScheduledCameraRecognition, ScheduledRecognitionLog, ContinuousAttendanceSchedule, ContinuousAttendanceLog
 from .serializers import AttendanceRecordSerializer
 from .video_roi_processor import sanitize_filename, stream_output, process_video_with_roi
-from .firebase_util import push_attendance_to_firebase, initialize_firebase
-from .recognition_utils import predict, update_attendance_in_db_in, update_attendance_in_db_out
+from .utils.firebase_util import push_attendance_to_firebase, initialize_firebase
 from .tasks import stop_continuous_recognition
-from users.models import Present, Time, Profile
+from users.models import Profile
 
 
 # --- Các biến global và phần còn lại của file ---
@@ -101,17 +100,11 @@ def process_video_roi_view(request):
         action = request.POST.get('action')
 
         if action == 'stop':
-            print("[View] Nhận yêu cầu DỪNG xử lý.")
             if processing_thread and processing_thread.is_alive():
                 stop_processing_event.set()
                 processing_thread.join(timeout=2.0) # Đợi tối đa 2 giây
-                if processing_thread.is_alive():
-                    print("[View Warning] Luồng xử lý không dừng kịp thời.")
-                else:
-                    print("[View] Luồng xử lý đã dừng.")
-            else:
-                print("[View] Không có luồng xử lý nào đang chạy để dừng.")
-            
+
+
             processing_status['is_processing'] = False
             processing_status['mode'] = None
             processing_status['camera_source'] = None
@@ -120,11 +113,9 @@ def process_video_roi_view(request):
             return JsonResponse({'status': 'success', 'message': 'Đã dừng xử lý.'})
 
         elif action == 'start':
-            print("[View] Nhận yêu cầu BẮT ĐẦU xử lý.")
             form = VideoRoiForm(request.POST)
             if form.is_valid():
                 if processing_thread and processing_thread.is_alive():
-                    print("[View Warning] Đã có luồng xử lý chạy, bỏ qua yêu cầu start.")
                     return JsonResponse({'status': 'warning', 'message': 'Đã có quá trình xử lý đang chạy.'}, status=400)
                 
                 camera_config = form.cleaned_data['camera']
@@ -145,21 +136,16 @@ def process_video_roi_view(request):
                     roi_w = camera_config.roi_w
                     roi_h = camera_config.roi_h
                     
-                    print(f"[View] ROI gốc từ DB: x={roi_x}, y={roi_y}, w={roi_w}, h={roi_h}")
 
                     if roi_w is not None and roi_h is not None and roi_w > 0 and roi_h > 0:
                         if roi_x is not None and roi_y is not None:
                             roi = (roi_x, roi_y, roi_w, roi_h)
-                            print(f"[View] ROI hợp lệ được sử dụng: {roi}")
                         else:
-                            print("[View Warning] ROI không hợp lệ (x hoặc y là None), sẽ xử lý toàn bộ frame.")
                             roi = None
                     else:
-                        print("[View Warning] ROI không hợp lệ (w hoặc h <= 0 hoặc None), sẽ xử lý toàn bộ frame.")
                         roi = None
                     
                     if mode == 'collect' and roi is None:
-                         print("[View Error] Chế độ 'Thu thập dữ liệu' yêu cầu ROI hợp lệ.")
                          return JsonResponse({'status': 'error', 'message': 'Chế độ Thu thập dữ liệu yêu cầu phải cấu hình ROI hợp lệ trước.'}, status=400)
 
                 except AttributeError as attr_err:
@@ -208,10 +194,6 @@ def process_video_roi_view(request):
                             'supervisor': supervisor_user.profile if role == 'worker' and supervisor_user else None
                         }
                     )
-                    if profile_created:
-                        print(f"[View] Đã tạo Profile cho {username}")
-                    else:
-                        print(f"[View] Đã cập nhật Profile cho {username}")
 
                 # Khởi tạo và bắt đầu luồng xử lý video
                 stop_processing_event = threading.Event()
@@ -239,7 +221,6 @@ def process_video_roi_view(request):
                 processing_status['camera_source'] = video_source
                 processing_status['username'] = username if mode == 'collect' else None
 
-                print(f"[View] Đã bắt đầu luồng xử lý: Mode={mode}, Source={video_source}, ROI={roi}, User={username}")
                 return JsonResponse({'status': 'success', 'message': 'Bắt đầu xử lý.'})
             else:
                 print("[View Error] Form không hợp lệ:", form.errors.as_json())
@@ -306,18 +287,19 @@ def add_camera_view(request):
                 return redirect('home')
             except Exception as e:
                 error_message = f"Lỗi khi thêm camera: {e}. Tên hoặc Nguồn có thể đã tồn tại."
-                print(f"[Add Camera View] {error_message}")
                 messages.error(request, error_message)
-                return render(request, 'recognition/add_camera.html', {'form': form})
+                cameras = CameraConfig.objects.all().order_by('name')
+                return render(request, 'recognition/add_camera.html', {'form': form, 'cameras': cameras})
         else:
             messages.error(request, "Dữ liệu nhập không hợp lệ. Vui lòng kiểm tra lại.")
     else:
         form = AddCameraForm()
     
-    return render(request, 'recognition/add_camera.html', {'form': form})
+    # Lấy danh sách camera hiện có để hiển thị
+    cameras = CameraConfig.objects.all().order_by('name')
+    return render(request, 'recognition/add_camera.html', {'form': form, 'cameras': cameras})
 
 def generate_frames():
-    print("[Stream] Bắt đầu generate_frames")
     from .video_roi_processor import stream_output
     while True:
         frame_bytes = stream_output.get_frame_bytes()
@@ -328,21 +310,13 @@ def generate_frames():
             )
         else:
             if not stream_output.running and processing_thread is None:
-                 print("[Stream] Stream stopped. Ending generate_frames.")
                  break
             time.sleep(0.05)
 
 @login_required
 def video_feed(request):
-    print("[Stream] Yêu cầu video_feed")
     with threading.Lock():
          is_proc_alive = processing_thread is not None and processing_thread.is_alive()
-
-    if not is_proc_alive:
-        print("[Stream] Không có tiến trình nào đang chạy. Không bắt đầu stream.")
-        from django.templatetags.static import static
-        placeholder_path = static('recognition/img/placeholder.png')
-        pass
 
     return StreamingHttpResponse(
         generate_frames(),
@@ -457,7 +431,6 @@ def save_roi_view(request, camera_id):
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-             print("[Save ROI View] Lỗi: Dữ liệu gửi lên không phải JSON hợp lệ.")
              return JsonResponse({'status': 'error', 'message': 'Dữ liệu yêu cầu không hợp lệ (không phải JSON).'}, status=400)
 
         # Lấy dữ liệu từ JSON object
@@ -472,7 +445,6 @@ def save_roi_view(request, camera_id):
         # Kiểm tra dữ liệu nhận được
         if None in [crop_x, crop_y, crop_width, crop_height, natural_width, natural_height]:
              missing = [k for k, v in data.items() if v is None and k in ['roi_x', 'roi_y', 'roi_width', 'roi_height', 'natural_width', 'natural_height']]
-             print(f"[Save ROI View] Lỗi: Thiếu dữ liệu bắt buộc: {missing}")
              return JsonResponse({'status': 'error', 'message': f'Thiếu dữ liệu bắt buộc: {", ".join(missing)}'}, status=400)
 
         print(f"[Save ROI View] Nhận dữ liệu JSON: CamID={camera_id}, Crop=({crop_x},{crop_y},{crop_width},{crop_height}), NaturalSize={natural_width}x{natural_height}")
@@ -511,7 +483,6 @@ def save_roi_view(request, camera_id):
             roi_h = max(1, min(roi_h, int(round(standard_height)) - roi_y)) # Đảm bảo h tối thiểu là 1
 
         except (ValueError, TypeError) as calc_err:
-             print(f"[Save ROI View] Lỗi tính toán tọa độ: {calc_err}")
              return JsonResponse({'status': 'error', 'message': f'Lỗi dữ liệu tọa độ hoặc kích thước: {calc_err}'}, status=400)
         # *** KẾT THÚC THAY ĐỔI TÍNH TOÁN ***
 
@@ -522,7 +493,6 @@ def save_roi_view(request, camera_id):
         camera_config.roi_h = roi_h
         camera_config.save()
 
-        print(f"[Save ROI View] Đã lưu ROI đã tính toán: x={roi_x}, y={roi_y}, w={roi_w}, h={roi_h}")
 
         return JsonResponse({
             'status': 'success',
@@ -544,8 +514,6 @@ def get_static_frame_view(request, camera_id):
     try:
         camera_config = CameraConfig.objects.get(pk=camera_id)
         video_source = camera_config.source
-        print(f"[Get Frame] Lấy frame tĩnh từ camera ID: {camera_id}, nguồn: {video_source}")
-
         cap = None
         try:
             try:
@@ -555,7 +523,6 @@ def get_static_frame_view(request, camera_id):
                  cap = cv2.VideoCapture(video_source)
 
             if not cap or not cap.isOpened():
-                print(f"[Get Frame] Lỗi: Không thể mở nguồn video: {video_source}")
                 return JsonResponse({'status': 'error', 'message': 'Không thể mở nguồn video'}, status=500)
 
             ret, frame = False, None
@@ -566,15 +533,12 @@ def get_static_frame_view(request, camera_id):
                  time.sleep(0.1)
 
             if not ret or frame is None:
-                print(f"[Get Frame] Lỗi: Không thể đọc frame từ nguồn: {video_source}")
                 return JsonResponse({'status': 'error', 'message': 'Không thể đọc frame từ camera'}, status=500)
 
             frame_resized = imutils.resize(frame, width=settings.RECOGNITION_FRAME_WIDTH)
-            print(f"[Get Frame] Đã resize frame về width={settings.RECOGNITION_FRAME_WIDTH}")
 
             ret, buffer = cv2.imencode('.jpg', frame_resized, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             if not ret:
-                 print("[Get Frame] Lỗi: Không thể encode frame thành JPEG")
                  return JsonResponse({'status': 'error', 'message': 'Lỗi xử lý ảnh'}, status=500)
 
             # *** THAY ĐỔI: Encode sang Base64 và trả về JSON ***
@@ -583,7 +547,6 @@ def get_static_frame_view(request, camera_id):
             # Tạo Data URL
             frame_base64_data_url = f"data:image/jpeg;base64,{jpg_as_text}"
             
-            print(f"[Get Frame] Đã encode frame thành Base64 Data URL (độ dài: {len(frame_base64_data_url)}).")
 
             # Trả về JsonResponse chứa Data URL
             return JsonResponse({
@@ -596,7 +559,6 @@ def get_static_frame_view(request, camera_id):
         finally:
              if cap and cap.isOpened():
                  cap.release()
-                 print(f"[Get Frame] Đã giải phóng camera.")
 
     except CameraConfig.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Không tìm thấy camera'}, status=404)
@@ -626,7 +588,6 @@ def ajax_train_view(request):
     if not request.user.is_superuser:
          return JsonResponse({'status': 'error', 'message': 'Không có quyền truy cập.'}, status=403)
 
-    print("[AJAX Train] Bắt đầu quá trình huấn luyện...")
     try:
         training_dir = settings.RECOGNITION_TRAINING_DIR
         person_folders = [f for f in os.listdir(training_dir) if os.path.isdir(os.path.join(training_dir, f))]
@@ -642,49 +603,39 @@ def ajax_train_view(request):
             info_path = os.path.join(curr_directory, '_info.txt')
             original_name = folder_name
             if os.path.exists(info_path):
-                try:
                     with open(info_path, 'r', encoding='utf-8') as f_info:
                         read_name = f_info.read().strip()
                         if read_name:
                            original_name = read_name
-                        else:
-                           print(f"[AJAX Train] Cảnh báo: File _info.txt trong {folder_name} rỗng, sử dụng tên thư mục.")
-                except Exception as e_read:
-                    print(f"[AJAX Train] Cảnh báo: Không thể đọc _info.txt trong {folder_name}: {e_read}")
-            else:
-                 print(f"[AJAX Train] Cảnh báo: Không tìm thấy _info.txt trong {folder_name}, sử dụng tên thư mục.")
+
 
             image_files = image_files_in_folder(curr_directory)
             if image_files:
                 total_image_files += len(image_files)
                 valid_folders_and_names[folder_name] = original_name
-            else:
-                 print(f"[AJAX Train] Cảnh báo: Thư mục '{folder_name}' không chứa ảnh, bỏ qua.")
 
         if not valid_folders_and_names:
              return JsonResponse({'status': 'error', 'message': 'Không tìm thấy thư mục con hợp lệ nào chứa ảnh trong training_dataset.'})
         if total_image_files == 0:
             return JsonResponse({'status': 'error', 'message': 'Không tìm thấy ảnh nào trong các thư mục con của training_dataset.'})
 
-        print(f"[AJAX Train] Tìm thấy tổng cộng {total_image_files} ảnh trong {len(valid_folders_and_names)} thư mục hợp lệ.")
         X = []
         y = []
         i = 0
         removed_count = 0
 
         for folder_name, original_name in valid_folders_and_names.items():
-            print(f"[AJAX Train] Đang xử lý thư mục: {folder_name} (Tên gốc: {original_name})")
             curr_directory = os.path.join(training_dir, folder_name)
             image_files = image_files_in_folder(curr_directory)
 
             for imagefile in image_files:
                 if not os.path.exists(imagefile):
-                    print(f"[AJAX Train] Lỗi: File không tồn tại '{imagefile}', bỏ qua.")
+
                     removed_count += 1
                     continue
                 image = cv2.imread(imagefile)
                 if image is None:
-                    print(f"[AJAX Train] Lỗi: Không thể đọc ảnh '{imagefile}', bỏ qua.")
+
                     removed_count += 1
                     continue
 
@@ -695,14 +646,12 @@ def ajax_train_view(request):
                         y.append(original_name)
                         i += 1
                     else:
-                         print(f"[AJAX Train] Cảnh báo: Không tìm thấy khuôn mặt trong '{imagefile}', bỏ qua.")
                          removed_count += 1
 
                 except Exception as e:
-                    print(f"[AJAX Train] Lỗi khi xử lý encoding ảnh '{imagefile}': {e}, bỏ qua.")
                     removed_count += 1
 
-        print(f"[AJAX Train] Đã xử lý {i} ảnh thành công, {removed_count} ảnh bị lỗi/bỏ qua.")
+
         if not X or not y:
              return JsonResponse({'status': 'error', 'message': 'Không có dữ liệu hợp lệ để huấn luyện sau khi xử lý ảnh.'})
 
@@ -712,15 +661,12 @@ def ajax_train_view(request):
         y_encoded = encoder.transform(y)
         X_train = np.array(X)
 
-        print(f"[AJAX Train] Shape dữ liệu huấn luyện X: {X_train.shape}, y: {y_encoded.shape}")
         if X_train.shape[0] == 0:
             return JsonResponse({'status': 'error', 'message': 'Không có vector đặc trưng nào được tạo ra để huấn luyện.'})
 
-        print("[AJAX Train] Bắt đầu huấn luyện SVC model...")
         svc = SVC(kernel='linear', probability=True, C=1.0)
         svc.fit(X_train, y_encoded)
 
-        print("[AJAX Train] Lưu model SVC và classes...")
         svc_save_path = settings.RECOGNITION_SVC_PATH
         classes_save_path = settings.RECOGNITION_CLASSES_PATH
         try:
@@ -732,7 +678,6 @@ def ajax_train_view(request):
              return JsonResponse({'status': 'error', 'message': f'Lỗi khi lưu file model: {e}'})
 
         try:
-             print("[AJAX Train] Tạo ảnh visualize...")
              if X_train.shape[1] > 2:
                  X_embedded = TSNE(n_components=2, random_state=42).fit_transform(X_train)
                  plt.figure(figsize=(10, 8))
@@ -748,19 +693,13 @@ def ajax_train_view(request):
                  os.makedirs(os.path.dirname(viz_path), exist_ok=True)
                  plt.savefig(viz_path)
                  plt.close()
-                 print(f"[AJAX Train] Đã lưu ảnh visualize vào: {viz_path}")
-             else:
-                 print("[AJAX Train] Bỏ qua visualize vì số chiều không đủ cho t-SNE.")
         except Exception as e_viz:
              print(f"[AJAX Train] Lỗi khi tạo ảnh visualize: {e_viz}")
              import traceback
              traceback.print_exc()
-
-        print("[AJAX Train] Huấn luyện hoàn tất.")
         return JsonResponse({'status': 'success', 'message': f'Huấn luyện thành công cho {len(encoder.classes_)} người!'})
 
     except Exception as e:
-        print(f"[AJAX Train] Lỗi không xác định trong quá trình huấn luyện: {e}")
         import traceback
         traceback.print_exc()
         return JsonResponse({'status': 'error', 'message': f'Lỗi không xác định: {e}'}, status=500)
@@ -780,16 +719,10 @@ def get_dataset_usernames_view(request):
                 if os.path.isdir(curr_directory):
                     info_path = os.path.join(curr_directory, '_info.txt')
                     if os.path.exists(info_path):
-                        try:
                             with open(info_path, 'r', encoding='utf-8') as f_info:
                                 original_name = f_info.read().strip()
                                 if original_name:
                                     original_usernames.append(original_name)
-                        except Exception as e_read:
-                             print(f"[Dataset Viewer] Lỗi đọc _info.txt trong {folder_name}: {e_read}")
-                    else:
-                         print(f"[Dataset Viewer] Cảnh báo: Không tìm thấy _info.txt trong {folder_name}")
-
             original_usernames.sort()
     except Exception as e:
         print(f"[Dataset Viewer] Lỗi khi liệt kê usernames: {e}")
@@ -875,9 +808,6 @@ def sync_to_firebase(request):
             camera = CameraConfig.objects.filter(id=camera_id).first()
             if camera:
                 camera_name = camera.name
-                print(f"[SYNC] Đã tìm thấy tên camera '{camera_name}' từ ID {camera_id}")
-            else:
-                print(f"[SYNC] Không tìm thấy camera với ID {camera_id}")
         except (ValueError, Exception) as e:
             print(f"[SYNC] Lỗi khi tìm camera từ ID: {e}")
     
@@ -1308,7 +1238,6 @@ def sync_supervisor_worker_firebase(request):
             supervisor_id = str(supervisor_user.id)  # ID của supervisor
 
             if not supervisor_email:
-                print(f"[SYNC WARNING] Supervisor {supervisor_user.username} không có email, bỏ qua.")
                 continue # Bỏ qua supervisor nếu không có email
 
             # Lấy danh sách ID của các worker thuộc supervisor này
@@ -1449,11 +1378,9 @@ def save_contractor_to_firebase(request):
         
         # Trường hợp 1: data là list các đối tượng có thuộc tính name và field
         if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
-            print(f"[CONTRACTOR] Dữ liệu dạng danh sách đối tượng: {data}")
             contractors = data
         # Trường hợp 2: data có thuộc tính contractors
         elif isinstance(data, dict) and 'contractors' in data:
-            print(f"[CONTRACTOR] Dữ liệu có thuộc tính contractors: {data['contractors']}")
             if isinstance(data['contractors'], list):
                 contractors = data['contractors']
             else:
@@ -1461,7 +1388,6 @@ def save_contractor_to_firebase(request):
                 return Response({'status': 'error', 'message': 'Dữ liệu contractors không đúng định dạng'}, status=400)
         # Trường hợp 3: data không phải là định dạng hợp lệ
         else:
-            print(f"[CONTRACTOR] Dữ liệu không đúng định dạng: {data}")
             return Response({'status': 'error', 'message': 'Dữ liệu không đúng định dạng'}, status=400)
         
         if not contractors:
@@ -1527,7 +1453,6 @@ def attendance_log_view(request):
              end_date = start_date
         # Chuyển đổi date thành datetime để so sánh bao gồm cả ngày kết thúc
         attendance_records = attendance_records.filter(date__gte=start_date, date__lte=end_date)
-        print(f"[Log View] Filtering date between: {start_date} and {end_date}")
 
     # Lọc theo tên username (tìm kiếm gần đúng)
     if search_query:
@@ -1536,7 +1461,6 @@ def attendance_log_view(request):
             Q(user__first_name__icontains=search_query) |
             Q(user__last_name__icontains=search_query)
         )
-        print(f"[Log View] Filtering by search query: {search_query}")
 
     # Gắn thêm tên supervisor vào từng record (Tối ưu hóa)
     for record in attendance_records:
@@ -1557,11 +1481,11 @@ def attendance_log_view(request):
 
     # Nếu là request AJAX (từ filter), chỉ trả về partial
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        print("[Log View] AJAX request detected, returning partial.")
+
         # Đảm bảo trả về đúng partial template
         return render(request, 'recognition/partials/attendance_log_table.html', context)
     else:
-        print("[Log View] Standard request detected, returning full page.")
+
         # Trả về template đầy đủ cho trang log
         return render(request, 'recognition/attendance_log_page.html', context)
 
@@ -2010,3 +1934,87 @@ def monitor_continuous_schedules(request):
     }
     
     return render(request, 'recognition/monitor_schedules.html', context)
+
+@login_required
+def view_settings_view(request):
+    """
+    Hiển thị ảnh training_visualisation.png và cho phép điều chỉnh các tham số threshold
+    """
+    if not request.user.is_superuser:
+        return redirect('not-authorised')
+    
+    message = None
+    message_type = None
+    
+    # Xử lý POST request khi người dùng cập nhật tham số
+    if request.method == 'POST':
+        try:
+            # Lấy giá trị các tham số từ form
+            prediction_threshold = float(request.POST.get('prediction_threshold', settings.RECOGNITION_PREDICTION_THRESHOLD))
+            check_in_threshold = int(request.POST.get('check_in_threshold', settings.RECOGNITION_CHECK_IN_THRESHOLD))
+            check_out_threshold = int(request.POST.get('check_out_threshold', settings.RECOGNITION_CHECK_OUT_THRESHOLD))
+            
+            # Kiểm tra giá trị hợp lệ
+            if not (0 <= prediction_threshold <= 1):
+                raise ValueError("Ngưỡng xác suất phải nằm trong khoảng 0-1")
+            if check_in_threshold < 1:
+                raise ValueError("Ngưỡng check-in phải ít nhất là 1")
+            if check_out_threshold < 1:
+                raise ValueError("Ngưỡng check-out phải ít nhất là 1")
+                
+            # Cập nhật các tham số vào settings
+            # Lưu ý: Điều này chỉ thay đổi settings trong quá trình chạy
+            # sẽ trở về giá trị ban đầu khi restart server
+            settings.RECOGNITION_PREDICTION_THRESHOLD = prediction_threshold
+            settings.RECOGNITION_CHECK_IN_THRESHOLD = check_in_threshold
+            settings.RECOGNITION_CHECK_OUT_THRESHOLD = check_out_threshold
+            
+            # Lưu vào file cấu hình tạm để phục hồi sau khi restart (tùy chọn)
+            temp_settings_file = os.path.join(settings.BASE_DIR, 'recognition', 'temp_settings.json')
+            with open(temp_settings_file, 'w') as f:
+                json.dump({
+                    'RECOGNITION_PREDICTION_THRESHOLD': prediction_threshold,
+                    'RECOGNITION_CHECK_IN_THRESHOLD': check_in_threshold,
+                    'RECOGNITION_CHECK_OUT_THRESHOLD': check_out_threshold
+                }, f)
+            
+            message = "Các tham số đã được cập nhật thành công!"
+            message_type = "success"
+            
+        except ValueError as e:
+            message = f"Lỗi: {str(e)}"
+            message_type = "danger"
+        except Exception as e:
+            message = f"Lỗi không xác định: {str(e)}"
+            message_type = "danger"
+    
+    # Kiểm tra sự tồn tại của ảnh visualization
+    visualisation_exists = os.path.exists(settings.RECOGNITION_VISUALIZATION_PATH)
+    
+    # Kiểm tra sự tồn tại của model SVC và classes
+    model_exists = os.path.exists(settings.RECOGNITION_SVC_PATH)
+    classes_exists = os.path.exists(settings.RECOGNITION_CLASSES_PATH)
+    
+    # Đếm số người đã được huấn luyện
+    trained_people_count = 0
+    if classes_exists:
+        try:
+            classes = np.load(settings.RECOGNITION_CLASSES_PATH)
+            trained_people_count = len(classes)
+        except Exception as e:
+            print(f"Lỗi khi đọc file classes: {e}")
+    
+    # Chuẩn bị dữ liệu cho template
+    context = {
+        'prediction_threshold': settings.RECOGNITION_PREDICTION_THRESHOLD,
+        'check_in_threshold': settings.RECOGNITION_CHECK_IN_THRESHOLD,
+        'check_out_threshold': settings.RECOGNITION_CHECK_OUT_THRESHOLD,
+        'visualisation_exists': visualisation_exists,
+        'model_exists': model_exists, 
+        'classes_exists': classes_exists,
+        'trained_people_count': trained_people_count,
+        'message': message,
+        'message_type': message_type,
+    }
+    
+    return render(request, 'recognition/view_settings.html', context)

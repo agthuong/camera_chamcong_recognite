@@ -2,7 +2,6 @@ import cv2
 import dlib
 import imutils
 from imutils import face_utils
-from imutils.face_utils import rect_to_bb
 from imutils.face_utils import FaceAligner
 import numpy as np
 import face_recognition
@@ -11,36 +10,15 @@ import os
 import time
 from sklearn.preprocessing import LabelEncoder
 from django.utils import timezone
-from recognition.models import AttendanceRecord
-from django.contrib.auth.models import User
 from django.conf import settings
 import threading
 import re
 from unidecode import unidecode
-from .firebase_util import push_attendance_to_firebase  # Thêm import này
-import logging
-import io
-import sys
+from attendance_system_facial_recognition.logger import setup_logger
+from .utils.datetime_utils import get_current_time, get_current_date, format_datetime
 
-# Cấu hình logging an toàn hơn
-logger = logging.getLogger(__name__)
-
-# Nếu chưa có handlers, thêm handlers mới
-if not logger.handlers:
-    # Sử dụng StreamHandler không chỉ định stream
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(stream_handler)
-    
-    # Thêm file handler với encoding utf-8
-    try:
-        file_handler = logging.FileHandler('video_processor.log', encoding='utf-8')
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-        logger.addHandler(file_handler)
-    except Exception as e:
-        print(f"Không thể tạo file handler: {str(e)}")
-
-logger.setLevel(logging.INFO)
+# Thiết lập logger cho module này
+logger = setup_logger(__name__, 'video_processor.log')
 
 # --- Global state for tracking collection progress ---
 # Format: { 'sanitized_username': {'current': 0, 'total': 150, 'active': False} }
@@ -108,14 +86,12 @@ def predict(face_aligned, svc, threshold=settings.RECOGNITION_PREDICTION_THRESHO
         faces_encodings = face_recognition.face_encodings(face_aligned, known_face_locations=x_face_locations)
 
         if not faces_encodings: # Check if list is empty
-            # print("Debug: No face encodings found.")
             return ([-1], [0.0])
 
         # Assuming only one face encoding per aligned image
         face_encodings_list[0] = faces_encodings[0]
 
     except Exception as e:
-        # print(f"Debug: Error during face encoding: {e}")
         return ([-1], [0.0])
 
     try:
@@ -123,15 +99,11 @@ def predict(face_aligned, svc, threshold=settings.RECOGNITION_PREDICTION_THRESHO
         best_class_index = np.argmax(prob[0])
         best_class_probability = prob[0][best_class_index]
 
-        # print(f"Debug: Probabilities: {prob[0]}, Best Index: {best_class_index}, Prob: {best_class_probability:.2f}")
-
         # --- Sử dụng ngưỡng từ settings --- 
         if best_class_probability >= threshold:
             return ([best_class_index], [best_class_probability])
         else:
-            # print(f"Debug: Probability {best_class_probability:.2f} below threshold {threshold}")
-            # --- Thay đổi: Trả về ngưỡng đã dùng để debug --- 
-            # return ([-1], [best_class_probability]) # Return -1 but still provide the probability
+
             return ([-1], [best_class_probability])
             # --- Kết thúc thay đổi ---
 
@@ -151,75 +123,29 @@ def select_roi_from_source(video_source, frame_skip_on_next=5):
     try:
         source_int = int(video_source)
         cap = cv2.VideoCapture(source_int)
-        print(f"[INFO] Sử dụng nguồn video ID: {source_int}")
     except ValueError:
         cap = cv2.VideoCapture(video_source)
-        print(f"[INFO] Sử dụng nguồn video: {video_source}")
 
     if not cap.isOpened():
         print(f"Lỗi: Không thể mở nguồn video: {video_source}")
         return None
 
-    window_title = "Chon ROI - Nhan 'n'=Next Frame, ENTER/SPACE=Chon ROI, ESC/q=Huy"
-    cv2.namedWindow(window_title)
     roi = None
     frame_count = 0
 
     while True:
         ret, frame = cap.read()
         if not ret:
-            print("Cảnh báo: Đã hết video hoặc không thể đọc frame tiếp theo.")
             # Option: Break or loop back if it's a stream? For now, break.
             if roi is None: # If we never selected an ROI
                 print("Không có frame nào để chọn ROI.")
             break
 
         frame_count += 1
-        # --- Sử dụng FRAME_WIDTH từ settings --- 
-        frame_display = imutils.resize(frame, width=settings.RECOGNITION_FRAME_WIDTH).copy() # Thay FRAME_WIDTH bằng settings
-        cv2.putText(frame_display, f"Frame: {frame_count}", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
-        cv2.putText(frame_display, "Nhan 'n': Next, ENTER/SPACE: Chon, ESC/q: Huy", (10, frame_display.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.imshow(window_title, frame_display)
-
-        key = cv2.waitKey(0) & 0xFF # Wait indefinitely for key press
-
-        if key == ord('n'): # Next frame(s)
-            print(f"[INFO] Bỏ qua {frame_skip_on_next} frames...")
-            for _ in range(frame_skip_on_next -1): # Read and discard frames
-                 ret, _ = cap.read()
-                 if not ret:
-                      break # Stop if video ends
-                 frame_count += 1
-            continue # Go to the next iteration to read and display
-
-        elif key == ord(' ') or key == 13: # Space or Enter - Select ROI on *this* frame
-            print("Vui lòng vẽ hình chữ nhật ROI và nhấn ENTER/SPACE lần nữa...")
-            # Use selectROI on the *current* frame that was displayed
-            roi_selected = cv2.selectROI(window_title, frame_display, showCrosshair=True, fromCenter=False)
-            
-            # Check if selection was cancelled during selectROI itself
-            if roi_selected == (0, 0, 0, 0):
-                 print("Đã hủy trong lúc vẽ ROI. Nhan 'n' để thử frame khác, ESC/q để thoát.")
-                 # Show the frame again to allow choosing 'n' or 'esc'
-                 cv2.putText(frame_display, "DA HUY ROI. Nhan 'n'/ENTER/ESC", (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                 cv2.imshow(window_title, frame_display)
-                 continue # Go back to waiting for 'n', Enter, or ESC
-            else:
-                roi = roi_selected # Valid ROI selected
-                print(f"ROI được chọn trên Frame {frame_count}: {roi}")
-                break # Exit the loop
-
-        elif key == ord('q') or key == 27: # q or ESC - Cancel
-            print("Hủy chọn ROI.")
-            roi = None
-            break
-        else:
-             print(f"Phím không hợp lệ: {chr(key)}. Chỉ sử dụng 'n', SPACE, ENTER, ESC, 'q'.")
 
     # Cleanup
     cap.release()
-    cv2.destroyWindow(window_title)
-    
+
     # roi will be None if cancelled, or the tuple (x,y,w,h) if selected
     return roi
 
@@ -277,8 +203,7 @@ class VideoSourceHandler:
         self.last_error_time = None
         self.consecutive_errors = 0
         self.max_consecutive_errors = 5
-        print(f"[INFO] Khởi tạo VideoSourceHandler với nguồn: {source} {'(RTSP/Streaming)' if self.is_rtsp else ''}")
-        
+
     def start(self):
         """Khởi động thread đọc frame"""
         self.capture = cv2.VideoCapture(self.source)
@@ -683,8 +608,8 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                     # Đơn giản hóa luồng xử lý, chỉ lưu ảnh và hiển thị thông báo
                                     try:
                                         # Xác định tên file và đường dẫn
-                                        now = timezone.now()
-                                        today = now.date()
+                                        now = get_current_time()
+                                        today = get_current_date()
                                         sanitized_person_name_for_file = sanitize_filename(person_name)
                                         
                                         # Xác định xem đây là check-in hay check-out

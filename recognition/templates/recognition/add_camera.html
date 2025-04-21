@@ -18,21 +18,40 @@
         .card {
             margin-top: 2rem;
         }
+        #cameraTable {
+            font-size: 0.9rem;
+        }
+        .group-header {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        #existingCameraTable {
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
 
 <div class="container mt-4">
-    <div class="row justify-content-center">
+    <div class="row">
         <div class="col-md-6">
-            <div class="card shadow-sm">
+            <!-- Thêm camera -->
+            <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
                     <h4 class="mb-0">Thêm Cấu hình Camera Mới</h4>
                 </div>
                 <div class="card-body">
                     <p class="card-text">
                         Nhập tên gợi nhớ và nguồn (ID webcam, đường dẫn file, URL RTSP) cho camera mới.
-                        ROI có thể được cấu hình sau khi thêm camera thành công (qua trang Admin hoặc chức năng chọn ROI).
+                        ROI có thể được cấu hình sau khi thêm camera thành công.
                     </p>
                     <hr>
 
@@ -55,14 +74,443 @@
                     </form>
                 </div>
             </div>
+            
+            <!-- Danh sách camera hiện có -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Camera Hiện Có</h4>
+                    <button id="refreshExistingBtn" class="btn btn-sm btn-light">
+                        <i class="fas fa-sync-alt"></i> Làm mới
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div id="existingLoading" class="loading" style="display: none;">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="sr-only">Đang tải...</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="existingCameraTable" class="table table-sm table-hover table-striped mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="80%">Tên Camera</th>
+                                    <th width="20%">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="existingCameraBody">
+                                <!-- Danh sách camera sẽ được thêm vào đây -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Danh sách camera từ API -->
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Danh sách Camera từ API</h4>
+                    <div>
+                        <button id="importAllBtn" class="btn btn-sm btn-success mr-2">
+                            <i class="fas fa-download"></i> Nhập Tất Cả
+                        </button>
+                        <button id="refreshCameraBtn" class="btn btn-sm btn-light">
+                            <i class="fas fa-sync-alt"></i> Làm mới
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="cameraLoading" class="loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Đang tải...</span>
+                        </div>
+                    </div>
+                    <div id="cameraError" class="alert alert-danger m-3" style="display: none;">
+                        Không thể tải danh sách camera. Vui lòng thử lại sau.
+                    </div>
+                    <div class="table-responsive">
+                        <table id="cameraTable" class="table table-sm table-hover table-striped mb-0" style="display: none;">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="50%">Tên Camera</th>
+                                    <th width="40%">Dự Án</th>
+                                    <th width="10%">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cameraTableBody">
+                                <!-- Danh sách camera sẽ được thêm vào đây -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- Modal xác nhận xóa camera -->
+<div class="modal fade" id="deleteCameraModal" tabindex="-1" role="dialog" aria-labelledby="deleteCameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteCameraModalLabel">Xác nhận xóa camera</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc chắn muốn xóa camera <strong id="deleteCameraName"></strong>?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xác nhận nhập tất cả camera -->
+<div class="modal fade" id="importAllModal" tabindex="-1" role="dialog" aria-labelledby="importAllModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="importAllModalLabel">Xác nhận nhập tất cả camera</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Bạn có chắc chắn muốn nhập tất cả camera từ API? Camera đã tồn tại sẽ được bỏ qua.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="confirmImportBtn">Nhập</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal kết quả nhập camera -->
+<div class="modal fade" id="importResultModal" tabindex="-1" role="dialog" aria-labelledby="importResultModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="importResultModalLabel">Kết quả nhập camera</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="importResultContent">
+                <!-- Kết quả nhập camera sẽ được hiển thị ở đây -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSRF Token for Ajax requests -->
+<form id="csrf-form">
+  {% csrf_token %}
+</form>
+
 <!-- Optional JavaScript -->
-<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+<script>
+    $(document).ready(function() {
+        // Lấy CSRF token từ form
+        var csrftoken = $("#csrf-form input[name='csrfmiddlewaretoken']").val();
+        
+        // Thiết lập header CSRF token cho tất cả các request ajax
+        $.ajaxSetup({
+            beforeSend: function(xhr, settings) {
+                if (!(/^(GET|HEAD|OPTIONS|TRACE)$/.test(settings.type)) && !this.crossDomain) {
+                    xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                }
+            }
+        });
+        
+        // Biến lưu trữ ID camera cần xóa
+        var cameraIdToDelete = null;
+        
+        // Hàm tải danh sách camera từ API
+        function loadCameras() {
+            $('#cameraTable').hide();
+            $('#cameraError').hide();
+            $('#cameraLoading').show();
+            
+            $.ajax({
+                url: '{% url "api-external-cameras" %}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        displayCameras(response.data);
+                        $('#cameraTable').show();
+                    } else {
+                        $('#cameraError').text('Lỗi: ' + response.message).show();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#cameraError').text('Không thể kết nối đến API. Vui lòng thử lại sau.').show();
+                    console.error('Error fetching cameras:', error);
+                },
+                complete: function() {
+                    $('#cameraLoading').hide();
+                }
+            });
+        }
+        
+        // Hàm hiển thị danh sách camera
+        function displayCameras(cameras) {
+            var $tbody = $('#cameraTableBody');
+            $tbody.empty();
+            
+            // Nhóm camera theo group
+            var cameraGroups = {};
+            cameras.forEach(function(camera) {
+                if (!cameraGroups[camera.group]) {
+                    cameraGroups[camera.group] = [];
+                }
+                cameraGroups[camera.group].push(camera);
+            });
+            
+            // Hiển thị camera theo từng nhóm
+            Object.keys(cameraGroups).sort().forEach(function(group) {
+                // Thêm header nhóm
+                $tbody.append(`
+                    <tr class="group-header">
+                        <td colspan="3"><strong>${group}</strong></td>
+                    </tr>
+                `);
+                
+                // Thêm các camera trong nhóm
+                cameraGroups[group].forEach(function(camera) {
+                    $tbody.append(`
+                        <tr data-name="${camera.name}" data-rtsp="${camera.rtsp_link}">
+                            <td>${camera.name}</td>
+                            <td>${camera.group}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary select-camera" 
+                                    data-name="${camera.name}" 
+                                    data-rtsp="${camera.rtsp_link}">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            });
+            
+            // Thêm sự kiện click cho các nút "Chọn"
+            $('.select-camera').click(function() {
+                var name = $(this).data('name');
+                var rtsp = $(this).data('rtsp');
+                
+                // Điền thông tin vào form
+                $('#id_name').val(name);
+                $('#id_source').val(rtsp);
+            });
+        }
+        
+        // Hàm tải danh sách camera hiện có
+        function loadExistingCameras() {
+            $('#existingLoading').show();
+            
+            // Tải lại dữ liệu camera từ server
+            $.ajax({
+                url: '{% url "api-existing-cameras" %}',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    let $tbody = $('#existingCameraBody');
+                    $tbody.empty();
+                    
+                    if (response.status === 'success') {
+                        let cameras = response.cameras;
+                        
+                        if (cameras.length === 0) {
+                            $tbody.append(`
+                                <tr>
+                                    <td colspan="2" class="text-center">Chưa có camera nào.</td>
+                                </tr>
+                            `);
+                        } else {
+                            cameras.forEach(function(camera) {
+                                $tbody.append(`
+                                    <tr>
+                                        <td>${camera.name}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger delete-camera" data-id="${camera.id}" data-name="${camera.name}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `);
+                            });
+                        }
+                        
+                        // Thêm sự kiện click cho các nút "Xóa"
+                        $('.delete-camera').click(function() {
+                            var id = $(this).data('id');
+                            var name = $(this).data('name');
+                            
+                            // Hiển thị modal xác nhận
+                            $('#deleteCameraName').text(name);
+                            cameraIdToDelete = id;
+                            $('#deleteCameraModal').modal('show');
+                        });
+                    } else {
+                        $tbody.append(`
+                            <tr>
+                                <td colspan="2" class="text-center text-danger">Lỗi: ${response.message}</td>
+                            </tr>
+                        `);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    let $tbody = $('#existingCameraBody');
+                    $tbody.empty();
+                    $tbody.append(`
+                        <tr>
+                            <td colspan="2" class="text-center text-danger">Lỗi khi tải danh sách camera</td>
+                        </tr>
+                    `);
+                    console.error('Lỗi khi tải camera:', error);
+                },
+                complete: function() {
+                    $('#existingLoading').hide();
+                }
+            });
+        }
+        
+        // Sự kiện khi nhấn nút xóa camera
+        $('#confirmDeleteBtn').click(function() {
+            if (!cameraIdToDelete) return;
+            
+            // Tạo form data với CSRF token và camera_id
+            var formData = new FormData();
+            formData.append('camera_id', cameraIdToDelete);
+            
+            $.ajax({
+                url: '{% url "api-delete-camera" %}',
+                type: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Ẩn modal xác nhận
+                        $('#deleteCameraModal').modal('hide');
+                        
+                        // Tải lại danh sách camera
+                        loadExistingCameras();
+                        
+                        // Hiển thị thông báo thành công
+                        alert('Đã xóa camera thành công!');
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    alert('Lỗi khi xóa camera: ' + error);
+                }
+            });
+        });
+        
+        // Sự kiện khi nhấn nút nhập tất cả camera
+        $('#importAllBtn').click(function() {
+            $('#importAllModal').modal('show');
+        });
+        
+        // Sự kiện khi xác nhận nhập tất cả camera
+        $('#confirmImportBtn').click(function() {
+            // Ẩn modal xác nhận
+            $('#importAllModal').modal('hide');
+            
+            // Hiển thị thông báo đang xử lý
+            $('#importResultContent').html(`
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="sr-only">Đang xử lý...</span>
+                    </div>
+                    <p class="mt-2">Đang nhập camera, vui lòng đợi...</p>
+                </div>
+            `);
+            $('#importResultModal').modal('show');
+            
+            // Gọi API nhập tất cả camera
+            $.ajax({
+                url: '{% url "api-import-all-cameras" %}',
+                type: 'POST',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Hiển thị kết quả
+                        $('#importResultContent').html(`
+                            <div class="alert alert-success">
+                                <p><strong>Đã nhập camera thành công!</strong></p>
+                                <p>${response.message}</p>
+                                <ul>
+                                    <li>Số camera đã thêm: ${response.details.success_count}</li>
+                                    <li>Số camera đã bỏ qua: ${response.details.skipped_count}</li>
+                                    <li>Số lỗi: ${response.details.error_count}</li>
+                                </ul>
+                            </div>
+                        `);
+                        
+                        // Nếu có lỗi, hiển thị chi tiết
+                        if (response.details.error_count > 0) {
+                            var errorList = '<div class="alert alert-warning mt-3"><p><strong>Chi tiết lỗi:</strong></p><ul>';
+                            response.details.errors.forEach(function(error) {
+                                errorList += `<li>${error}</li>`;
+                            });
+                            errorList += '</ul></div>';
+                            $('#importResultContent').append(errorList);
+                        }
+                        
+                        // Tải lại danh sách camera
+                        loadExistingCameras();
+                    } else {
+                        $('#importResultContent').html(`
+                            <div class="alert alert-danger">
+                                <p><strong>Lỗi khi nhập camera:</strong></p>
+                                <p>${response.message}</p>
+                            </div>
+                        `);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#importResultContent').html(`
+                        <div class="alert alert-danger">
+                            <p><strong>Lỗi khi nhập camera:</strong></p>
+                            <p>${error}</p>
+                        </div>
+                    `);
+                }
+            });
+        });
+        
+        // Tải danh sách camera khi trang được tải
+        loadCameras();
+        loadExistingCameras();
+        
+        // Sự kiện khi nhấn nút làm mới danh sách camera API
+        $('#refreshCameraBtn').click(function() {
+            loadCameras();
+        });
+        
+        // Sự kiện khi nhấn nút làm mới danh sách camera hiện có
+        $('#refreshExistingBtn').click(function() {
+            loadExistingCameras();
+        });
+    });
+</script>
 
 </body>
 </html> 

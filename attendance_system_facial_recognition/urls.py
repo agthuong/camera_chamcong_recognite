@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from recognition import views as recog_views
+from recognition import api_camera
 from users import views as users_views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -44,6 +45,9 @@ urlpatterns = [
     path('get_dataset_usernames/', recog_views.get_dataset_usernames_view, name='get-dataset-usernames'),
     path('get_random_images/<str:username>/', recog_views.get_random_dataset_images_view, name='get-random-images'),
 
+    # --- URL cho hiển thị và điều chỉnh tham số --- 
+    path('view_settings/', recog_views.view_settings_view, name='view-settings'),
+
     # --- URL Endpoint kiểm tra trạng thái xử lý ---
     path('get_processing_status/', recog_views.get_processing_status_view, name='get-processing-status'),
 
@@ -53,6 +57,14 @@ urlpatterns = [
     path('api/test-firebase/', recog_views.test_firebase_api, name='api-test-firebase'),
     # API lấy danh sách supervisors
     path('api/supervisors/', recog_views.get_supervisors_api, name='api-get-supervisors'),
+    # API lấy danh sách camera từ API bên ngoài
+    path('api/external-cameras/', api_camera.fetch_external_cameras, name='api-external-cameras'),
+    # API thêm tất cả camera từ API bên ngoài
+    path('api/import-all-cameras/', api_camera.import_all_cameras, name='api-import-all-cameras'),
+    # API xóa camera
+    path('api/delete-camera/', api_camera.delete_camera, name='api-delete-camera'),
+    # API lấy danh sách camera hiện có
+    path('api/existing-cameras/', api_camera.get_existing_cameras, name='api-existing-cameras'),
 
     # Trang hiển thị mối quan hệ Supervisor-Worker
     path('supervisor-worker/', recog_views.supervisor_worker_view, name='supervisor-worker'),

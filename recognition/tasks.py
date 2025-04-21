@@ -17,7 +17,7 @@ from django.utils import timezone as django_timezone
 from django.conf import settings
 from django.contrib.auth.models import User
 
-
+from attendance_system_facial_recognition.logger import setup_logger
 from .models import (
     AttendanceRecord, ContinuousAttendanceSchedule, 
     ContinuousAttendanceLog
@@ -26,27 +26,9 @@ from .models import (
 # Import các hàm cần thiết từ module views
 #from .recognition_utils import predict, update_attendance_in_db_in, update_attendance_in_db_out
 from imutils.face_utils import FaceAligner
-from imutils import face_utils
 
-# Cấu hình logging an toàn hơn
-logger = logging.getLogger(__name__)
-
-# Nếu chưa có handlers, thêm handlers mới
-if not logger.handlers:
-    # Sử dụng StreamHandler không chỉ định stream
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(stream_handler)
-    
-    # Thêm file handler với encoding utf-8
-    try:
-        file_handler = logging.FileHandler('celery_recognition.log', encoding='utf-8')
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-        logger.addHandler(file_handler)
-    except Exception as e:
-        print(f"Không thể tạo file handler: {str(e)}")
-
-logger.setLevel(logging.INFO)
+# Thiết lập logger cho module 
+logger = setup_logger(__name__, 'celery_recognition.log')
 
 # Lưu trữ các processor đang hoạt động
 active_processors = {}
@@ -976,23 +958,11 @@ def start_continuous_recognition(self, schedule_id):
         # Kiểm tra xem lịch trình này đã đang chạy chưa (trong DB)
         if schedule.is_running:
             # Nếu là test run và đang chạy -> có thể là lỗi từ lần test trước chưa dừng hẳn
-            if is_test_run:
-                logger.warning(f"Lịch trình {schedule_id} đã is_running=True khi bắt đầu test. Sẽ thử dừng lịch trình cũ trước.")
-                try:
-                    # Cố gắng dừng lịch trình cũ
-                    if schedule_id in active_processors:
-                        logger.info(f"Tìm thấy processor cũ cho {schedule_id}, dừng lại trước")
-                        old_processor = active_processors[schedule_id]
-                        old_processor.stop()
-                        del active_processors[schedule_id]
-                except Exception as e:
-                    logger.error(f"Lỗi khi dừng processor cũ: {e}")
-                
                 # Reset is_running trong DB
                 schedule.is_running = False
                 schedule.worker_id = None
                 schedule.save(update_fields=['is_running', 'worker_id'])
-            else: 
+        else: 
                 # Nếu là chạy thường và đang chạy
                 logger.warning(f"Lịch trình {schedule_id} đã is_running=True, kiểm tra worker_id")
                 

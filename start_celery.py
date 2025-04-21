@@ -1,6 +1,6 @@
 """
 Script khởi động cả Celery worker và Celery beat trong một tiến trình
-Sử dụng cho mục đích kiểm thử nhanh
+Sử dụng cho Docker container riêng
 """
 import os
 import subprocess
@@ -156,41 +156,40 @@ def run_command(command):
     
     if return_code:
         print(f"[ERROR] Lệnh thất bại với mã trả về {return_code}")
-        # Không nên exit ở đây vì beat vẫn có thể chạy
-        # sys.exit(return_code)
     return return_code # Trả về return code
 
 def run_worker():
-    """Khởi động Celery worker với eventlet pool"""
+    """Khởi động Celery worker"""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'attendance_system_facial_recognition.settings')
-    # Sử dụng eventlet pool cho Windows
+    
+    # Trong Docker, không cần chỉ định pool eventlet
     command = [
         sys.executable, # Đường dẫn python hiện tại
         "-m", "celery", # Chạy module celery
         "-A", "attendance_system_facial_recognition", 
         "worker", 
-        "--loglevel=info", 
-        "-P", "eventlet" # Chỉ định pool là eventlet
+        "--loglevel=info",
+        # Sử dụng pool prefork trong Docker (mặc định)
+        # Có thể bỏ qua eventlet pool vì trên Linux không cần
     ]
     run_command(command)
 
 def run_beat():
     """Khởi động Celery beat"""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'attendance_system_facial_recognition.settings')
-    # Lệnh cho beat không cần thay đổi pool
     command = [
         sys.executable, 
         "-m", "celery",
         "-A", "attendance_system_facial_recognition", 
         "beat", 
         "--loglevel=info",
-        # Thêm pidfile để tránh chạy nhiều instance beat cùng lúc (tùy chọn)
-        # "--pidfile=celerybeat.pid" 
+        # Thêm pidfile để tránh chạy nhiều instance beat cùng lúc
+        "--pidfile=/app/celerybeat.pid"
     ]
     run_command(command)
 
 if __name__ == "__main__":
-    print("[INFO] Bắt đầu khởi động Celery Worker và Beat...")
+    print("[INFO] Starting Celery worker and beat in Docker container...")
     
     # In thông tin về các lịch trình
     print_schedule_info()
@@ -200,13 +199,10 @@ if __name__ == "__main__":
     worker_thread.daemon = True
     worker_thread.start()
     
-    # Đợi một chút để worker khởi động
-    print("[INFO] Đợi worker khởi động (5 giây)...")
+    # Đợi worker khởi động
     time.sleep(5)
     
-    # Khởi động beat trong thread chính (hoặc thread riêng nếu muốn)
-    print("[INFO] Khởi động Celery Beat...")
-    # Chạy beat trong thread riêng để có thể bắt KeyboardInterrupt dễ hơn
+    # Khởi động beat trong thread riêng
     beat_thread = threading.Thread(target=run_beat, name="CeleryBeatThread")
     beat_thread.daemon = True
     beat_thread.start()
@@ -216,11 +212,10 @@ if __name__ == "__main__":
         while worker_thread.is_alive() and beat_thread.is_alive():
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n[INFO] Nhận tín hiệu KeyboardInterrupt. Đang dừng các tiến trình Celery...")
-        # Worker và Beat là daemon threads nên sẽ tự động dừng khi thread chính kết thúc
+        print("[INFO] Đã nhận lệnh dừng từ người dùng...")
         sys.exit(0)
     except Exception as e:
-         print(f"[ERROR] Lỗi không xác định trong thread chính: {e}")
-         sys.exit(1)
+        print(f"[ERROR] Lỗi không xác định trong thread chính: {e}")
+        sys.exit(1)
     finally:
-         print("[INFO] Kết thúc script start_celery.") 
+        print("[INFO] Kết thúc script start_celery.") 

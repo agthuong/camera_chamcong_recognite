@@ -1,0 +1,113 @@
+{% extends 'recognition/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Cấu hình Hệ thống Nhận diện</h2>
+
+    {% if message %}
+    <div class="alert alert-{{ message_type }}">
+        {{ message }}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Điều chỉnh Tham số Nhận diện</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="prediction_threshold"><strong>Ngưỡng xác suất nhận diện:</strong></label>
+                            <input type="number" step="0.01" min="0" max="1" class="form-control" id="prediction_threshold" 
+                                  name="prediction_threshold" value="{{ prediction_threshold }}" 
+                                  aria-describedby="predictionHelp">
+                            <small id="predictionHelp" class="form-text text-muted">
+                                Giá trị từ 0-1. Giá trị cao hơn yêu cầu độ tin cậy cao hơn khi nhận diện.
+                                Đề xuất: 0.65-0.85
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="check_in_threshold"><strong>Ngưỡng check-in (số lần liên tiếp):</strong></label>
+                            <input type="number" min="1" max="20" class="form-control" id="check_in_threshold" 
+                                  name="check_in_threshold" value="{{ check_in_threshold }}"
+                                  aria-describedby="checkinHelp">
+                            <small id="checkinHelp" class="form-text text-muted">
+                                Số lần nhận diện liên tiếp cần thiết để xác nhận check-in.
+                                Giá trị cao hơn giảm sai sót nhưng làm chậm quá trình chấm công.
+                            </small>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label for="check_out_threshold"><strong>Ngưỡng check-out (số lần liên tiếp):</strong></label>
+                            <input type="number" min="1" max="20" class="form-control" id="check_out_threshold" 
+                                  name="check_out_threshold" value="{{ check_out_threshold }}"
+                                  aria-describedby="checkoutHelp">
+                            <small id="checkoutHelp" class="form-text text-muted">
+                                Số lần nhận diện liên tiếp cần thiết để xác nhận check-out.
+                                Đề xuất: cùng giá trị với ngưỡng check-in hoặc cao hơn.
+                            </small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success mt-3">Cập nhật Tham số</button>
+                    </form>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">Lưu ý: Các thay đổi chỉ có hiệu lực cho đến khi khởi động lại server.</small>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">Thông tin Hệ thống</h4>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>Trạng thái Model:</strong>
+                        {% if model_exists and classes_exists %}
+                            <span class="badge bg-success">Đã Huấn luyện</span>
+                        {% else %}
+                            <span class="badge bg-danger">Chưa Huấn luyện</span>
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Số người đã được huấn luyện:</strong>
+                        <span class="badge bg-primary">{{ trained_people_count }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h4 class="mb-0">Hiển thị Dữ liệu (t-SNE)</h4>
+                </div>
+                <div class="card-body text-center">
+                    {% if visualisation_exists %}
+                        <img src="{% static 'recognition/img/training_visualisation.png' %}" class="img-fluid" 
+                             alt="Biểu đồ hiển thị dữ liệu huấn luyện">
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Chưa có biểu đồ hiển thị.
+                            Vui lòng thực hiện huấn luyện trước.
+                        </div>
+                    {% endif %}
+                </div>
+                {% if visualisation_exists %}
+                <div class="card-footer">
+                    <small class="text-muted">
+                        Biểu đồ t-SNE hiển thị cách phân bố dữ liệu sau khi giảm chiều xuống 2D. 
+                        Các cụm riêng biệt cho thấy dữ liệu huấn luyện tốt.
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

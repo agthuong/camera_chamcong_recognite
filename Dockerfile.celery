@@ -1,0 +1,50 @@
+FROM python:3.8-slim
+
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV DEBIAN_FRONTEND noninteractive
+
+# Cài đặt dependencies cần thiết
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libglib2.0-0 \
+    libgl1-mesa-glx \
+    libopenblas-dev \
+    liblapack-dev \
+    libx11-dev \
+    libgtk-3-dev \
+    libpq-dev \
+    wget \
+    curl \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Tạo thư mục làm việc
+WORKDIR /app
+
+# Sao chép requirements.txt
+COPY requirements.txt /app/requirements.txt
+
+# Cài đặt các dependencies Python
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Sao chép mã nguồn
+COPY . /app/
+
+# Sao chép script start_celery riêng
+COPY start_celery.py /app/start_celery.py
+
+# Tạo thư mục media
+RUN mkdir -p /app/media
+
+# Sửa lỗi trong settings.py
+RUN sed -i 's|BASE_DIR / '\''db.sqlite3'\''|os.path.join(BASE_DIR, '\''db.sqlite3'\'')|g' /app/attendance_system_facial_recognition/settings.py || true
+
+# Lệnh để chạy Celery worker và beat
+CMD ["python", "start_celery.py"] 
