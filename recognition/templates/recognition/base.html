@@ -14,12 +14,78 @@
 
     <title>{% block title %}Hệ thống Điểm danh{% endblock title %}</title>
     {% block extra_head %}{% endblock %}
+    
+    <style>
+        /* Tùy chỉnh cho navbar cao cấp hơn */
+        .navbar {
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+            padding: 10px 0;
+        }
+        
+        .navbar-brand {
+            font-weight: bold;
+            font-size: 1.4rem;
+        }
+        
+        /* Tùy chỉnh cho các tab */
+        .navbar .nav-item .nav-link {
+            transition: all 0.3s ease;
+            margin: 0 5px;
+            padding: 8px 15px;
+            position: relative;
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        
+        .navbar .nav-item .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.15);
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .navbar .nav-item .nav-link.active:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #17a2b8; /* Màu Bootstrap info */
+            border-radius: 3px;
+        }
+        
+        .navbar .nav-item .nav-link:hover:not(.active) {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-1px);
+            color: white;
+        }
+        
+        /* Hiệu ứng hover cho navbar-brand */
+        .navbar-brand:hover {
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Style cho nút toggler */
+        .navbar-toggler {
+            border: none;
+            padding: 10px;
+        }
+        
+        .navbar-toggler:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25);
+        }
+    </style>
 </head>
 <body>
     <header class="site-header">
-      <nav class="navbar navbar-expand-md navbar-dark bg-steel fixed-top" style="background-color: #343a40;"> 
+      <nav class="navbar navbar-expand-md navbar-dark fixed-top" style="background-color: #343a40;"> 
         <div class="container">
-          <a class="navbar-brand mr-4" href="{% url 'home' %}">Hệ thống Điểm danh</a>
+          <a class="navbar-brand mr-4" href="{% url 'home' %}">
+            <i class="fas fa-id-card-alt mr-2"></i>Hệ thống Điểm danh
+          </a>
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggle" aria-controls="navbarToggle" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
           </button>
@@ -27,19 +93,33 @@
             <div class="navbar-nav mr-auto">
               <!-- Thêm các link khác nếu cần -->
                {% if user.is_authenticated and user.is_superuser %}
-                 <a class="nav-item nav-link" href="{% url 'home' %}">Thu thập dữ liệu</a>
-                 <a class="nav-item nav-link" href="{% url 'attendance-log' %}">Bảng Chấm công</a>
-                 <a class="nav-item nav-link" href="{% url 'supervisor-worker' %}">Quản lý</a>
-                 <a class="nav-item nav-link" href="{% url 'continuous-schedule' %}">Lịch Chấm công</a>
+                 <a class="nav-item nav-link" id="nav-home" href="{% url 'home' %}">
+                    <i class="fas fa-camera mr-1"></i>Thu thập dữ liệu
+                 </a>
+                 <a class="nav-item nav-link" id="nav-attendance" href="{% url 'attendance-log' %}">
+                    <i class="fas fa-clipboard-list mr-1"></i>Bảng Chấm công
+                 </a>
+                 <a class="nav-item nav-link" id="nav-management" href="{% url 'supervisor-worker' %}">
+                    <i class="fas fa-users-cog mr-1"></i>Quản lý
+                 </a>
+                 <a class="nav-item nav-link" id="nav-schedule" href="{% url 'continuous-schedule' %}">
+                    <i class="fas fa-calendar-alt mr-1"></i>Lịch Chấm công
+                 </a>
                {% endif %}
             </div>
             <!-- Navbar Right Side -->
             <div class="navbar-nav">
               {% if user.is_authenticated %}
-                <span class="navbar-text mr-3">Chào, {{ user.username }}!</span>
-                <a class="nav-item nav-link" href="{% url 'logout' %}">Đăng xuất <i class="fas fa-sign-out-alt"></i></a>
+                <span class="navbar-text mr-3">
+                    <i class="fas fa-user-circle mr-1"></i>Chào, {{ user.username }}!
+                </span>
+                <a class="nav-item nav-link" href="{% url 'logout' %}">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Đăng xuất
+                </a>
               {% else %}
-                <a class="nav-item nav-link" href="{% url 'login' %}">Đăng nhập <i class="fas fa-sign-in-alt"></i></a>
+                <a class="nav-item nav-link" id="nav-login" href="{% url 'login' %}">
+                    <i class="fas fa-sign-in-alt mr-1"></i>Đăng nhập
+                </a>
                 <!-- <a class="nav-item nav-link" href="{% url 'register' %}">Đăng ký</a> -->
               {% endif %}
             </div>
@@ -48,7 +128,7 @@
       </nav>
     </header>
 
-    <main role="main" class="container" style="padding-top: 80px;"> <!-- Thêm padding top để nội dung không bị che bởi navbar fixed -->
+    <main role="main" class="container" style="padding-top: 90px;"> <!-- Tăng padding top để nội dung không bị che bởi navbar cao hơn -->
       <div class="row">
         <div class="col-md-12">
           {% if messages %}
@@ -75,5 +155,52 @@
     {% block extrajs %}
     <!-- Chỗ để các template con thêm script riêng -->
     {% endblock extrajs %}
+    
+    <script>
+        // Script để xử lý highlight tab active
+        $(document).ready(function() {
+            // Lấy đường dẫn URL hiện tại
+            var currentPath = window.location.pathname;
+            
+            // Debug - in ra console
+            console.log("Current path:", currentPath);
+            
+            // Xóa tất cả class active
+            $('.navbar .nav-link').removeClass('active');
+            
+            // Loại bỏ dấu / ở cuối nếu có
+            if (currentPath.length > 1 && currentPath.endsWith('/')) {
+                currentPath = currentPath.slice(0, -1);
+            }
+            
+            // Xử lý theo đường dẫn
+            if (currentPath === '' || currentPath === '/' || currentPath.includes('/home')) {
+                $('#nav-home').addClass('active');
+                console.log("Activated: home tab");
+            } 
+            else if (currentPath.includes('/attendance-log')) {
+                $('#nav-attendance').addClass('active');
+                console.log("Activated: attendance tab");
+            }
+            else if (currentPath.includes('/supervisor-worker')) {
+                $('#nav-management').addClass('active');
+                console.log("Activated: management tab");
+            }
+            else if (currentPath.includes('/continuous-schedule') || currentPath.includes('/schedule')) {
+                $('#nav-schedule').addClass('active');
+                console.log("Activated: schedule tab");
+            }
+            else if (currentPath.includes('/login')) {
+                $('#nav-login').addClass('active');
+                console.log("Activated: login tab");
+            }
+            
+            // In ra trạng thái các tab để debug
+            console.log("Nav home active:", $('#nav-home').hasClass('active'));
+            console.log("Nav attendance active:", $('#nav-attendance').hasClass('active'));
+            console.log("Nav management active:", $('#nav-management').hasClass('active'));
+            console.log("Nav schedule active:", $('#nav-schedule').hasClass('active'));
+        });
+    </script>
 </body>
 </html>

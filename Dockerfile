@@ -46,6 +46,7 @@ RUN sed -i 's|BASE_DIR / '\''db.sqlite3'\''|os.path.join(BASE_DIR, '\''db.sqlite
 
 # Mở cổng
 EXPOSE 8000
-
+# Tạo một khối VOLUME cho database
+VOLUME ["/app/db"]
 # Khởi động server - chỉ chạy Django, không chạy Celery nữa
 CMD ["bash", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn attendance_system_facial_recognition.wsgi:application --bind 0.0.0.0:8000"]

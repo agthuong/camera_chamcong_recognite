@@ -200,28 +200,46 @@ def process_video_roi_view(request):
                 video_source = camera_config.source
                 camera_name = camera_config.name
                 
-                processing_thread = threading.Thread(
-                    target=process_video_with_roi,
-                    args=(video_source, mode, roi, stop_processing_event, stream_output),
-                    kwargs={
-                        'username': username,
-                        'max_samples': settings.RECOGNITION_DEFAULT_MAX_SAMPLES,
-                        'recognition_threshold': settings.RECOGNITION_CHECK_IN_THRESHOLD, 
-                        'company': company,
-                        'contractor': contractor if mode == 'collect' and role == 'worker' else None,
-                        'field': field if mode == 'collect' and role == 'worker' else None,
-                        'camera_name': camera_name
-                    },
-                    daemon=True
-                )
-                processing_thread.start()
-                
-                processing_status['is_processing'] = True
-                processing_status['mode'] = mode
-                processing_status['camera_source'] = video_source
-                processing_status['username'] = username if mode == 'collect' else None
-
-                return JsonResponse({'status': 'success', 'message': 'Bắt đầu xử lý.'})
+                try:
+                    # Thử khởi tạo luồng xử lý video trong try-except để bắt lỗi
+                    processing_thread = threading.Thread(
+                        target=process_video_with_roi,
+                        args=(video_source, mode, roi, stop_processing_event, stream_output),
+                        kwargs={
+                            'username': username,
+                            'max_samples': settings.RECOGNITION_DEFAULT_MAX_SAMPLES,
+                            'recognition_threshold': settings.RECOGNITION_CHECK_IN_THRESHOLD, 
+                            'company': company,
+                            'contractor': contractor if mode == 'collect' and role == 'worker' else None,
+                            'field': field if mode == 'collect' and role == 'worker' else None,
+                            'camera_name': camera_name
+                        },
+                        daemon=True
+                    )
+                    processing_thread.start()
+                    
+                    # Đợi một khoảng thời gian ngắn để xem có lỗi kết nối camera không
+                    time.sleep(0.5)
+                    
+                    # Kiểm tra nếu thread đã kết thúc quá nhanh (có thể do lỗi)
+                    if not processing_thread.is_alive():
+                        return JsonResponse({'status': 'error', 'message': 'Không thể kết nối với camera, vui lòng thử lại hoặc liên hệ quản trị viên.'}, status=400)
+                    
+                    processing_status['is_processing'] = True
+                    processing_status['mode'] = mode
+                    processing_status['camera_source'] = video_source
+                    processing_status['username'] = username if mode == 'collect' else None
+                    
+                    return JsonResponse({'status': 'success', 'message': 'Bắt đầu xử lý.'})
+                    
+                except Exception as e:
+                    print(f"[ERROR] Lỗi khi khởi tạo xử lý video: {e}")
+                    # Kiểm tra nếu là lỗi liên quan đến kết nối camera
+                    error_msg = str(e)
+                    if "Không thể mở nguồn video" in error_msg or "connection failed" in error_msg:
+                        return JsonResponse({'status': 'error', 'message': 'Kết nối thất bại, vui lòng liên hệ quản trị viên'}, status=400)
+                    else:
+                        return JsonResponse({'status': 'error', 'message': f'Lỗi hệ thống: {error_msg}'}, status=500)
             else:
                 print("[View Error] Form không hợp lệ:", form.errors.as_json())
                 first_error_key = next(iter(form.errors), None)

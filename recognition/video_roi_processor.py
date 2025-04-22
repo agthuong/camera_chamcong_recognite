@@ -206,6 +206,7 @@ class VideoSourceHandler:
 
     def start(self):
         """Khởi động thread đọc frame"""
+        print(f"[INFO] Khởi tạo nguồn video: {self.source}")
         self.capture = cv2.VideoCapture(self.source)
         
         # Đặt các tham số đặc biệt cho RTSP
@@ -219,16 +220,25 @@ class VideoSourceHandler:
 
             # Cho phép kết nối lại nhanh hơn
             self.max_consecutive_errors = 3  # Giảm số lỗi trước khi kết nối lại
-            print("[INFO] Đã áp dụng cấu hình đặc biệt cho luồng RTSP/Streaming")
+            print(f"[INFO] Đã áp dụng cấu hình đặc biệt cho luồng RTSP/Streaming")
             
         if not self.capture.isOpened():
-            print(f"[ERROR] Không thể mở nguồn video: {self.source}")
+            error_message = f"Không thể mở nguồn video: {self.source}"
+            print(f"[ERROR] {error_message}")
             return False
             
         # Tùy chọn kiểm tra kích thước frame
         width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = self.capture.get(cv2.CAP_PROP_FPS)
+        
+        # Kiểm tra nếu kích thước không hợp lệ, có thể là dấu hiệu của kết nối thất bại
+        if width <= 0 or height <= 0:
+            error_message = f"Kích thước video không hợp lệ: {width}x{height}, có thể camera không khả dụng"
+            print(f"[ERROR] {error_message}")
+            self.capture.release()
+            return False
+            
         print(f"[INFO] Kích thước video: {width}x{height}, FPS: {fps:.1f}")
         
         self.running = True
@@ -372,6 +382,14 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
     if roi:
         rx, ry, rw, rh = [int(v) for v in roi]
 
+    # Khởi tạo và bắt đầu xử lý video
+    video_handler = VideoSourceHandler(video_source)
+    if not video_handler.start():
+        error_msg = f"Không thể mở nguồn video: {video_source}"
+        print(f"[PROCESS ERROR] {error_msg}")
+        output_handler.stop_stream()
+        return {"error": error_msg} if mode != 'collect' else 0
+    
     detector, predictor, fa = None, None, None
     svc, encoder = None, None
     if mode in ['collect', 'recognize']:

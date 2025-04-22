@@ -84,15 +84,10 @@ WSGI_APPLICATION = 'attendance_system_facial_recognition.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/2.2/ref/settings/#databases
 
-
 DATABASES = {
     'default': {
         'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.environ.get('DB_NAME', BASE_DIR / 'db.sqlite3'),
-        'USER': os.environ.get('DB_USER', ''),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', ''),
-        'PORT': os.environ.get('DB_PORT', ''),
+        'NAME': os.environ.get('DB_NAME', os.path.join(BASE_DIR, 'db.sqlite3')),
     }
 }
 
@@ -217,3 +212,12 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute='*/1'),  # Chạy mỗi phút
     },
 }
+
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(' ')
+CSRF_TRUSTED_ORIGINS = [
+    'https://attendance.dbplus.com.vn:8086',
+    'https://attendance.dbplus.com.vn',
+    'http://localhost:8000',
+    'http://localhost:8086',
+    'http://localhost:8087',
+]

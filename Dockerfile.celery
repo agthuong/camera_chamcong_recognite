@@ -46,5 +46,8 @@ RUN mkdir -p /app/media
 # Sửa lỗi trong settings.py
 RUN sed -i 's|BASE_DIR / '\''db.sqlite3'\''|os.path.join(BASE_DIR, '\''db.sqlite3'\'')|g' /app/attendance_system_facial_recognition/settings.py || true
 
+# Tạo một khối VOLUME cho database
+VOLUME ["/app/db"]
+
 # Lệnh để chạy Celery worker và beat
 CMD ["python", "start_celery.py"] 

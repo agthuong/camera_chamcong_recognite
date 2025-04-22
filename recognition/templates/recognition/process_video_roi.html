@@ -445,6 +445,28 @@
     </div>
 </div>
 
+<!-- Thêm modal thông báo lỗi kết nối camera ngay sau các modal hiện có -->
+<!-- Connection Error Modal -->
+<div class="modal fade" id="camera-connection-error-modal" tabindex="-1" role="dialog" aria-labelledby="cameraErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="cameraErrorModalLabel">Lỗi kết nối</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+                <p>Kết nối thất bại, vui lòng liên hệ quản trị viên</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extrajs %}
@@ -1103,24 +1125,41 @@
                         
                         // Giải mã response JSON nếu có
                         var errorMessage = "Lỗi kết nối hoặc lỗi server khi gửi yêu cầu bắt đầu.";
+                        var showConnectionErrorModal = false;
+                        
                         try {
                             if (jqXHR.responseText) {
                                 var responseObj = JSON.parse(jqXHR.responseText);
                                 if (responseObj && responseObj.message) {
                                     errorMessage = responseObj.message;
+                                    // Kiểm tra nếu là lỗi kết nối camera
+                                    if (responseObj.message.includes("Không thể mở nguồn video") || 
+                                        responseObj.message.includes("connection failed") ||
+                                        responseObj.message.includes("camera") ||
+                                        responseObj.message.includes("video source") ||
+                                        responseObj.message.includes("404 Not Found") || // Bắt lỗi RTSP
+                                        responseObj.message.includes("rtsp") || // Bắt lỗi RTSP
+                                        responseObj.message.includes("method DESCRIBE failed")) { // Bắt lỗi RTSP
+                                        showConnectionErrorModal = true;
+                                    }
                                 }
                             }
                         } catch (e) {
                             console.error("Error parsing response:", e);
                         }
                         
-                        // Sử dụng SweetAlert2 thay vì alert thông thường
-                        Swal.fire({
-                            title: 'Lỗi',
-                            text: errorMessage,
-                            icon: 'error',
-                            confirmButtonText: 'Đóng'
-                        });
+                        if (showConnectionErrorModal) {
+                            // Hiển thị modal thông báo lỗi kết nối camera
+                            $('#camera-connection-error-modal').modal('show');
+                        } else {
+                            // Sử dụng SweetAlert2 cho các lỗi khác
+                            Swal.fire({
+                                title: 'Lỗi',
+                                text: errorMessage,
+                                icon: 'error',
+                                confirmButtonText: 'Đóng'
+                            });
+                        }
                         
                         button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
                     }
@@ -1207,16 +1246,19 @@
 
             // --- Xử lý lỗi tải ảnh video stream ---
             videoStreamImg.on('error', function() {
-                 console.warn("Lỗi tải video stream. Đặt lại thành placeholder.");
-                 $(this).attr('src', placeholderSrc);
-                 videoContainer.removeClass('is-streaming');
-                 placeholderText.show();
-                 $("body").data("is-processing", false); // Cập nhật trạng thái
-                 stopButton.prop('disabled', true); // Disable nút Dừng
-                 refreshStreamBtn.prop('disabled', true); // Disable nút Refresh
-                 startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); // Enable nút Start
-                 if (progressInterval) clearInterval(progressInterval); // Dừng progress nếu có
-                 collectProgressContainer.hide();
+                console.warn("Lỗi tải video stream. Đặt lại thành placeholder.");
+                $(this).attr('src', placeholderSrc);
+                videoContainer.removeClass('is-streaming');
+                placeholderText.show();
+                $("body").data("is-processing", false); // Cập nhật trạng thái
+                stopButton.prop('disabled', true); // Disable nút Dừng
+                refreshStreamBtn.prop('disabled', true); // Disable nút Refresh
+                startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); // Enable nút Start
+                if (progressInterval) clearInterval(progressInterval); // Dừng progress nếu có
+                collectProgressContainer.hide();
+                
+                // Hiển thị modal thông báo lỗi kết nối camera
+                $('#camera-connection-error-modal').modal('show');
             });
 
             // --- Xử lý nút Refresh Stream ---
