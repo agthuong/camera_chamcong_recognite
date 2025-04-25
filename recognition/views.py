@@ -94,30 +94,119 @@ def not_authorised(request):
 
 @login_required
 def process_video_roi_view(request):
-    global processing_thread, stop_processing_event, processing_status
+    global processing_thread, stop_processing_event, processing_status, processing_lock
     
     if request.method == 'POST':
         action = request.POST.get('action')
 
         if action == 'stop':
+            # --- Sử dụng Lock để đảm bảo an toàn thread --- 
+            with processing_lock:
             if processing_thread and processing_thread.is_alive():
+                    print("[STOP VIEW] Nhận yêu cầu dừng.")
+                    print("[STOP VIEW] Đặt cờ stop_processing_event")
                 stop_processing_event.set()
-                processing_thread.join(timeout=2.0) # Đợi tối đa 2 giây
-
-
+                    
+                    join_timeout = 30.0 # Tăng lên 30 giây để xử lý các trường hợp khó dừng
+                    print(f"[STOP VIEW] Đợi thread xử lý chính kết thúc với timeout {join_timeout} giây...")
+                    start_join_time = time.time()
+                    processing_thread.join(timeout=join_timeout)
+                    end_join_time = time.time()
+                    join_duration = end_join_time - start_join_time
+                    print(f"[STOP VIEW] Thời gian join thread chính: {join_duration:.2f} giây.")
+                    
+                    if processing_thread.is_alive():
+                        print(f"[STOP VIEW CRITICAL ERROR] Thread xử lý chính VẪN ĐANG CHẠY sau {join_timeout} giây timeout!")
+                        print("[STOP VIEW CRITICAL ERROR] Thread có thể đã bị treo trong VideoCapture.release() hoặc một hàm I/O khác.")
+                        print("[STOP VIEW CRITICAL ERROR] Cần khởi động lại ứng dụng để dừng thread này một cách an toàn.")
+                        # Cân nhắc: Không reset trạng thái nếu thread chưa dừng?
+                        # VẪN reset những trạng thái cơ bản để UI phản ánh không có tiến trình đang chạy
+                        processing_status['is_processing'] = False
+                        processing_status['mode'] = None
+                        processing_status['camera_source'] = None
+                        processing_status['username'] = None
+                        # NHƯNG KHÔNG đặt lại thread = None và không tạo mới stop_event
+                        print("[STOP VIEW WARNING] Đã đặt is_processing=False nhưng thread vẫn chạy ngầm!")
+                    else:
+                        print("[STOP VIEW] Thread xử lý chính đã kết thúc.")
+                        # Chỉ reset trạng thái khi thread đã dừng hoàn toàn
+                        print("[STOP VIEW] Bắt đầu làm sạch tài nguyên...")
+                        try:
+                            processing_status['is_processing'] = False
+                            processing_status['mode'] = None
+                            processing_status['camera_source'] = None
+                            processing_status['username'] = None
+                            processing_thread = None # Đặt lại thành None
+                            # Tạo lại stop_event mới
+                            stop_processing_event = threading.Event()
+                            print("[STOP VIEW] Đã làm sạch tài nguyên và tạo stop_event mới.")
+                        except Exception as e:
+                            print(f"[STOP VIEW ERROR] Lỗi khi làm sạch tài nguyên: {e}")
+                else:
+                    print("[STOP VIEW] Không có tiến trình xử lý nào đang chạy để dừng.")
+                    # Reset trạng thái an toàn nếu không có thread nào chạy
             processing_status['is_processing'] = False
             processing_status['mode'] = None
             processing_status['camera_source'] = None
             processing_status['username'] = None
             processing_thread = None
-            return JsonResponse({'status': 'success', 'message': 'Đã dừng xử lý.'})
+                    if stop_processing_event.is_set():
+                        stop_processing_event = threading.Event()
+                        
+            return JsonResponse({'status': 'success', 'message': 'Yêu cầu dừng đã được xử lý.'})
 
         elif action == 'start':
+            # --- Sử dụng Lock để đảm bảo an toàn thread --- 
+            with processing_lock:
+                # Kiểm tra lại trạng thái bên trong lock
+                if processing_thread and processing_thread.is_alive():
+                    print("[START VIEW] Phát hiện tiến trình đang chạy. Bắt đầu dừng tiến trình cũ...")
+                    stop_processing_event.set()
+                    
+                    # Tăng timeout đáng kể và kiểm tra kết quả join
+                    join_timeout_start = 30.0 # Tăng lên 30 giây
+                    print(f"[START VIEW] Đợi thread cũ kết thúc với timeout {join_timeout_start} giây...")
+                    start_join_time = time.time()
+                    processing_thread.join(timeout=join_timeout_start)
+                    end_join_time = time.time()
+                    join_duration = end_join_time - start_join_time
+                    print(f"[START VIEW] Thời gian join thread cũ: {join_duration:.2f} giây.")
+
+                    # Kiểm tra xem thread cũ đã thực sự dừng chưa
+                    if processing_thread.is_alive():
+                        print(f"[START VIEW CRITICAL ERROR] Không thể dừng tiến trình cũ sau {join_timeout_start} giây. Thread có thể đã bị treo!")
+                        print("[START VIEW CRITICAL ERROR] Không thể bắt đầu thread mới khi thread cũ chưa giải phóng tài nguyên camera.")
+                        # Không reset stop_event cũ vì thread cũ vẫn có thể đang dùng nó
+                        return JsonResponse({
+                            'status': 'error', 
+                            'message': f'Tiến trình trước đó vẫn đang chạy và không thể dừng sau {join_timeout_start} giây. Vui lòng đợi thêm hoặc tải lại trang.'
+                        }, status=409) # 409 Conflict
+                    else:
+                        print("[START VIEW] Thread cũ đã dừng thành công. Tiến hành reset trạng thái.")
+                        # Reset các biến CHỈ KHI thread cũ đã dừng
+                        processing_status['is_processing'] = False
+                        processing_status['mode'] = None
+                        processing_status['camera_source'] = None
+                        processing_status['username'] = None
+                        processing_thread = None
+                        # Tạo stop_event mới cho tiến trình sắp tới
+                        stop_processing_event = threading.Event()
+                        print("[START VIEW] Đã reset trạng thái.")
+                else:
+                    print("[START VIEW] Không có tiến trình nào đang chạy. Chuẩn bị bắt đầu mới.")
+                    # Đảm bảo stop_event được reset nếu không có thread nào chạy
+                    if stop_processing_event.is_set():
+                         stop_processing_event = threading.Event()
+                
+                # --- Code bắt đầu tiến trình mới (giữ nguyên phần form validation và khởi tạo thread) --- 
             form = VideoRoiForm(request.POST)
             if form.is_valid():
+                    # Kiểm tra lại lần nữa (dù đã có lock, để chắc chắn)
                 if processing_thread and processing_thread.is_alive():
-                    return JsonResponse({'status': 'warning', 'message': 'Đã có quá trình xử lý đang chạy.'}, status=400)
+                         print("[START VIEW WARNING] Vẫn phát hiện thread chạy sau khi kiểm tra và lock? Có thể có lỗi logic.")
+                         return JsonResponse({'status': 'error', 'message': 'Lỗi hệ thống: Phát hiện tiến trình chạy không mong muốn.'}, status=500)
                 
+                    # ... (Lấy dữ liệu form như cũ: camera_config, mode, username, ...) ...
                 camera_config = form.cleaned_data['camera']
                 mode = form.cleaned_data['mode']
                 username = form.cleaned_data.get('username')
@@ -128,39 +217,28 @@ def process_video_roi_view(request):
                 field = form.cleaned_data.get('field')
                 email = form.cleaned_data.get('email')
 
-                # *** BẮT ĐẦU: Lấy và xác thực ROI ***
+                    # ... (Lấy ROI như cũ) ...
                 roi = None
                 try:
                     roi_x = camera_config.roi_x
                     roi_y = camera_config.roi_y
                     roi_w = camera_config.roi_w
                     roi_h = camera_config.roi_h
-                    
 
                     if roi_w is not None and roi_h is not None and roi_w > 0 and roi_h > 0:
                         if roi_x is not None and roi_y is not None:
                             roi = (roi_x, roi_y, roi_w, roi_h)
-                        else:
-                            roi = None
-                    else:
-                        roi = None
                     
                     if mode == 'collect' and roi is None:
                          return JsonResponse({'status': 'error', 'message': 'Chế độ Thu thập dữ liệu yêu cầu phải cấu hình ROI hợp lệ trước.'}, status=400)
 
-                except AttributeError as attr_err:
-                    print(f"[View Error] Lỗi thuộc tính khi lấy ROI cho camera {camera_config.id}: {attr_err}")
-                    roi = None
-                    if mode == 'collect':
-                        return JsonResponse({'status': 'error', 'message': f'Lỗi cấu hình ROI cho camera đã chọn: {attr_err}'}, status=500)
                 except Exception as e:
-                    print(f"[View Error] Lỗi không xác định khi lấy ROI: {e}")
-                    roi = None
+                        print(f"[View Error] Lỗi khi lấy ROI: {e}")
                     if mode == 'collect':
                         return JsonResponse({'status': 'error', 'message': f'Lỗi khi lấy ROI: {e}'}, status=500)
-                # *** KẾT THÚC: Lấy và xác thực ROI ***
+                        roi = None # Đặt roi là None nếu có lỗi và không phải collect
 
-                # Xử lý tạo/cập nhật User và Profile nếu là mode 'collect'
+                    # ... (Xử lý User/Profile như cũ) ...
                 if mode == 'collect':
                     from users.models import Profile # Import Profile tại đây
                     if not username:
@@ -195,13 +273,17 @@ def process_video_roi_view(request):
                         }
                     )
 
-                # Khởi tạo và bắt đầu luồng xử lý video
+                    # Khởi tạo và bắt đầu luồng xử lý video MỚI
+                    print("[START VIEW] Chuẩn bị khởi tạo thread xử lý mới...")
+                    # Đảm bảo stop_event là mới và chưa set
+                    if stop_processing_event.is_set():
+                        print("[START VIEW WARNING] stop_event đã bị set trước khi tạo thread? Resetting...")
                 stop_processing_event = threading.Event()
+                        
                 video_source = camera_config.source
                 camera_name = camera_config.name
                 
                 try:
-                    # Thử khởi tạo luồng xử lý video trong try-except để bắt lỗi
                     processing_thread = threading.Thread(
                         target=process_video_with_roi,
                         args=(video_source, mode, roi, stop_processing_event, stream_output),
@@ -211,43 +293,49 @@ def process_video_roi_view(request):
                             'recognition_threshold': settings.RECOGNITION_CHECK_IN_THRESHOLD, 
                             'company': company,
                             'contractor': contractor if mode == 'collect' and role == 'worker' else None,
-                            'field': field if mode == 'collect' and role == 'worker' else None,
+                                'field': field if role == 'worker' else None,
                             'camera_name': camera_name
                         },
                         daemon=True
                     )
                     processing_thread.start()
+                        print(f"[START VIEW] Đã khởi động thread xử lý mới (Mode: {mode}, Camera: {camera_name})")
                     
-                    # Đợi một khoảng thời gian ngắn để xem có lỗi kết nối camera không
+                        # Đợi một chút để kiểm tra lỗi kết nối ban đầu
                     time.sleep(0.5)
                     
-                    # Kiểm tra nếu thread đã kết thúc quá nhanh (có thể do lỗi)
                     if not processing_thread.is_alive():
+                            print("[START VIEW ERROR] Thread mới kết thúc quá nhanh, có thể lỗi kết nối camera.")
+                            # Reset trạng thái vì thread không chạy
+                            processing_status['is_processing'] = False
+                            processing_thread = None
                         return JsonResponse({'status': 'error', 'message': 'Không thể kết nối với camera, vui lòng thử lại hoặc liên hệ quản trị viên.'}, status=400)
                     
+                        # Cập nhật trạng thái thành công
                     processing_status['is_processing'] = True
                     processing_status['mode'] = mode
                     processing_status['camera_source'] = video_source
                     processing_status['username'] = username if mode == 'collect' else None
+                        print(f"[START VIEW] Cập nhật processing_status: {processing_status}")
                     
                     return JsonResponse({'status': 'success', 'message': 'Bắt đầu xử lý.'})
                     
                 except Exception as e:
-                    print(f"[ERROR] Lỗi khi khởi tạo xử lý video: {e}")
-                    # Kiểm tra nếu là lỗi liên quan đến kết nối camera
+                        print(f"[START VIEW ERROR] Lỗi khi khởi tạo thread xử lý video: {e}")
                     error_msg = str(e)
+                        # Reset trạng thái nếu có lỗi
+                        processing_status['is_processing'] = False
+                        processing_thread = None
                     if "Không thể mở nguồn video" in error_msg or "connection failed" in error_msg:
                         return JsonResponse({'status': 'error', 'message': 'Kết nối thất bại, vui lòng liên hệ quản trị viên'}, status=400)
                     else:
                         return JsonResponse({'status': 'error', 'message': f'Lỗi hệ thống: {error_msg}'}, status=500)
             else:
-                print("[View Error] Form không hợp lệ:", form.errors.as_json())
+                    # Form không hợp lệ
+                    print("[START VIEW ERROR] Form không hợp lệ:", form.errors.as_json())
                 first_error_key = next(iter(form.errors), None)
                 error_message = f"Dữ liệu không hợp lệ: {form.errors[first_error_key][0]}" if first_error_key else "Dữ liệu không hợp lệ."
                 return JsonResponse({'status': 'error', 'message': error_message, 'errors': form.errors}, status=400)
-        # Chỗ này cần else hoặc bỏ hẳn để không lỗi cú pháp
-        # else: 
-        #     return JsonResponse({'status': 'error', 'message': 'Hành động không hợp lệ.'}, status=400)
 
     # GET Request
     else: 

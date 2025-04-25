@@ -595,49 +595,151 @@
             // --- Các hàm và logic xử lý form, video, train, dataset, contractor giữ nguyên ---
             // ... (Ví dụ: contractorInput.closest..., chooseContractorBtn.click, etc.) ...
             // --- Hàm xử lý nút Dừng (stopButton.click) ---
-            stopButton.click(function() {
+            stopButton.on('click', function() {
+                // Hiển thị thông báo đang dừng chi tiết hơn
+                Swal.fire({
+                    title: 'Đang dừng tiến trình...',
+                    html: `
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+                        </div>
+                        <p>Vui lòng đợi - Thời gian còn lại tối đa: <span id="stop-countdown">30</span>s</p>
+                        <p class="small text-muted">Hệ thống đang dừng xử lý và giải phóng tài nguyên camera</p>
+                    `,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    showCancelButton: true,
+                    cancelButtonText: 'Bỏ qua (không an toàn)',
+                    backdrop: true,
+                    willOpen: () => {
+                        Swal.showLoading();
+                        // Thêm đếm ngược
+                        let countdown = 30;
+                        const countdownElement = document.getElementById('stop-countdown');
+                        window.stopCountdownInterval = setInterval(() => {
+                            countdown--;
+                            if (countdownElement) countdownElement.textContent = countdown;
+                            if (countdown <= 0) {
+                                clearInterval(window.stopCountdownInterval);
+                                Swal.close();
+                                resetVideoUI();  // Reset UI ngay cả khi backend chưa trả về
+                                console.log("[Stop UI] Reset UI từ countdown sau 30 giây");
+                            }
+                        }, 1000);
+                    },
+                    didClose: () => {
+                        // Dừng interval khi modal đóng
+                        if (window.stopCountdownInterval) {
+                            clearInterval(window.stopCountdownInterval);
+                        }
+                    }
+                }).then((result) => {
+                    // Nếu người dùng nhấn "Bỏ qua"
+                    if (result.dismiss === Swal.DismissReason.cancel) {
+                        console.log("[Stop UI] Người dùng đã nhấn Bỏ qua");
+                        resetVideoUI();
+                    }
+                });
+                
+                var button = $(this);
+                button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Đang dừng...');
+                
+                // Thêm timeout để hủy yêu cầu nếu mất quá nhiều thời gian
+                var stopTimeout = setTimeout(function() {
+                    // Nếu request vẫn chưa hoàn thành sau 30 giây, hiển thị thông báo và reset UI
+                    console.log("[Stop] Request quá thời gian (30s), reset UI...");
+                    Swal.close();
+                    resetVideoUI();
+                    button.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng');
+                    
+                    // Hiển thị thông báo cho người dùng biết
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Quá thời gian chờ',
+                        text: 'Tiến trình có thể vẫn đang chạy ngầm. Vui lòng tải lại trang hoặc liên hệ quản trị viên nếu vấn đề vẫn tiếp diễn.',
+                        confirmButtonText: 'Đã hiểu'
+                    });
+                }, 30000); // 30 giây
+                
+                $.ajax({
+                    url: "{% url 'home' %}",  // Sửa thành 'home' để khớp với urls.py
+                    type: "POST",
+                    data: stopForm.serialize(),
+                    success: function(response) {
+                        clearTimeout(stopTimeout); // Hủy timeout
+                        console.log("[Stop] Success response:", response);
+                        
+                        if (response.status === 'success') {
+                            // Reset giao diện về trạng thái ban đầu
+                            Swal.close();
+                            resetVideoUI();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Lỗi',
+                                text: "Lỗi khi dừng xử lý: " + response.message
+                            });
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        clearTimeout(stopTimeout); // Hủy timeout
+                        console.error("[Stop AJAX Error] Status:", textStatus, "Error:", errorThrown);
+                        
+                        // Dù có lỗi vẫn reset UI để tránh treo
+                        Swal.close();
+                        resetVideoUI();
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Lỗi kết nối',
+                            text: 'Không thể kết nối với máy chủ. UI đã được đặt lại.'
+                        });
+                    },
+                    complete: function() {
+                        clearTimeout(stopTimeout); // Đảm bảo hủy timeout nếu có
+                        button.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng');
+                    }
+                });
+            });
 
-                 var button = $(this);
-                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Dừng...');
-                 // Gửi yêu cầu dừng qua AJAX (sử dụng form stop-form)
-                 $.ajax({
-                     url: "{% url 'home' %}", // Gửi đến cùng view xử lý
-                     type: "POST",
-                     data: stopForm.serialize(), // Dữ liệu từ form Dừng (action=stop)
-                     dataType: "json",
-                     success: function(response) {
-
-                         if (response.status === 'success') {
-                             // Reset giao diện về trạng thái ban đầu
-                             // button.prop('disabled', true); // Không disable lại nút dừng khi thành công
-                             startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu'); // Enable nút Start
-                             refreshStreamBtn.prop('disabled', true);
-                             videoStreamImg.attr("src", placeholderSrc);
-                             videoContainer.removeClass('is-streaming');
-                             placeholderText.show();
-                             $("body").data("is-processing", false);
-                             collectProgressContainer.hide(); // Ẩn progress bar
-                             trainingLoadingIndicator.hide(); // Ẩn loading train
-                             if (progressInterval) clearInterval(progressInterval); // Dừng cập nhật progress
-
-                         } else {
-                             alert("Lỗi khi dừng xử lý: " + response.message);
-                             // button.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng'); // Sẽ được xử lý ở complete
-                         }
-                     },
-                     error: function(jqXHR, textStatus, errorThrown) {
-                         console.error("[Stop AJAX Error] Status:", textStatus, "Error:", errorThrown);
-
-                         // button.prop('disabled', false).html('<i class="fas fa-stop"></i> Dừng'); // Sẽ được xử lý ở complete
-                     },
-                     complete: function() {
-                         // Luôn đảm bảo nút Dừng được kích hoạt lại và reset text sau khi request hoàn tất
-                         // Chỉ disable nếu *đang không* trong trạng thái processing
-                         var isProcessing = $("body").data("is-processing");
-                         button.prop('disabled', !isProcessing).html('<i class="fas fa-stop"></i> Dừng');
-                     }
-                 });
-             });
+            // Nâng cấp hàm resetVideoUI để chi tiết hơn
+            function resetVideoUI() {
+                // Reset giao diện về trạng thái ban đầu
+                startButton.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                refreshStreamBtn.prop('disabled', true);
+                videoStreamImg.attr("src", placeholderSrc);
+                videoStreamImg.attr("data-original-src", ''); // Xóa src gốc nếu có
+                videoContainer.removeClass('is-streaming');
+                placeholderText.show();
+                $("body").data("is-processing", false);
+                
+                // Ẩn progress bar và loading - giữ lại dữ liệu nếu có để người dùng xem
+                if (collectProgressContainer.is(":visible")) {
+                    // Thay vì ẩn ngay, đổi màu để chỉ ra đã dừng nhưng vẫn hiển thị
+                    collectProgressBar.addClass('bg-secondary').removeClass('progress-bar-striped progress-bar-animated');
+                    
+                    // Cập nhật label nếu có
+                    let currentLabel = collectProgressLabel.text();
+                    if (!currentLabel.includes("Đã dừng:")) {
+                        collectProgressLabel.text("Đã dừng: " + currentLabel);
+                    }
+                    
+                    // Đặt timeout để ẩn sau 5 giây
+                    setTimeout(function() {
+                        collectProgressContainer.fadeOut(500, function() {
+                            // Reset trạng thái progress bar khi đã ẩn
+                            collectProgressBar.removeClass('bg-secondary').addClass('progress-bar-striped progress-bar-animated');
+                        });
+                    }, 5000);
+                } else {
+                    collectProgressContainer.hide(); // Ẩn ngay nếu đang không hiển thị
+                }
+                
+                trainingLoadingIndicator.hide(); // Ẩn loading train
+                if (progressInterval) clearInterval(progressInterval); // Dừng cập nhật progress
+                console.log("[Reset UI] UI đã được reset thành công");
+            }
 
             // --- Hàm xử lý nút Huấn luyện (trainButton.click) ---
             trainButton.click(function() {
@@ -904,23 +1006,45 @@
                                     
                                     // Hiển thị progress bar ngay cả khi chưa active
                                     collectProgressContainer.show();
-                                    collectProgressLabel.text(`Đang thu thập cho: ${currentUsername}`);
+                                    
+                                    // Kiểm tra nếu đang trong quá trình dừng - THÊM MỚI
+                                    if (data.stopping) {
+                                        collectProgressLabel.text(`Đang dừng thu thập: ${currentUsername}`);
+                                        collectProgressBar.addClass('bg-warning').removeClass('bg-info bg-success');
+                                    } else if (data.completed) {
+                                        collectProgressLabel.text(`Hoàn thành: ${currentUsername} (${data.current}/${data.total})`);
+                                        collectProgressBar.addClass('bg-success').removeClass('bg-info bg-warning');
+                                    } else if (data.active) {
+                                        collectProgressLabel.text(`Đang thu thập cho: ${currentUsername}`);
+                                        collectProgressBar.addClass('bg-info').removeClass('bg-warning bg-success');
+                                    } else {
+                                        collectProgressLabel.text(`Đã dừng: ${currentUsername} (${data.current}/${data.total})`);
+                                        collectProgressBar.addClass('bg-secondary').removeClass('bg-info bg-warning bg-success');
+                                    }
+                                    
                                     var percentage = (data.current / data.total) * 100;
                                     console.log(`[Progress] ${currentUsername}: ${data.current}/${data.total} (${percentage.toFixed(1)}%)`);
-                                    collectProgressBar.css('width', percentage + '%').attr('aria-valuenow', percentage).text(Math.round(percentage) + '%');
+                                    collectProgressBar.css('width', percentage + '%')
+                                                     .attr('aria-valuenow', percentage)
+                                                     .text(Math.round(percentage) + '%');
                                     
-                                    // Kiểm tra trạng thái active và completed
+                                    // Cập nhật trạng thái active/completed và stopping - THÊM MỚI
                                     if (data.active) {
                                         isActive = true;
                                         if (data.current >= data.total) {
                                             console.log(`[Progress] Thu thập có thể đã hoàn thành cho ${currentUsername}. Tiến trình đã đạt ${data.current}/${data.total}.`);
                                             collectProgressLabel.text(`Đã xong cho: ${currentUsername}`);
-                                            // Vẫn giữ isActive = true để hiển thị thanh tiến trình thêm một lúc
-                                        } 
+                                            collectProgressBar.addClass('bg-success').removeClass('bg-info bg-warning');
+                                        } else if (data.stopping) {
+                                            console.log(`[Progress] Tiến trình đang dừng cho ${currentUsername}. Đã thu thập ${data.current}/${data.total}.`);
+                                            collectProgressLabel.text(`Đang dừng thu thập: ${currentUsername} (${data.current}/${data.total})`);
+                                            collectProgressBar.addClass('bg-warning').removeClass('bg-info bg-success');
+                                        }
                                     } else if (data.completed) {
                                         // Nếu đã hoàn thành, hiển thị message hoàn thành
                                         console.log(`[Progress] Tiến trình đã hoàn thành cho ${currentUsername}.`);
                                         collectProgressLabel.text(`Hoàn thành: ${currentUsername} (${data.current}/${data.total})`);
+                                        collectProgressBar.addClass('bg-success').removeClass('bg-info bg-warning');
                                         
                                         // Hiển thị thêm một khoảng thời gian rồi ẩn đi
                                         if (!window.completedTimeout) {
@@ -942,6 +1066,7 @@
                                         if (data.current > 0) {
                                             console.log(`[Progress] Tiến trình không còn active cho ${currentUsername} nhưng đã có ${data.current}/${data.total} mẫu.`);
                                             collectProgressLabel.text(`Đã dừng: ${currentUsername} (${data.current}/${data.total})`);
+                                            collectProgressBar.addClass('bg-secondary').removeClass('bg-info bg-warning bg-success');
                                         }
                                         if (!window.completedTimeout) {
                                             window.completedTimeout = setTimeout(function() {
@@ -973,10 +1098,11 @@
                 console.log("[Click] Nút Bắt đầu được click");
                 var button = $(this);
                 
-                // Kiểm tra xem đã có tiến trình đang chạy chưa
+                // Lấy trạng thái hiện tại của tiến trình xử lý
+                // Dựa vào trạng thái này để quyết định dừng hay bắt đầu
                 var isProcessing = $("body").data("is-processing");
                 
-                // --- Phần Validation ---
+                // --- Phần Validation --- (Giữ nguyên)
                 if (!cameraSelect.val()) { alert("Vui lòng chọn camera."); return false; }
                 var selectedMode = $('input[name="mode"]:checked').val();
                 var username = $("#id_username").val();
@@ -989,7 +1115,8 @@
                     var contractorValue = contractorInput.val(); // Lấy từ input ẩn
                     var fieldValue = fieldInput.val(); // Lấy từ input ẩn
                     if (!contractorValue) { alert("Vui lòng chọn Nhà thầu cho Worker."); return false; }
-                    if (!fieldValue) { alert("Vui lòng nhập Lĩnh vực công việc cho Worker."); return false; }
+                    // Bỏ kiểm tra bắt buộc cho Field
+                    // if (!fieldValue) { alert("Vui lòng nhập Lĩnh vực công việc cho Worker."); return false; }
                 }
                 if (selectedMode === 'collect' && selectedRole === 'supervisor') {
                     var emailValue = $('#id_email').val(); 
@@ -999,63 +1126,66 @@
 
                 button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Bắt đầu...');
                 
-                // Nếu đã có tiến trình đang chạy, dừng tiến trình đó trước
+                // --- Tối ưu hóa logic dừng/bắt đầu --- 
                 if (isProcessing) {
-                    console.log("[Process] Có tiến trình đang chạy, dừng tiến trình hiện tại trước khi bắt đầu mới");
-                    
+                    // Nếu đang xử lý, gửi yêu cầu dừng trước
+                    console.log("[Process] Đang xử lý, gửi yêu cầu dừng...");
+                    sendStopRequest().then(function() {
+                        // Sau khi dừng thành công, gửi yêu cầu bắt đầu
+                        console.log("[Process] Đã dừng thành công, gửi yêu cầu bắt đầu mới...");
+                        startProcess(button);
+                    }).catch(function(error) {
+                        // Xử lý lỗi nếu không dừng được
+                        console.error("[Process] Lỗi khi dừng tiến trình cũ:", error);
+                        Swal.fire(
+                            'Lỗi',
+                            'Không thể dừng tiến trình đang chạy. Vui lòng thử lại.',
+                            'error'
+                        );
+                        button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                    });
+                } else {
+                    // Nếu không có tiến trình đang chạy, bắt đầu ngay
+                    console.log("[Process] Không có tiến trình nào, bắt đầu mới...");
+                    startProcess(button);
+                }
+            });
+            
+            // --- Hàm gửi yêu cầu DỪNG (trả về Promise) --- 
+            function sendStopRequest() {
+                return new Promise(function(resolve, reject) {
                     Swal.fire({
                         title: 'Đang dừng tiến trình hiện tại...',
                         text: 'Vui lòng chờ trong giây lát.',
                         allowOutsideClick: false,
                         allowEscapeKey: false,
                         showConfirmButton: false,
-                        willOpen: () => {
-                            Swal.showLoading();
-                        }
+                        willOpen: () => { Swal.showLoading(); }
                     });
-                    
-                    // Gửi yêu cầu dừng tiến trình hiện tại
+
                     $.ajax({
                         url: "{% url 'home' %}",
                         type: "POST",
-                        data: stopForm.serialize(), // Dữ liệu từ form Dừng (action=stop)
+                        data: stopForm.serialize(), 
                         dataType: "json",
                         success: function(stopResponse) {
-                            console.log("[Stop Response]", stopResponse);
-                            
+                            Swal.close();
                             if (stopResponse.status === 'success') {
-                                // Sau khi dừng thành công, bắt đầu tiến trình mới
-                                Swal.close();
-                                startProcess(button);
+                                resolve(); // Resolve promise khi dừng thành công
                             } else {
-                                // Nếu không dừng được tiến trình
-                                Swal.fire({
-                                    title: 'Lỗi',
-                                    text: 'Không thể dừng tiến trình hiện tại: ' + (stopResponse.message || 'Không xác định'),
-                                    icon: 'error',
-                                    confirmButtonText: 'Đóng'
-                                });
-                                button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                                reject('Server báo lỗi khi dừng: ' + (stopResponse.message || 'Không xác định'));
                             }
                         },
                         error: function(jqXHR, textStatus, errorThrown) {
+                            Swal.close();
                             console.error("[Stop AJAX Error]", textStatus, errorThrown);
-                            Swal.fire({
-                                title: 'Lỗi',
-                                text: 'Không thể dừng tiến trình hiện tại do lỗi kết nối.',
-                                icon: 'error',
-                                confirmButtonText: 'Đóng'
-                            });
-                            button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
+                            reject('Lỗi kết nối khi dừng tiến trình.');
                         }
                     });
-                } else {
-                    // Nếu không có tiến trình đang chạy, bắt đầu tiến trình mới ngay
-                    startProcess(button);
-                }
-            });
-            
-            // Hàm xử lý bắt đầu tiến trình mới
+                });
+            }
+
+            // --- Hàm gửi yêu cầu BẮT ĐẦU --- 
             function startProcess(button) {
                 var formData = processForm.serialize(); 
                 if (formData.indexOf('action=start') === -1) {
@@ -1076,83 +1206,78 @@
                             refreshStreamBtn.prop('disabled', false);
                             placeholderText.hide();
                             videoContainer.addClass('is-streaming');
+                            // Load ảnh với timestamp để tránh cache
                             videoStreamImg.attr("src", videoFeedUrl + "?ts=" + new Date().getTime());
+                            // Cập nhật trạng thái xử lý
                             $("body").data("is-processing", true);
+                            
+                            // Xử lý progress bar
                             if ($('input[name="mode"]:checked').val() === 'collect') {
-                                console.log("[Progress] Bắt đầu cập nhật tiến trình sau khi start thành công.");
-                                
+                                console.log("[Progress] Bắt đầu cập nhật tiến trình.");
                                 // Dừng interval cũ nếu có
                                 if (progressInterval) {
-                                    console.log("[Progress] Dừng interval cũ và tạo interval mới.");
                                     clearInterval(progressInterval);
                                     progressInterval = null;
                                 }
-                                
-                                // Reset progress bar ngay lúc này
+                                // Reset progress bar
                                 collectProgressBar.css('width', '0%').attr('aria-valuenow', 0).text('0%');
                                 collectProgressContainer.show();
-                                
-                                // Hiển thị username
                                 var collectionUsername = $('#id_username').val();
                                 collectProgressLabel.text('Đang thu thập cho: ' + collectionUsername);
-                                console.log("[Progress] Hiển thị progress bar cho: " + collectionUsername);
                                 
-                                // Bắt đầu interval mới sau một khoảng thời gian ngắn để cho backend có thời gian khởi tạo
+                                // Bắt đầu interval mới
                                 setTimeout(function() {
-                                    console.log("[Progress] Bắt đầu interval cập nhật tiến trình.");
-                                    // Gọi ngay lần đầu
-                                    updateCollectProgress();
-                                    // Sau đó thiết lập interval
-                                    progressInterval = setInterval(updateCollectProgress, 1000);
-                                }, 1000);
+                                    updateCollectProgress(); // Gọi ngay lần đầu
+                                    progressInterval = setInterval(updateCollectProgress, 1000); 
+                                }, 500); // Đợi 0.5s để backend khởi tạo tracker
+                            } else {
+                                // Nếu không phải mode collect, ẩn progress bar
+                                collectProgressContainer.hide();
+                                if (progressInterval) clearInterval(progressInterval); 
+                                progressInterval = null;
                             }
-                            if(response.message) { console.log("Backend message:", response.message); }
-                            // Không disable nút start nữa nếu thành công, để user có thể bấm lại nếu muốn (ví dụ đổi camera)
+                            
+                            // Reset nút Start
                             button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
                         } else {
-                            // Trường hợp status không phải 'success'
+                            // Lỗi từ backend khi bắt đầu
                             Swal.fire({
                                 title: 'Lỗi',
                                 text: response.message || 'Không xác định',
                                 icon: 'error',
                                 confirmButtonText: 'Đóng'
                             });
+                            resetVideoUI(); // Reset UI khi có lỗi
                             button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
                         }
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
                         console.error("[Start AJAX Error] Status:", textStatus, "Error:", errorThrown, jqXHR.responseText);
-                        
-                        // Giải mã response JSON nếu có
+                        // Xử lý lỗi kết nối hoặc lỗi server khác
                         var errorMessage = "Lỗi kết nối hoặc lỗi server khi gửi yêu cầu bắt đầu.";
                         var showConnectionErrorModal = false;
-                        
                         try {
                             if (jqXHR.responseText) {
                                 var responseObj = JSON.parse(jqXHR.responseText);
                                 if (responseObj && responseObj.message) {
                                     errorMessage = responseObj.message;
-                                    // Kiểm tra nếu là lỗi kết nối camera
-                                    if (responseObj.message.includes("Không thể mở nguồn video") || 
-                                        responseObj.message.includes("connection failed") ||
-                                        responseObj.message.includes("camera") ||
-                                        responseObj.message.includes("video source") ||
-                                        responseObj.message.includes("404 Not Found") || // Bắt lỗi RTSP
-                                        responseObj.message.includes("rtsp") || // Bắt lỗi RTSP
-                                        responseObj.message.includes("method DESCRIBE failed")) { // Bắt lỗi RTSP
+                                    // Kiểm tra lỗi kết nối camera
+                                    if (errorMessage.includes("Không thể mở nguồn video") || 
+                                        errorMessage.includes("connection failed") ||
+                                        errorMessage.includes("camera") ||
+                                        errorMessage.includes("video source") ||
+                                        errorMessage.includes("404 Not Found") ||
+                                        errorMessage.includes("rtsp") ||
+                                        errorMessage.includes("method DESCRIBE failed")) {
                                         showConnectionErrorModal = true;
                                     }
                                 }
                             }
-                        } catch (e) {
-                            console.error("Error parsing response:", e);
-                        }
+                        } catch (e) { console.error("Error parsing response:", e); }
                         
                         if (showConnectionErrorModal) {
-                            // Hiển thị modal thông báo lỗi kết nối camera
                             $('#camera-connection-error-modal').modal('show');
                         } else {
-                            // Sử dụng SweetAlert2 cho các lỗi khác
                             Swal.fire({
                                 title: 'Lỗi',
                                 text: errorMessage,
@@ -1160,7 +1285,7 @@
                                 confirmButtonText: 'Đóng'
                             });
                         }
-                        
+                        resetVideoUI(); // Reset UI khi có lỗi
                         button.prop('disabled', false).html('<i class="fas fa-play"></i> Bắt đầu');
                     }
                 });
@@ -1544,6 +1669,123 @@
                     }
                 });
             });
+
+            // --- Thêm hàm kiểm tra trạng thái xử lý ---
+            function isCurrentlyProcessing() {
+                return $("body").data("is-processing") === true;
+            }
+            
+            // --- Thêm hàm hiển thị thông báo yêu cầu dừng trước ---
+            function showStopProcessingAlert() {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Vui lòng dừng tiến trình hiện tại',
+                    html: 'Bạn cần <b>dừng tiến trình đang chạy</b> trước khi thay đổi camera hoặc chế độ xử lý.',
+                    confirmButtonText: 'Đã hiểu',
+                    showCancelButton: true,
+                    cancelButtonText: 'Dừng ngay',
+                }).then((result) => {
+                    if (result.dismiss === Swal.DismissReason.cancel) {
+                        // Nếu người dùng chọn "Dừng ngay", kích hoạt nút Dừng
+                        stopButton.click();
+                    }
+                });
+            }
+            
+            // --- Vô hiệu hóa camera select khi đang xử lý ---
+            cameraSelect.on('mousedown touchstart', function(e) {
+                if (isCurrentlyProcessing()) {
+                    e.preventDefault();
+                    showStopProcessingAlert();
+                    return false;
+                }
+            });
+            
+            // --- Vô hiệu hóa các radio button mode khi đang xử lý ---
+            modeRadios.on('click', function(e) {
+                if (isCurrentlyProcessing()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showStopProcessingAlert();
+                    return false;
+                }
+            });
+            
+            // --- Vô hiệu hóa nút Thêm Camera khi đang xử lý ---
+            $('a[href$="add-camera"]').on('click', function(e) {
+                if (isCurrentlyProcessing()) {
+                    e.preventDefault();
+                    showStopProcessingAlert();
+                    return false;
+                }
+            });
+            
+            // --- Vô hiệu hóa nút ROI khi đang xử lý ---
+            configureRoiLink.on('click', function(e) {
+                if (isCurrentlyProcessing()) {
+                    e.preventDefault();
+                    showStopProcessingAlert();
+                    return false;
+                }
+            });
+            
+            // --- Cập nhật giao diện ban đầu dựa trên trạng thái ---
+            function updateUIOnProcessingStatus() {
+                const isProcessing = isCurrentlyProcessing();
+                
+                // Thêm class disabled-during-processing cho các phần tử cần vô hiệu hóa
+                if (isProcessing) {
+                    cameraSelect.addClass('disabled-during-processing').attr('title', 'Vui lòng dừng tiến trình hiện tại trước');
+                    $('#div_id_mode').addClass('disabled-during-processing');
+                    $('a[href$="add-camera"]').addClass('disabled-during-processing');
+                    configureRoiLink.addClass('disabled-during-processing');
+                } else {
+                    cameraSelect.removeClass('disabled-during-processing').removeAttr('title');
+                    $('#div_id_mode').removeClass('disabled-during-processing');
+                    $('a[href$="add-camera"]').removeClass('disabled-during-processing');
+                    configureRoiLink.removeClass('disabled-during-processing');
+                }
+            }
+            
+            // Gọi lần đầu khi tải trang
+            updateUIOnProcessingStatus();
+            
+            // Thêm CSS cho phần tử bị vô hiệu hóa
+            $('<style>').text(`
+                .disabled-during-processing {
+                    opacity: 0.6;
+                    cursor: not-allowed !important;
+                    pointer-events: auto !important;
+                }
+                .disabled-during-processing * {
+                    pointer-events: none;
+                }
+                .disabled-during-processing a, 
+                .disabled-during-processing select,
+                .disabled-during-processing input[type="radio"],
+                .disabled-during-processing label {
+                    cursor: not-allowed !important;
+                }
+                input[type="radio"]:disabled + label {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+            `).appendTo('head');
+            
+            // Cập nhật hàm resetVideoUI để cập nhật giao diện
+            var originalResetVideoUI = resetVideoUI;
+            resetVideoUI = function() {
+                originalResetVideoUI();
+                updateUIOnProcessingStatus();
+            };
+            
+            // Cập nhật startProcess để cập nhật giao diện
+            var originalStartProcess = startProcess;
+            startProcess = function(button) {
+                originalStartProcess(button);
+                // Cập nhật UI sau khi startProcess hoàn thành
+                setTimeout(updateUIOnProcessingStatus, 500);
+            };
         }); // End $(document).ready()
     </script>
 {% endblock extrajs %}

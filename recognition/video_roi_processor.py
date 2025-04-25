@@ -203,6 +203,8 @@ class VideoSourceHandler:
         self.last_error_time = None
         self.consecutive_errors = 0
         self.max_consecutive_errors = 5
+        # Thêm thuộc tính stop_event - sẽ được gán từ bên ngoài
+        self.stop_event = None
 
     def start(self):
         """Khởi động thread đọc frame"""
@@ -250,20 +252,155 @@ class VideoSourceHandler:
         
     def stop(self):
         """Dừng thread đọc frame và giải phóng tài nguyên"""
+        print(f"[VSH STOP] Bắt đầu dừng VideoSourceHandler cho nguồn: {self.source}")
+        
+        # Đặt cờ running = False để dừng vòng lặp _read_loop
         self.running = False
-        if self.thread:
-            self.thread.join(timeout=1.0)  # Đợi thread kết thúc tối đa 1 giây
-        if self.capture:
+        
+        # Giải phóng tài nguyên thread
+        try:
+            if self.thread and self.thread.is_alive():
+                print(f"[VSH STOP] Đợi thread đọc frame kết thúc...")
+                join_timeout = 3.0  # Giảm xuống vì đã cải thiện _read_loop với nhiều kiểm tra stop_event
+                start_join_time = time.time()
+                self.thread.join(timeout=join_timeout)
+                end_join_time = time.time()
+                join_duration = end_join_time - start_join_time
+                print(f"[VSH STOP] Thời gian join thread đọc frame: {join_duration:.2f} giây.")
+                
+                # Kiểm tra nếu thread vẫn còn sống sau timeout
+                if self.thread.is_alive():
+                    print(f"[VSH STOP WARNING] Thread đọc frame vẫn đang chạy sau {join_timeout} giây timeout.")
+                    # Xóa tham chiếu thread ngay cả khi vẫn chạy - THÊM MỚI
+                    print("[VSH STOP] Đặt self.thread = None và tiếp tục")
+                    self.thread = None
+                else:
+                    print("[VSH STOP] Thread đọc frame đã kết thúc.")
+                    self.thread = None
+            elif self.thread:
+                 print("[VSH STOP] Thread đọc frame đã kết thúc trước khi gọi stop.")
+                 self.thread = None
+            else:
+                 print("[VSH STOP] Không có thread đọc frame để dừng.")
+                 
+        except Exception as e:
+            print(f"[VSH STOP ERROR] Lỗi khi dừng thread đọc frame: {e}")
+            # Xóa tham chiếu thread ngay cả khi có lỗi - THÊM MỚI
+            self.thread = None
+            
+        # --- Thực hiện release() trong thread riêng để tránh treo ---
+        print("[VSH STOP] Bắt đầu giải phóng OpenCV capture với thread riêng...")
+        capture_released = False
+        
+        # Tạo hàm release an toàn chạy trong thread riêng
+        def safe_release():
+            nonlocal capture_released
+            try:
+                if self.capture and self.capture.isOpened():
+                    print(f"[VSH SAFE RELEASE] Gọi self.capture.release() cho nguồn: {self.source}")
+                    release_start_time = time.time()
             self.capture.release()
-        print("[INFO] Đã dừng VideoSourceHandler")
+                    release_end_time = time.time()
+                    release_duration = release_end_time - release_start_time
+                    print(f"[VSH SAFE RELEASE] Thời gian thực thi self.capture.release(): {release_duration:.2f} giây.")
+                    capture_released = True
+            except Exception as e:
+                print(f"[VSH SAFE RELEASE ERROR] Lỗi khi giải phóng capture: {e}")
+        
+        # Chỉ tạo release thread nếu có capture cần giải phóng
+        if self.capture:
+            try:
+                release_thread = threading.Thread(target=safe_release)
+                release_thread.daemon = True
+                release_thread.start()
+                
+                # Chỉ đợi release thread một khoảng thời gian nhất định
+                release_timeout = 3.0  # 3 giây là đủ cho hầu hết trường hợp
+                print(f"[VSH STOP] Đợi release thread tối đa {release_timeout} giây...")
+                release_thread.join(timeout=release_timeout)
+                
+                if release_thread.is_alive():
+                    print(f"[VSH STOP WARNING] Release thread vẫn đang chạy sau {release_timeout} giây.")
+                    print("[VSH STOP] Tiếp tục mà không đợi release hoàn thành")
+                else:
+                    print("[VSH STOP] Release thread đã hoàn thành")
+                    
+                # Bất kể release thành công hay không, vẫn đặt capture = None
+                self.capture = None
+                print("[VSH STOP] Đã đặt capture = None")
+                
+            except Exception as e:
+                print(f"[VSH STOP ERROR] Lỗi khi tạo/đợi release thread: {e}")
+                # Đảm bảo đặt capture = None trong mọi trường hợp
+                self.capture = None
+                
+        elif self.capture is not None:
+            # Nếu capture không null nhưng không isOpened(), vẫn đặt = None
+            self.capture = None
+            print("[VSH STOP] Đặt capture = None (capture không mở)")
+        else:
+            print("[VSH STOP] Không có capture để giải phóng")
+            
+        # Làm sạch tài nguyên khác
+        print("[VSH STOP] Làm sạch các tài nguyên khác (lock, frame)...")
+        with self.lock:
+            self.current_frame = None
+            self.frame_available = False
+        
+        print(f"[VSH STOP] Đã hoàn thành dừng VideoSourceHandler cho nguồn: {self.source}")
         
     def _read_loop(self):
         """Loop chạy trong thread để liên tục đọc frame mới"""
         retry_delay = 0.01  # Giá trị cơ bản
+        frame_read_count = 0
         while self.running:
+            # Kiểm tra stop_event nếu có - THÊM MỚI
+            if self.stop_event and self.stop_event.is_set():
+                print(f"[VSH LOOP {self.source}] Phát hiện stop_event, thoát _read_loop")
+                self.running = False  # Đảm bảo dừng ngay lập tức
+                break
+                
             try:
-                ret, frame = self.capture.read()
-                if not ret or frame is None or frame.size == 0:
+                # print(f"[VSH LOOP {self.source}] Bắt đầu đọc frame...") # Có thể gây quá nhiều log
+                read_start_time = time.time()
+                
+                # Đọc frame với cơ chế timeout đơn giản - THÊM MỚI
+                ret, frame = None, None
+                read_success = False
+                max_read_wait = 0.3  # 300ms timeout cho đọc frame
+                
+                while time.time() - read_start_time < max_read_wait and not read_success:
+                    # Kiểm tra stop_event thường xuyên trong quá trình đợi đọc frame - THÊM MỚI
+                    if self.stop_event and self.stop_event.is_set():
+                        print(f"[VSH LOOP {self.source}] Phát hiện stop_event khi cố gắng đọc frame")
+                        return  # Thoát ngay lập tức
+                    
+                    try:
+                        if self.capture is None or not self.capture.isOpened():
+                            break
+                        ret, frame = self.capture.read()  # Thử đọc frame
+                        if ret and frame is not None:
+                            read_success = True
+                            break
+                    except Exception as e:
+                        print(f"[VSH LOOP ERROR {self.source}] Lỗi khi đọc frame: {e}")
+                    
+                    # Đợi một chút trước khi thử lại
+                    time.sleep(0.01)
+                    
+                read_duration = time.time() - read_start_time
+                
+                # Kiểm tra lại stop_event sau khi đọc frame - THÊM MỚI
+                if self.stop_event and self.stop_event.is_set():
+                    print(f"[VSH LOOP {self.source}] Phát hiện stop_event sau khi đọc frame")
+                    return
+                
+                # In log nếu thời gian đọc frame > 0.5 giây
+                if read_duration > 0.5:
+                    print(f"[VSH LOOP WARNING {self.source}] Thời gian đọc frame: {read_duration:.2f} giây (success={read_success})")
+                    
+                if not read_success or frame is None or (frame is not None and frame.size == 0):
+                    # ... (xử lý lỗi đọc frame như cũ)
                     self.consecutive_errors += 1
                     current_time = time.time()
                     
@@ -273,8 +410,13 @@ class VideoSourceHandler:
                     
                     # In cảnh báo mỗi 3 giây để tránh làm tràn console
                     if self.last_error_time is None or (current_time - self.last_error_time) > 3:
-                        print(f"[WARNING] Lỗi khi đọc frame. Số lỗi liên tiếp: {self.consecutive_errors}")
+                        print(f"[VSH LOOP WARNING {self.source}] Lỗi khi đọc frame. Số lỗi liên tiếp: {self.consecutive_errors}")
                         self.last_error_time = current_time
+                    
+                    # Kiểm tra stop_event thường xuyên khi xử lý lỗi - THÊM MỚI
+                    if self.stop_event and self.stop_event.is_set():
+                        print(f"[VSH LOOP {self.source}] Phát hiện stop_event khi xử lý lỗi đọc frame")
+                        return
                     
                     # Điều chỉnh retry_delay tùy thuộc vào loại luồng
                     retry_delay = 0.01 if not self.is_rtsp else 0.05 * self.consecutive_errors
@@ -282,13 +424,32 @@ class VideoSourceHandler:
                     
                     # Thử kết nối lại camera nếu có quá nhiều lỗi liên tiếp
                     if self.consecutive_errors >= self.max_consecutive_errors:
-                        print(f"[INFO] Thử kết nối lại với nguồn video: {self.source}")
+                        # Kiểm tra stop_event trước khi kết nối lại - THÊM MỚI
+                        if self.stop_event and self.stop_event.is_set():
+                            print(f"[VSH LOOP {self.source}] Phát hiện stop_event trước khi thử kết nối lại")
+                            return
+                            
+                        print(f"[VSH LOOP INFO {self.source}] Thử kết nối lại với nguồn video...")
+                        # --- Bổ sung: Gọi release trước khi tạo lại --- 
+                        if self.capture and self.capture.isOpened():
+                            try:
+                                print(f"[VSH LOOP INFO {self.source}] Gọi release() trước khi kết nối lại...")
                         self.capture.release()
+                            except Exception as release_err:
+                                print(f"[VSH LOOP ERROR {self.source}] Lỗi khi release trước khi kết nối lại: {release_err}")
+                        # --- Kết thúc bổ sung ---
                         time.sleep(retry_delay)  # Đợi một chút trước khi thử lại
+                        
+                        # Kiểm tra stop_event trước khi tạo capture mới - THÊM MỚI
+                        if self.stop_event and self.stop_event.is_set():
+                            print(f"[VSH LOOP {self.source}] Phát hiện stop_event trước khi tạo capture mới")
+                            return
+                            
                         self.capture = cv2.VideoCapture(self.source)
                         
                         # Áp dụng lại các cấu hình đặc biệt cho RTSP
                         if self.is_rtsp:
+                            # ... (cấu hình RTSP như cũ)
                             self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                             self.capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('H', '2', '6', '4'))
                             try:
@@ -298,16 +459,28 @@ class VideoSourceHandler:
                             
                         self.consecutive_errors = 0
                         
+                    # Kiểm tra stop_event trước khi sleep - THÊM MỚI
+                    if self.stop_event and self.stop_event.is_set():
+                        print(f"[VSH LOOP {self.source}] Phát hiện stop_event trước khi sleep khi xử lý lỗi")
+                        return
+                        
                     time.sleep(retry_delay)  # Tránh sử dụng 100% CPU khi gặp lỗi
                     continue
                 
                 # Reset counter nếu đọc thành công
+                frame_read_count += 1
                 self.consecutive_errors = 0
                 self.last_error_time = None
                 
                 # Kiểm tra frame hợp lệ (không quá nhỏ)
                 if frame.shape[0] < 10 or frame.shape[1] < 10:
-                    print(f"[WARNING] Frame không hợp lệ, kích thước quá nhỏ: {frame.shape}")
+                    print(f"[VSH LOOP WARNING {self.source}] Frame không hợp lệ, kích thước quá nhỏ: {frame.shape}")
+                    
+                    # Kiểm tra stop_event trước khi tiếp tục - THÊM MỚI
+                    if self.stop_event and self.stop_event.is_set():
+                        print(f"[VSH LOOP {self.source}] Phát hiện stop_event sau khi phát hiện frame không hợp lệ")
+                        return
+                        
                     time.sleep(0.01)
                     continue
                 
@@ -316,16 +489,28 @@ class VideoSourceHandler:
                     self.current_frame = frame
                     self.frame_available = True
                 
+                # Kiểm tra stop_event trước khi sleep - THÊM MỚI
+                if self.stop_event and self.stop_event.is_set():
+                    print(f"[VSH LOOP {self.source}] Phát hiện stop_event sau khi cập nhật frame")
+                    return
+                
                 # Nhường CPU cho các thread khác
-                # Điều chỉnh thời gian sleep tùy thuộc vào loại luồng
                 sleep_time = 0.001 if not self.is_rtsp else 0.005
                 time.sleep(sleep_time)
                 
             except Exception as e:
-                print(f"[ERROR] Lỗi trong thread đọc frame: {e}")
+                print(f"[VSH LOOP ERROR {self.source}] Lỗi trong thread đọc frame: {e}")
                 import traceback
                 traceback.print_exc()
+                
+                # Kiểm tra stop_event khi gặp exception - THÊM MỚI
+                if self.stop_event and self.stop_event.is_set():
+                    print(f"[VSH LOOP {self.source}] Phát hiện stop_event sau khi xử lý exception")
+                    return
+                    
                 time.sleep(0.1)  # Tránh vòng lặp vô hạn khi gặp lỗi
+                
+        print(f"[VSH LOOP] Thread đọc frame cho nguồn {self.source} kết thúc. Đã đọc {frame_read_count} frames.")
                 
     def get_frame(self):
         """Lấy frame mới nhất từ thread"""
@@ -384,6 +569,11 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
 
     # Khởi tạo và bắt đầu xử lý video
     video_handler = VideoSourceHandler(video_source)
+    # Truyền stop_event cho VideoSourceHandler - THÊM MỚI
+    video_handler.stop_event = stop_event
+    
+    # Sử dụng khối try-finally để đảm bảo giải phóng tài nguyên
+    try:
     if not video_handler.start():
         error_msg = f"Không thể mở nguồn video: {video_source}"
         print(f"[PROCESS ERROR] {error_msg}")
@@ -392,6 +582,7 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
     
     detector, predictor, fa = None, None, None
     svc, encoder = None, None
+            
     if mode in ['collect', 'recognize']:
         print("[PROCESS INFO] Đang tải bộ phát hiện khuôn mặt...")
         try:
@@ -448,7 +639,8 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 'total': max_samples, 
                 'active': True,
                 'completed': False,
-                'sanitized': sanitized_username 
+                    'sanitized': sanitized_username,
+                    'stopping': False  # THÊM MỚI - Đánh dấu trạng thái đang dừng
             }
             print(f"[Tracker INIT] Progress for {username}: {collect_progress_tracker[username]}")
             # --- Kết thúc thay đổi --- 
@@ -503,25 +695,46 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
             output_handler.stop_stream()
             return {}
 
-    print(f"[PROCESS INFO] Khởi tạo luồng video từ nguồn: {video_source}")
-    video_handler = VideoSourceHandler(video_source)
-    if not video_handler.start():
-        print(f"[PROCESS ERROR] Không thể khởi động VideoSourceHandler cho nguồn: {video_source}")
-        output_handler.stop_stream()
-        return 0 if mode == 'collect' else recognized_persons
-
     frame_index = 0
-    print(f"[PROCESS INFO] Bắt đầu vòng lặp xử lý (Mode: {mode})...")
-    try:
+        last_processed_frame = 0  # THÊM MỚI - theo dõi frame cuối cùng được xử lý
+        loop_start_time = time.time()
+        last_log_time = loop_start_time
+        print(f"[PROCESS {camera_name}] Bắt đầu vòng lặp xử lý (Mode: {mode})...")
+        
         while not stop_event.is_set():
+            loop_iter_start_time = time.time()
+            # Kiểm tra stop_event NGAY ĐẦU vòng lặp
+            if stop_event.is_set():
+                print(f"[PROCESS {camera_name}] Phát hiện stop_event ngay đầu vòng lặp, thoát...")
+                # Cập nhật trạng thái 'stopping' nếu đang ở chế độ thu thập
+                if mode == 'collect' and username in collect_progress_tracker:
+                    collect_progress_tracker[username]['stopping'] = True
+                    print(f"[PROCESS {camera_name}] Cập nhật trạng thái stopping=True cho {username}")
+                break
+                
             frame = video_handler.get_frame()
             if frame is None:
+                # Kiểm tra stop_event sau khi get_frame() trả về None - THÊM MỚI
+                if stop_event.is_set():
+                    print(f"[PROCESS {camera_name}] Phát hiện stop_event sau khi get_frame() trả về None, thoát...")
+                    if mode == 'collect' and username in collect_progress_tracker:
+                        collect_progress_tracker[username]['stopping'] = True
+                    break
+                # print(f"[PROCESS {camera_name}] No frame available, waiting...") # Có thể gây nhiều log
                 time.sleep(0.01)
                 continue
 
             frame_to_display = frame.copy()
             roi_frame_for_processing = None
 
+            # Kiểm tra stop_event sau khi copy frame và trước khi xử lý ROI - THÊM MỚI
+            if stop_event.is_set():
+                print(f"[PROCESS {camera_name}] Phát hiện stop_event sau khi copy frame, thoát...")
+                if mode == 'collect' and username in collect_progress_tracker:
+                    collect_progress_tracker[username]['stopping'] = True
+                break
+
+            # Xử lý ROI
             if roi:
                 orig_h, orig_w = frame.shape[:2]
                 scale = orig_w / settings.RECOGNITION_FRAME_WIDTH
@@ -551,14 +764,44 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                 roi_frame_for_processing = frame.copy() # Xử lý toàn bộ frame
                 orig_rx, orig_ry = 0, 0 # Đặt tọa độ gốc để vẽ bounding box đúng
 
+            # Kiểm tra stop_event sau khi xử lý ROI và trước khi xử lý frame - THÊM MỚI
+            if stop_event.is_set():
+                print(f"[PROCESS {camera_name}] Phát hiện stop_event sau khi xử lý ROI, thoát...")
+                if mode == 'collect' and username in collect_progress_tracker:
+                    collect_progress_tracker[username]['stopping'] = True
+                break
+
             if roi_frame_for_processing is not None and mode in ['collect', 'recognize']:
                 frame_index += 1
-                if mode == 'recognize' and frame_index % settings.RECOGNIZE_FRAME_SKIP != 0:
+                
+                # Kiểm tra stop_event TRƯỚC khi quyết định bỏ qua frame - THÊM MỚI
+                if stop_event.is_set():
+                    print(f"[PROCESS {camera_name}] Phát hiện stop_event trước khi kiểm tra frame_skip, thoát...")
+                    if mode == 'collect' and username in collect_progress_tracker:
+                        collect_progress_tracker[username]['stopping'] = True
+                    break
+                
+                # THAY ĐỔI: Cải tiến logic bỏ qua frame
+                process_this_frame = True
+                if mode == 'recognize':
+                    process_this_frame = (frame_index % settings.RECOGNIZE_FRAME_SKIP == 0)
+                elif mode == 'collect':
+                    process_this_frame = (frame_index % settings.COLLECT_FRAME_SKIP == 0) 
+                
+                if not process_this_frame:
                     output_handler.set_frame(frame_to_display)
-                    continue
-                if mode == 'collect' and frame_index % settings.COLLECT_FRAME_SKIP != 0:
-                     output_handler.set_frame(frame_to_display)
+                    
+                    # Kiểm tra stop_event sau khi quyết định bỏ qua frame - THÊM MỚI
+                    if stop_event.is_set():
+                        print(f"[PROCESS {camera_name}] Phát hiện stop_event sau khi bỏ qua frame, thoát...")
+                        if mode == 'collect' and username in collect_progress_tracker:
+                            collect_progress_tracker[username]['stopping'] = True
+                        break
+                    
                      continue
+                    
+                # Ghi nhớ frame cuối cùng được xử lý - THÊM MỚI
+                last_processed_frame = frame_index
 
                 try:
                     roi_gray = cv2.cvtColor(roi_frame_for_processing, cv2.COLOR_BGR2GRAY)
@@ -567,9 +810,23 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                     print(f"[PROCESS ERROR] Lỗi trong quá trình phát hiện khuôn mặt: {detect_err}")
                     faces = []
 
+                # Kiểm tra stop_event sau khi phát hiện khuôn mặt - THÊM MỚI
+                if stop_event.is_set():
+                    print(f"[PROCESS {camera_name}] Phát hiện stop_event sau khi phát hiện {len(faces)} khuôn mặt, thoát...")
+                    if mode == 'collect' and username in collect_progress_tracker:
+                        collect_progress_tracker[username]['stopping'] = True
+                    break
+
                 detected_in_frame = set()
                 if faces:
                     for face in faces:
+                        # Kiểm tra stop_event trong vòng lặp mặt - THÊM MỚI
+                        if stop_event.is_set():
+                            print(f"[PROCESS {camera_name}] Phát hiện stop_event trong vòng lặp mặt, thoát...")
+                            if mode == 'collect' and username in collect_progress_tracker:
+                                collect_progress_tracker[username]['stopping'] = True
+                            break
+                            
                         (fx, fy, fw, fh) = face_utils.rect_to_bb(face)
                         if roi:
                             draw_x = orig_rx + int(fx * (orig_rw / roi_frame_for_processing.shape[1]))
@@ -586,6 +843,13 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                             continue
 
                         if mode == 'collect':
+                            # Kiểm tra stop_event trước khi lưu mẫu - THÊM MỚI
+                            if stop_event.is_set():
+                                print(f"[PROCESS {camera_name}] Phát hiện stop_event trước khi lưu mẫu, thoát...")
+                                if username in collect_progress_tracker:
+                                    collect_progress_tracker[username]['stopping'] = True
+                                break
+                                
                             sample_count += 1
                             img_path = os.path.join(output_dir, f"{sanitized_username}_{sample_count}.jpg")
                             cv2.imwrite(img_path, face_aligned)
@@ -599,10 +863,21 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
 
                             if sample_count >= max_samples:
                                 print(f"[PROCESS INFO] Đã thu thập đủ {max_samples} mẫu.")
+                                
+                                # Đánh dấu là hoàn thành thay vì chỉ đặt stop_event - THÊM MỚI
+                                if username in collect_progress_tracker:
+                                    collect_progress_tracker[username]['completed'] = True
+                                    print(f"[PROCESS INFO] Đánh dấu completed=True cho {username}")
+                                
                                 stop_event.set()
                                 break
 
                         elif mode == 'recognize':
+                            # Kiểm tra stop_event trước khi nhận diện - THÊM MỚI
+                            if stop_event.is_set():
+                                print(f"[PROCESS {camera_name}] Phát hiện stop_event trước khi nhận diện, thoát...")
+                                break
+                                
                             (pred_idx, prob) = predict(face_aligned, svc)
                             prob_value = float(prob[0])
                             person_name = "Unknown"
@@ -623,7 +898,12 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         print(f"[RECOGNIZED] {person_name}")
                                         recognized_persons[person_name] = True
                                     
-                                    # Đơn giản hóa luồng xử lý, chỉ lưu ảnh và hiển thị thông báo
+                                    # Kiểm tra stop_event trước khi lưu ảnh chấm công - THÊM MỚI
+                                    if stop_event.is_set():
+                                        print(f"[PROCESS {camera_name}] Phát hiện stop_event trước khi lưu ảnh chấm công, thoát...")
+                                        break
+                                    
+                                    # Xử lý lưu ảnh chấm công như cũ
                                     try:
                                         # Xác định tên file và đường dẫn
                                         now = get_current_time()
@@ -631,7 +911,6 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                                         sanitized_person_name_for_file = sanitize_filename(person_name)
                                         
                                         # Xác định xem đây là check-in hay check-out
-                                        # Giả lập bằng cách kiểm tra xem đã có ảnh check-in hôm nay chưa
                                         check_in_file_pattern = f'{sanitized_person_name_for_file}_{today}_*.jpg'
                                         check_in_dir = os.path.join(settings.MEDIA_ROOT, settings.RECOGNITION_ATTENDANCE_FACES_DIR, settings.RECOGNITION_CHECK_IN_SUBDIR)
                                         
@@ -706,35 +985,58 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
                             cv2.putText(frame_to_display, person_name, (draw_x, draw_y - 5),
                                       cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1)
 
+                    # Kiểm tra nếu vòng lặp mặt bị thoát do stop_event
+                    if stop_event.is_set():
+                        print(f"[PROCESS {camera_name}] Thoát vòng lặp mặt do stop_event")
+                        break
+
                     if mode == 'recognize':
                          for name in recognition_counts:
                              if name not in detected_in_frame:
-                                 recognition_counts[name] = 0
-                elif mode == 'recognize':
-                     for name in recognition_counts:
                          recognition_counts[name] = 0
+
+            # Kiểm tra stop_event trước khi cập nhật output_handler
+            if stop_event.is_set():
+                print(f"[PROCESS {camera_name}] Phát hiện stop_event trước khi cập nhật output_handler, thoát...")
+                if mode == 'collect' and username in collect_progress_tracker:
+                    collect_progress_tracker[username]['stopping'] = True
+                break
 
             output_handler.set_frame(frame_to_display)
 
-            if mode == 'collect' and stop_event.is_set():
+            # Kiểm tra stop_event SAU KHI xử lý frame
+            if stop_event.is_set():
+                print(f"[PROCESS {camera_name}] Phát hiện stop_event sau khi xử lý frame, thoát...")
+                if mode == 'collect' and username in collect_progress_tracker:
+                    collect_progress_tracker[username]['stopping'] = True
                 break
 
-            if frame_index % 100 == 0: # Print every 100 frames processed in ROI
-                 print(f"[PROCESS LOOP] Frame index: {frame_index}, Mode: {mode}, stop_event: {stop_event.is_set()}")
+            # Log định kỳ để theo dõi tiến trình
+            current_time = time.time()
+            if current_time - last_log_time > 10.0: # Log mỗi 10 giây
+                 print(f"[PROCESS LOOP {camera_name}] Đang chạy... Frame index: {frame_index}, Processed: {last_processed_frame}, Mode: {mode}")
+                 # Thêm trạng thái stop_event vào log định kỳ
+                 print(f"[PROCESS LOOP {camera_name}] stop_event.is_set() = {stop_event.is_set()}")
+                 last_log_time = current_time
+            
+            # Log nếu một vòng lặp mất quá nhiều thời gian
+            loop_iter_duration = current_time - loop_iter_start_time
+            if loop_iter_duration > 2.0: # Cảnh báo nếu vòng lặp > 2 giây
+                print(f"[PROCESS LOOP WARNING {camera_name}] Vòng lặp xử lý mất {loop_iter_duration:.2f} giây (frame {frame_index})")
 
-            time.sleep(0.001)
-
-    except Exception as e:
-        print(f"[PROCESS ERROR] Lỗi trong vòng lặp xử lý: {e}")
-        import traceback
-        traceback.print_exc()
-    finally:
-        print("[PROCESS INFO] Kết thúc vòng lặp, dừng video handler...")
-        video_handler.stop()
-        output_handler.stop_stream()
+            time.sleep(0.001) # Nhường CPU
+            
+        # Vòng lặp kết thúc - kiểm tra lý do - THÊM MỚI
+        if stop_event.is_set():
+            print(f"[PROCESS END {camera_name}] Vòng lặp kết thúc do stop_event được đặt")
+        else:
+            print(f"[PROCESS END {camera_name}] Vòng lặp kết thúc do lý do khác")
 
     # Đánh dấu tiến trình là không hoạt động khi kết thúc (hoặc bị dừng)
     if mode == 'collect' and username and username in collect_progress_tracker:
+            # Đánh dấu 'stopping' = False vì đã dừng xong
+            collect_progress_tracker[username]['stopping'] = False
+            
         if sample_count >= max_samples:
             # Chỉ đặt active=False nếu đã thu thập đủ mẫu
             collect_progress_tracker[username]['active'] = False
@@ -771,5 +1073,50 @@ def process_video_with_roi(video_source, mode, roi, stop_event, output_handler, 
         return final_recognized
     else:
         return {}
+
+    except Exception as e: # Thêm khối except cho try chính
+        print(f"[PROCESS ERROR] Lỗi nghiêm trọng trong quá trình xử lý video: {e}")
+        import traceback
+        traceback.print_exc()
+        # Đảm bảo dừng output handler nếu có lỗi nghiêm trọng
+        try:
+            output_handler.stop_stream()
+        except Exception as stop_err:
+            print(f"[PROCESS ERROR] Lỗi khi dừng output handler sau khi có lỗi: {stop_err}")
+        # Cập nhật tracker nếu đang thu thập
+        if mode == 'collect' and username and username in collect_progress_tracker:
+            collect_progress_tracker[username]['active'] = False
+            collect_progress_tracker[username]['completed'] = False # Đánh dấu là chưa hoàn thành
+            print(f"[Tracker ERROR] Đặt active=False do lỗi cho {username}: {collect_progress_tracker[username]}")
+        # Trả về kết quả lỗi phù hợp
+        return 0 if mode == 'collect' else {}
+        
+    finally:
+        # Đảm bảo luôn giải phóng tài nguyên ngay cả khi có lỗi hoặc kết thúc bình thường
+        print(f"[PROCESS FINALLY {camera_name}] Bắt đầu giải phóng tài nguyên...")
+        try:
+            # Dừng VideoSourceHandler trước
+            if video_handler:
+                print("[PROCESS FINALLY] Dừng VideoSourceHandler...")
+                video_handler.stop()
+        except Exception as e:
+            print(f"[PROCESS ERROR] Lỗi khi dừng VideoSourceHandler trong finally: {e}")
+            
+        try:
+            # Dừng output handler (có thể đã được gọi nếu có lỗi)
+            print("[PROCESS FINALLY] Dừng OutputHandler...")
+            output_handler.stop_stream()
+        except Exception as e:
+            print(f"[PROCESS ERROR] Lỗi khi dừng OutputHandler trong finally: {e}")
+            
+        # Giải phóng bộ nhớ các mô hình nếu cần
+        detector, predictor, fa = None, None, None
+        svc, encoder = None, None
+        
+        print("[PROCESS FINALLY] Đã giải phóng tất cả tài nguyên")
+        
+        # *** Lưu ý: Không nên trả về giá trị từ khối finally *** 
+        # Việc return ở đây sẽ ghi đè giá trị return từ khối try hoặc except
+        # Giá trị return nên được xử lý trong khối try hoặc except
 
 

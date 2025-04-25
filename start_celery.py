@@ -168,9 +168,11 @@ def run_worker():
         "-m", "celery", # Chạy module celery
         "-A", "attendance_system_facial_recognition", 
         "worker", 
-        "--loglevel=info",
-        # Sử dụng pool prefork trong Docker (mặc định)
-        # Có thể bỏ qua eventlet pool vì trên Linux không cần
+        "--loglevel=warning",  # Thay đổi từ info sang warning để giảm log
+        "--concurrency=4",     # Giới hạn số worker
+        "--without-heartbeat", # Tắt heartbeat để giảm log
+        "--without-gossip",    # Tắt gossip để giảm log
+        "--without-mingle",    # Tắt mingle để giảm log
     ]
     run_command(command)
 
@@ -182,7 +184,8 @@ def run_beat():
         "-m", "celery",
         "-A", "attendance_system_facial_recognition", 
         "beat", 
-        "--loglevel=info",
+        "--loglevel=warning",  # Thay đổi từ info sang warning để giảm log
+        "--quiet",             # Thêm tham số quiet để giảm thiểu log
         # Thêm pidfile để tránh chạy nhiều instance beat cùng lúc
         "--pidfile=/app/celerybeat.pid"
     ]

@@ -150,8 +150,8 @@ class ScheduledCameraRecognition(models.Model):
         related_name="schedules",
         verbose_name="Camera"
     )
-    start_time = models.DateTimeField(verbose_name="Thời gian bắt đầu")
-    end_time = models.DateTimeField(verbose_name="Thời gian kết thúc")
+    start_time = models.TimeField(verbose_name="Thời gian bắt đầu")
+    end_time = models.TimeField(verbose_name="Thời gian kết thúc")
     interval_minutes = models.IntegerField(
         choices=TIME_INTERVAL_CHOICES,
         default=60,
@@ -243,8 +243,8 @@ class ContinuousAttendanceSchedule(models.Model):
         default='check_in',
         verbose_name="Loại chấm công"
     )
-    start_time = models.DateTimeField(verbose_name="Thời gian bắt đầu")
-    end_time = models.DateTimeField(verbose_name="Thời gian kết thúc")
+    start_time = models.TimeField(verbose_name="Thời gian bắt đầu")
+    end_time = models.TimeField(verbose_name="Thời gian kết thúc")
     active_days = models.CharField(
         max_length=20, 
         default="1,2,3,4,5", 
